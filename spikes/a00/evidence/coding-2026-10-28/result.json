@@ -1,0 +1,371 @@
+{
+  "schemaVersion": 1,
+  "manifest": {
+    "probeVersion": "0.0.2",
+    "probeRevision": "source-sha256:24273dbdd8f674cce9334551ada6b83914e5e94a979235a7a5dbe0340986aa3e",
+    "os": "darwin 25.6.0",
+    "node": "v22.16.0",
+    "startedAt": "2026-10-28T17:52:16.070Z",
+    "authMechanism": "ChatGPT account, plus plan",
+    "billing": "Existing Codex backend account. Bounded turns may consume plan usage or API charges.",
+    "usage": "Unavailable. Inspect account usage separately.",
+    "experiment": "coding",
+    "backend": "Codex App Server",
+    "backendVersion": "codex-cli 0.164.0",
+    "model": "gpt-5.6-sol",
+    "sandbox": "workspace-write",
+    "approvalPolicy": "never",
+    "fixture": "temporary synthetic Git workspace"
+  },
+  "observations": [
+    {
+      "scenario": "coding-start",
+      "source": "probe",
+      "event": "action",
+      "action": "start",
+      "sequence": 1,
+      "elapsedMs": 1307.022583
+    },
+    {
+      "scenario": "coding-start",
+      "source": "backend",
+      "event": "acknowledgment",
+      "operation": "turn-start",
+      "sequence": 2,
+      "elapsedMs": 1318.987791
+    },
+    {
+      "scenario": "coding-status",
+      "source": "probe",
+      "event": "action",
+      "action": "status-read",
+      "sequence": 3,
+      "elapsedMs": 1319.000125
+    },
+    {
+      "scenario": "coding-start",
+      "source": "backend",
+      "event": "backend-state",
+      "state": "active",
+      "sequence": 4,
+      "elapsedMs": 1319.5339999999999
+    },
+    {
+      "scenario": "coding-status",
+      "source": "backend",
+      "event": "backend-state",
+      "state": "active",
+      "sequence": 5,
+      "elapsedMs": 1319.5462909999999
+    },
+    {
+      "scenario": "coding-status",
+      "source": "backend",
+      "event": "acknowledgment",
+      "operation": "thread-read",
+      "sequence": 6,
+      "elapsedMs": 1448.043541
+    },
+    {
+      "scenario": "coding-start",
+      "source": "backend",
+      "event": "backend-state",
+      "state": "idle",
+      "sequence": 7,
+      "elapsedMs": 18203.672458
+    },
+    {
+      "scenario": "coding-status",
+      "source": "backend",
+      "event": "backend-state",
+      "state": "idle",
+      "sequence": 8,
+      "elapsedMs": 18203.705583000003
+    },
+    {
+      "scenario": "coding-start",
+      "source": "backend",
+      "event": "backend-state",
+      "state": "completed",
+      "sequence": 9,
+      "elapsedMs": 18204.957708
+    },
+    {
+      "scenario": "coding-status",
+      "source": "backend",
+      "event": "backend-state",
+      "state": "completed",
+      "sequence": 10,
+      "elapsedMs": 18204.990416
+    },
+    {
+      "scenario": "coding-start",
+      "source": "probe",
+      "event": "fixture-check",
+      "result": "alpha",
+      "userMarkerPreserved": true,
+      "helperStopped": false,
+      "helperExit": "unknown",
+      "sequence": 11,
+      "elapsedMs": 18258.309625
+    },
+    {
+      "scenario": "coding-steer",
+      "source": "probe",
+      "event": "action",
+      "action": "start",
+      "sequence": 12,
+      "elapsedMs": 19198.159208
+    },
+    {
+      "scenario": "coding-steer",
+      "source": "backend",
+      "event": "backend-state",
+      "state": "active",
+      "sequence": 13,
+      "elapsedMs": 19211.016375000003
+    },
+    {
+      "scenario": "coding-steer",
+      "source": "backend",
+      "event": "acknowledgment",
+      "operation": "turn-start",
+      "sequence": 14,
+      "elapsedMs": 19211.279333000002
+    },
+    {
+      "scenario": "coding-steer",
+      "source": "probe",
+      "event": "action",
+      "action": "steer",
+      "sequence": 15,
+      "elapsedMs": 24684.017458000002
+    },
+    {
+      "scenario": "coding-steer",
+      "source": "backend",
+      "event": "acknowledgment",
+      "operation": "steer",
+      "sequence": 16,
+      "elapsedMs": 24684.660750000003
+    },
+    {
+      "scenario": "coding-steer",
+      "source": "backend",
+      "event": "backend-state",
+      "state": "idle",
+      "sequence": 17,
+      "elapsedMs": 46938.594207999995
+    },
+    {
+      "scenario": "coding-steer",
+      "source": "backend",
+      "event": "backend-state",
+      "state": "completed",
+      "sequence": 18,
+      "elapsedMs": 46938.888708
+    },
+    {
+      "scenario": "coding-steer",
+      "source": "probe",
+      "event": "fixture-check",
+      "result": "beta",
+      "userMarkerPreserved": true,
+      "helperStopped": true,
+      "helperExit": "natural",
+      "sequence": 19,
+      "elapsedMs": 46997.578333
+    },
+    {
+      "scenario": "coding-cancel",
+      "source": "probe",
+      "event": "action",
+      "action": "start",
+      "sequence": 20,
+      "elapsedMs": 47815.02525
+    },
+    {
+      "scenario": "coding-cancel",
+      "source": "backend",
+      "event": "backend-state",
+      "state": "active",
+      "sequence": 21,
+      "elapsedMs": 47831.062083
+    },
+    {
+      "scenario": "coding-cancel",
+      "source": "backend",
+      "event": "acknowledgment",
+      "operation": "turn-start",
+      "sequence": 22,
+      "elapsedMs": 47831.266625
+    },
+    {
+      "scenario": "coding-cancel",
+      "source": "probe",
+      "event": "action",
+      "action": "interrupt",
+      "sequence": 23,
+      "elapsedMs": 53722.304458
+    },
+    {
+      "scenario": "coding-cancel",
+      "source": "backend",
+      "event": "acknowledgment",
+      "operation": "interrupt",
+      "sequence": 24,
+      "elapsedMs": 53831.906291
+    },
+    {
+      "scenario": "coding-cancel",
+      "source": "backend",
+      "event": "backend-state",
+      "state": "idle",
+      "sequence": 25,
+      "elapsedMs": 53832.418541
+    },
+    {
+      "scenario": "coding-cancel",
+      "source": "backend",
+      "event": "backend-state",
+      "state": "interrupted",
+      "sequence": 26,
+      "elapsedMs": 53832.447208
+    },
+    {
+      "scenario": "coding-cancel",
+      "source": "probe",
+      "event": "fixture-check",
+      "result": "unexpected",
+      "userMarkerPreserved": true,
+      "helperStopped": true,
+      "helperExit": "external",
+      "sequence": 27,
+      "elapsedMs": 53900.938708
+    },
+    {
+      "scenario": "coding-restart",
+      "source": "probe",
+      "event": "writer-stopped",
+      "mode": "native",
+      "backendExited": true,
+      "groupEmpty": true,
+      "helperStopped": true,
+      "sequence": 28,
+      "elapsedMs": 54001.0075
+    },
+    {
+      "scenario": "coding-restart",
+      "source": "probe",
+      "event": "action",
+      "action": "restart",
+      "sequence": 29,
+      "elapsedMs": 54029.990041
+    },
+    {
+      "scenario": "coding-restart",
+      "source": "backend",
+      "event": "backend-state",
+      "state": "active",
+      "sequence": 30,
+      "elapsedMs": 54212.539625
+    },
+    {
+      "scenario": "coding-restart",
+      "source": "backend",
+      "event": "backend-state",
+      "state": "idle",
+      "sequence": 31,
+      "elapsedMs": 80814.51675
+    },
+    {
+      "scenario": "coding-restart",
+      "source": "backend",
+      "event": "backend-state",
+      "state": "completed",
+      "sequence": 32,
+      "elapsedMs": 80814.750375
+    },
+    {
+      "scenario": "coding-restart",
+      "source": "probe",
+      "event": "fixture-check",
+      "result": "beta",
+      "userMarkerPreserved": true,
+      "helperStopped": true,
+      "helperExit": "external",
+      "sequence": 33,
+      "elapsedMs": 80912.216791
+    }
+  ],
+  "findings": [
+    {
+      "scenario": "coding-start",
+      "kind": "verified",
+      "observed": "Terminal turn state and actual fixture contents checked.",
+      "evidence": [
+        1,
+        2,
+        4,
+        7,
+        9,
+        11
+      ]
+    },
+    {
+      "scenario": "coding-status",
+      "kind": "verified",
+      "observed": "Status was read through thread/read and observed through active and terminal notifications.",
+      "evidence": [
+        3,
+        5,
+        6,
+        8,
+        10
+      ]
+    },
+    {
+      "scenario": "coding-steer",
+      "kind": "verified",
+      "observed": "The active turn produced beta after the contradictory instruction.",
+      "evidence": [
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ]
+    },
+    {
+      "scenario": "coding-cancel",
+      "kind": "verified",
+      "observed": "The turn was interrupted and the owned helper stopped.",
+      "evidence": [
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27
+      ]
+    },
+    {
+      "scenario": "coding-restart",
+      "kind": "verified",
+      "observed": "Stopped the owned backend and process group, inspected the partial diff, then ran a replacement task against that partial fixture.",
+      "evidence": [
+        28,
+        29,
+        30,
+        31,
+        32,
+        33
+      ]
+    }
+  ]
+}

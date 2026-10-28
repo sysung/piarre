@@ -1,0 +1,40 @@
+{
+  "name": "piarre-a00",
+  "displayName": "Piarre A00 capability probe",
+  "description": "Development-only audio and coding integration experiments.",
+  "version": "0.0.2",
+  "private": true,
+  "publisher": "piarre-local",
+  "engines": { "vscode": "^1.95.0", "node": ">=22.16.0" },
+  "main": "./dist/extension.cjs",
+  "activationEvents": [],
+  "capabilities": { "untrustedWorkspaces": { "supported": false }, "virtualWorkspaces": false },
+  "contributes": {
+    "commands": [
+      { "command": "piarre.a00.voice", "title": "Piarre A00: Open voice probe" },
+      { "command": "piarre.a00.credential", "title": "Piarre A00: Set voice credential" }
+    ],
+    "configuration": {
+      "title": "Piarre A00",
+      "properties": {
+        "piarre.a00.realtimeModel": { "type": "string", "default": "gpt-realtime", "description": "Realtime model to test. Record the exact model returned by the provider." }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc -p tsconfig.host.json && tsc -p tsconfig.webview.json && tsc -p tsconfig.test.json",
+    "test": "node --import tsx --test test/*.test.ts",
+    "probe:coding": "node --import tsx src/coding.ts",
+    "report": "node --import tsx src/report.ts",
+    "protocol:inspect": "codex app-server generate-ts --experimental --out .a00-local/protocol"
+  },
+  "dependencies": { "zod": "^4.6.7" },
+  "devDependencies": {
+    "@types/node": "^22.15.30",
+    "@types/vscode": "^1.95.0",
+    "esbuild": "^0.25.5",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  }
+}

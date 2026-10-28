@@ -1,0 +1,11 @@
+import { writeFileSync } from 'node:fs';
+const token = process.argv[2];
+if (!token || !/^[a-f0-9]{32}$/.test(token)) process.exit(2);
+const started = Date.now();
+const report = (phase, exitReason) => writeFileSync('checkpoint.json', JSON.stringify({ token, pid: process.pid, phase, elapsedMs: Date.now() - started, ...(exitReason ? { exitReason } : {}) }));
+report('active');
+const timer = setInterval(() => report('active'), 200);
+const finish = exitReason => { clearInterval(timer); report('exited', exitReason); process.exit(0); };
+process.on('SIGTERM', () => finish('signal'));
+process.on('SIGINT', () => finish('signal'));
+setTimeout(() => finish('natural'), 12000);
