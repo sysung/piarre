@@ -50,6 +50,29 @@ test('connection failure closes every acquired resource', async () => {
   await voice.start(); voice.end();
   assert.equal(closed, 2); assert.equal(failures, 1);
 });
+test('a failed microphone acquisition can be retried', async () => {
+  const states: VoiceState[] = [];
+  let attempts = 0;
+  let failures = 0;
+  let closed = 0;
+  const voice = createVoiceLifecycle({
+    async acquire() {
+      attempts++;
+      if (attempts === 1) throw new Error('Permission denied');
+      return { close() { closed++; } };
+    },
+    async connect() {},
+    changed: state => states.push(state),
+    failed() { failures++; }
+  });
+  await voice.start();
+  await voice.start();
+  voice.end();
+  assert.equal(attempts, 2);
+  assert.equal(failures, 1);
+  assert.equal(closed, 1);
+  assert.deepEqual(states, ['starting', 'failed', 'starting', 'active', 'ended']);
+});
 test('End reports failed when any owned resource cannot close', async () => {
   const states: VoiceState[] = [];
   let failures = 0;

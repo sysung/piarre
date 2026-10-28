@@ -7,7 +7,8 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { parseWebviewMessage } from '../src/protocol';
 import { EvidenceWriter } from '../src/evidence';
-import { manifestSchema, observationInputSchema, parseResult, untestedFindings, decide } from '../src/shared/evidence';
+import { manifestSchema, observationInputSchema, parseResult, untestedFindings, decide, type Finding } from '../src/shared/evidence';
+import { scenarioIds, type ScenarioId } from '../src/shared/scenarios';
 import { renderReport } from '../src/report';
 
 const manifest = manifestSchema.parse({ experiment: 'voice', probeVersion: 'test', probeRevision: 'test', os: 'test', node: 'test', startedAt: new Date(0).toISOString(), authMechanism: 'test', billing: 'test', usage: 'unavailable', editor: 'test', provider: 'OpenAI Realtime', model: 'test', audioSetup: 'test', vad: 'test' });
@@ -26,6 +27,12 @@ test('missing scenarios and cross-scenario evidence cannot be finalized', () => 
   const findings = untestedFindings('voice').map(finding => finding.scenario === 'voice-normal-end' ? { scenario: finding.scenario, kind: 'verified', observed: 'Stopped', evidence: [1] } : finding);
   assert.throws(() => parseResult({ schemaVersion: 1, manifest, observations: [{ sequence: 1, elapsedMs: 0, scenario: 'voice-two-turns', source: 'probe', event: 'action', action: 'start' }], findings }));
 });
+test('observation time cannot move backwards', () => {
+  assert.throws(() => parseResult({ schemaVersion: 1, manifest, findings: untestedFindings('voice'), observations: [
+    { sequence: 1, elapsedMs: 2, scenario: 'voice-two-turns', source: 'probe', event: 'action', action: 'start' },
+    { sequence: 2, elapsedMs: 1, scenario: 'voice-two-turns', source: 'probe', event: 'action', action: 'end' }
+  ] }));
+});
 test('incremental observations survive before an atomically finalized result', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'a00-evidence-test-'));
   const writer = new EvidenceWriter(directory, manifest);
@@ -40,6 +47,18 @@ test('unrun experiments produce no-go and reports require both experiment types'
   assert.equal(decide([...untestedFindings('voice'), ...untestedFindings('coding')]).kind, 'no-go');
   const result = parseResult({ schemaVersion: 1, manifest, observations: [], findings: untestedFindings('voice') });
   assert.throws(() => renderReport([result, result]));
+});
+test('decision reports go only when every bounded scenario is verified', () => {
+  const findings = [...scenarioIds('voice'), ...scenarioIds('coding')].map(scenario => basicFinding(scenario, 'verified'));
+  assert.equal(decide(findings).kind, 'go');
+});
+test('decision reports conditional go when native controls fail but restart is verified', () => {
+  const findings = [...scenarioIds('voice'), ...scenarioIds('coding')].map(scenario => basicFinding(
+    scenario,
+    scenario === 'coding-steer' ? 'unsupported' : scenario === 'coding-cancel' ? 'failed' : 'verified'
+  ));
+  assert.equal(decide(findings).kind, 'conditional-go');
+  assert.equal(decide(findings.map(finding => finding.scenario === 'coding-restart' ? basicFinding(finding.scenario, 'blocked') : finding)).kind, 'no-go');
 });
 test('an acknowledgment and a note alone cannot verify a live capability', () => {
   const findings = untestedFindings('voice').map(finding => finding.scenario === 'voice-two-turns' ? { scenario: finding.scenario, kind: 'verified', observed: 'Heard audio', evidence: [1, 2] } : finding);
@@ -91,3 +110,13 @@ test('the report CLI round-trips validated unrun results and copies the evidence
   assert.deepEqual(JSON.parse(await readFile(join(directory, 'bundle', 'voice', 'result.json'), 'utf8')), voice);
   assert.deepEqual(JSON.parse(await readFile(join(directory, 'bundle', 'coding', 'result.json'), 'utf8')), coding);
 });
+
+function basicFinding(scenario: ScenarioId, kind: Finding['kind']): Finding {
+  switch (kind) {
+    case 'verified': return { scenario, kind, observed: 'Observed.', evidence: [1] };
+    case 'unsupported': return { scenario, kind, reason: 'Unsupported.', evidence: [1] };
+    case 'failed': return { scenario, kind, expected: 'Expected.', observed: 'Failed.', evidence: [1] };
+    case 'blocked': return { scenario, kind, prerequisite: 'Required.', evidence: [] };
+    case 'not-tested': return { scenario, kind, reason: 'Not tested.' };
+  }
+}
