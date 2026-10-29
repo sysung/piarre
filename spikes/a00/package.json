@@ -17,6 +17,7 @@
     "configuration": {
       "title": "Piarre A00",
       "properties": {
+        "piarre.a00.voiceProvider": { "type": "string", "enum": ["mock", "openai"], "default": "mock", "description": "Voice provider for the next evidence run. Mock uses real microphone capture and local simulated responses." },
         "piarre.a00.realtimeModel": { "type": "string", "default": "gpt-realtime", "description": "Realtime model to test. Record the exact model returned by the provider." }
       }
     }

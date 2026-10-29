@@ -8,6 +8,7 @@ import { EvidenceWriter } from './evidence';
 import { parseWebviewMessage } from './protocol';
 import { sourceRevision } from './revision';
 import { manifestSchema, parseResult, untestedFindings, type Finding } from './shared/evidence';
+import { parseVoiceConfiguration } from './shared/provider';
 import { scenarioIds, scenarios } from './shared/scenarios';
 
 const authorizationSchema = z.object({ value: z.string().min(1), expires_at: z.number(), session: z.object({ model: z.string().min(1) }) });
@@ -30,24 +31,32 @@ export function activate(context: vscode.ExtensionContext): void {
       const audioSetup = await vscode.window.showInputBox({ title: 'Audio setup', prompt: 'Name the microphone and headset or speakers. Do not include personal information.', value: 'Built-in microphone and headphones' });
       if (!audioSetup) return;
       const directory = await mkdtemp(join(tmpdir(), 'piarre-a00-voice-'));
-      const model = vscode.workspace.getConfiguration('piarre.a00').get<string>('realtimeModel', 'gpt-realtime');
+      const settings = vscode.workspace.getConfiguration('piarre.a00');
+      const provider: unknown = settings.get('voiceProvider', 'mock');
+      const configuration = parseVoiceConfiguration(provider === 'openai' ? { provider, model: settings.get('realtimeModel', 'gpt-realtime') } : { provider });
       writer = new EvidenceWriter(directory, manifestSchema.parse({
         experiment: 'voice', probeVersion: '0.0.2', probeRevision: await sourceRevision(context.extensionUri.fsPath), os: `${platform()} ${release()}`, node: process.version,
-        startedAt: new Date().toISOString(), authMechanism: 'Host API key in SecretStorage or process environment, short-lived client secret in Webview memory',
-        billing: 'OpenAI API account required. Live use may incur charges.', usage: 'Unavailable. Inspect account usage separately.',
-        editor: `VS Code ${vscode.version}`, provider: 'OpenAI Realtime', model, audioSetup, vad: 'server_vad, create_response=true, interrupt_response=true'
+        startedAt: new Date().toISOString(), editor: `VS Code ${vscode.version}`, audioSetup,
+        ...(configuration.provider === 'mock' ? {
+          provider: 'Local deterministic mock', model: 'piarre-deterministic-mock-v1', authMechanism: 'None. No credential is read.',
+          billing: 'None. Local simulation has no provider billing.', usage: 'Local simulation only.', vad: 'None. Responses are manually simulated.'
+        } : {
+          provider: 'OpenAI Realtime', model: configuration.model, authMechanism: 'Host API key in SecretStorage or process environment, short-lived client secret in Webview memory',
+          billing: 'OpenAI API account required. Live use may incur charges.', usage: 'Unavailable. Inspect account usage separately.', vad: 'server_vad, create_response=true, interrupt_response=true'
+        })
       }));
       await save();
       output.appendLine(`Voice evidence directory: ${directory}`);
       output.show(true);
     }
     const activeWriter = writer;
+    const mock = activeWriter.manifest.experiment === 'voice' && activeWriter.manifest.provider === 'Local deterministic mock';
     let lastTrial: number | undefined;
     const view = vscode.window.createWebviewPanel('piarre.a00', 'Piarre A00 voice probe', vscode.ViewColumn.One, { enableScripts: true, localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'dist')] });
     panel = view;
     const nonce = randomBytes(24).toString('base64');
     const script = view.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'dist', 'voice.js'));
-    view.webview.html = `<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}'; connect-src https://api.openai.com; media-src blob:; style-src 'nonce-${nonce}';"><title>A00 voice probe</title><style nonce="${nonce}">body{max-width:800px;padding:24px;font-family:var(--vscode-font-family)}button,select,textarea{margin:8px 8px 8px 0;font:inherit}textarea{display:block;width:95%;min-height:70px}pre{white-space:pre-wrap}audio{display:block}label{display:block}</style></head><body><h1>A00 voice probe</h1><p>Start enables the microphone and a billed Realtime session. End releases the microphone and connection. Record observations after each procedure in the README.</p><label>Scenario <select id="scenario">${scenarioIds('voice').map(id => `<option value="${id}">${scenarios[id].label}</option>`).join('')}</select></label><button id="start">Start</button><button id="end">End</button><p id="status" role="status">idle. Microphone off.</p><audio id="audio" autoplay controls></audio><h2>Record a finding</h2><label>Outcome <select id="outcome"><option>not-tested</option><option>verified</option><option>failed</option><option>blocked</option><option>unsupported</option></select></label><label>Actual observation, setup limitation, or blocker<textarea id="note" maxlength="2000"></textarea></label><button id="save">Save finding</button><h2>Sanitized provider events</h2><pre id="log"></pre><script nonce="${nonce}" src="${script}"></script></body></html>`;
+    view.webview.html = `<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}'; connect-src ${mock ? "'none'" : 'https://api.openai.com'}; media-src blob:; style-src 'nonce-${nonce}';"><title>A00 voice probe</title><style nonce="${nonce}">body{max-width:800px;padding:24px;font-family:var(--vscode-font-family)}button,select,textarea{margin:8px 8px 8px 0;font:inherit}textarea{display:block;width:95%;min-height:70px}pre{white-space:pre-wrap}audio{display:block}label{display:block}</style></head><body data-provider="${mock ? 'mock' : 'openai'}"><h1>A00 voice probe</h1>${mock ? '<p role="note"><strong>Mock · simulated provider · microphone active when started</strong></p>' : ''}<p>${mock ? 'Start enables the real microphone and a local simulated provider. No credential or provider billing is used.' : 'Start enables the microphone and a billed OpenAI Realtime session.'} End releases the microphone and connection. Record observations after each procedure in the README.</p><label>Scenario <select id="scenario">${scenarioIds('voice').map(id => `<option value="${id}">${scenarios[id].label}</option>`).join('')}</select></label><button id="start">Start</button><button id="end">End</button><span ${mock ? '' : 'hidden'}><button id="simulate" disabled>Simulate response</button><button id="inject" disabled>Inject provider failure</button></span><p id="status" role="status">idle. Microphone off.</p><audio id="audio" autoplay controls></audio><h2>Record a finding</h2><label>Outcome <select id="outcome"><option>not-tested</option><option>verified</option><option>failed</option><option>blocked</option><option>unsupported</option></select></label><label>Actual observation, setup limitation, or blocker<textarea id="note" maxlength="2000"></textarea></label><button id="save">Save finding</button><h2>Sanitized provider events</h2><pre id="log"></pre><script nonce="${nonce}" src="${script}"></script></body></html>`;
     const receive = view.webview.onDidReceiveMessage(async (raw: unknown) => {
       try {
         const message = parseWebviewMessage(raw);
@@ -86,6 +95,7 @@ export function activate(context: vscode.ExtensionContext): void {
             return;
           }
           case 'session-request': {
+            if (mock) { await view.webview.postMessage({ kind: 'session-error', requestId: message.requestId }); return; }
             for (const request of requests.values()) request.abort();
             requests.clear();
             const controller = new AbortController();
@@ -105,7 +115,7 @@ export function activate(context: vscode.ExtensionContext): void {
               }
               const authorization = authorizationSchema.parse(await response.json());
               if (controller.signal.aborted || panel !== view || requests.get(message.requestId) !== controller) return;
-              if (activeWriter.manifest.experiment === 'voice') activeWriter.manifest.model = authorization.session.model;
+              if (activeWriter.manifest.experiment === 'voice' && activeWriter.manifest.provider === 'OpenAI Realtime') activeWriter.manifest.model = authorization.session.model;
               await view.webview.postMessage({ kind: 'session', requestId: message.requestId, secret: authorization.value });
             } catch {
               if (!controller.signal.aborted && panel === view) await view.webview.postMessage({ kind: 'session-error', requestId: message.requestId });
@@ -120,7 +130,7 @@ export function activate(context: vscode.ExtensionContext): void {
       receive.dispose();
       for (const request of requests.values()) request.abort();
       requests.clear();
-      if (lastTrial) activeWriter.record({ scenario: 'voice-panel-dispose', source: 'probe', trial: lastTrial, event: 'action', action: 'dispose' });
+      if (lastTrial) activeWriter.record({ scenario: 'voice-panel-dispose', source: mock ? 'mock' : 'probe', trial: lastTrial, event: 'action', action: 'dispose' });
       void save().catch(() => output.appendLine('Could not finalize voice evidence. Incremental observations remain in the evidence directory.'));
     });
     context.subscriptions.push(view);

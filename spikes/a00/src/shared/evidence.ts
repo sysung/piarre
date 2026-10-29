@@ -5,7 +5,7 @@ const privatePattern = /(?:sk-[a-zA-Z0-9_-]{8,}|ek_[a-zA-Z0-9_-]{8,}|Bearer\s+\S
 export const safeText = z.string().max(2000).refine(value => !privatePattern.test(value), 'Private material is not allowed in evidence.');
 export const scenarioSchema = z.custom<keyof typeof scenarios>(value => typeof value === 'string' && isScenarioId(value), 'Unknown scenario.');
 const trial = z.number().int().positive();
-const common = { scenario: scenarioSchema, source: z.enum(['probe', 'provider', 'backend', 'operator']), trial: trial.optional() };
+const common = { scenario: scenarioSchema, source: z.enum(['probe', 'provider', 'backend', 'operator', 'mock']), trial: trial.optional() };
 export const observationInputSchema = z.discriminatedUnion('event', [
   z.object({ ...common, event: z.literal('action'), action: z.enum(['start', 'end', 'dispose', 'steer', 'interrupt', 'restart', 'status-read']) }).strict(),
   z.object({ ...common, event: z.literal('acknowledgment'), operation: z.enum(['connected', 'turn-start', 'steer', 'interrupt', 'thread-read']) }).strict(),
@@ -37,8 +37,10 @@ const environment = {
   probeVersion: safeText.min(1), probeRevision: safeText.min(1), os: safeText.min(1), node: safeText.min(1),
   startedAt: z.string().datetime(), authMechanism: safeText.min(1), billing: safeText.min(1), usage: safeText.min(1)
 };
-export const manifestSchema = z.discriminatedUnion('experiment', [
-  z.object({ ...environment, experiment: z.literal('voice'), editor: safeText.min(1), provider: z.literal('OpenAI Realtime'), model: safeText.min(1), audioSetup: safeText.min(1), vad: safeText.min(1) }).strict(),
+const voiceEnvironment = { ...environment, experiment: z.literal('voice'), editor: safeText.min(1), audioSetup: safeText.min(1), vad: safeText.min(1) };
+export const manifestSchema = z.union([
+  z.object({ ...voiceEnvironment, provider: z.literal('OpenAI Realtime'), model: safeText.min(1) }).strict(),
+  z.object({ ...voiceEnvironment, provider: z.literal('Local deterministic mock'), model: z.literal('piarre-deterministic-mock-v1'), authMechanism: z.literal('None. No credential is read.'), billing: z.literal('None. Local simulation has no provider billing.') }).strict(),
   z.object({ ...environment, experiment: z.literal('coding'), backend: z.literal('Codex App Server'), backendVersion: safeText.min(1), model: safeText.min(1), sandbox: z.literal('workspace-write'), approvalPolicy: z.literal('never'), fixture: z.literal('temporary synthetic Git workspace') }).strict()
 ]);
 export type Manifest = z.infer<typeof manifestSchema>;
@@ -52,6 +54,11 @@ export function parseResult(input: unknown): ExperimentResult {
     throw new Error('Every experiment scenario needs exactly one finding.');
   }
   result.observations.forEach((event, index) => {
+    const mockVoice = result.manifest.experiment === 'voice' && result.manifest.provider === 'Local deterministic mock';
+    if (event.source === 'mock' && !mockVoice) throw new Error('Mock observations can only belong to a mock voice result.');
+    if (result.manifest.experiment === 'voice') {
+      if (mockVoice && event.source !== 'mock' && event.source !== 'operator') throw new Error('Mock observations must identify their simulated source.');
+    }
     if (event.sequence !== index + 1 || !expected.includes(event.scenario)) throw new Error('Invalid observation sequence or experiment.');
     if (index > 0 && event.elapsedMs < (result.observations[index - 1]?.elapsedMs ?? 0)) throw new Error('Observation time moved backwards.');
   });
@@ -111,7 +118,11 @@ export type Decision =
   | { kind: 'conditional-go'; reason: string }
   | { kind: 'no-go'; reason: string };
 
-export function decide(findings: readonly Finding[]): Decision {
+export function decide(input: readonly ExperimentResult[]): Decision {
+  const results = input.map(result => parseResult(result));
+  if (results.some(result => result.manifest.experiment === 'voice' && result.manifest.provider === 'Local deterministic mock')) return { kind: 'no-go', reason: 'Mock voice evidence verifies local simulation only. Live OpenAI voice remains unverified.' };
+  if (results.length !== 2 || new Set(results.map(result => result.manifest.experiment)).size !== 2) return { kind: 'no-go', reason: 'One validated voice result and one validated coding result are required.' };
+  const findings = results.flatMap(result => result.findings);
   const get = (scenario: keyof typeof scenarios) => findings.find(finding => finding.scenario === scenario)?.kind;
   const voiceReady = scenarioIds('voice').every(id => get(id) === 'verified');
   if (!voiceReady || get('coding-start') !== 'verified' || get('coding-status') !== 'verified') return { kind: 'no-go', reason: 'Required voice, start, or status evidence remains unverified.' };

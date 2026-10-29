@@ -23,14 +23,32 @@ The automated tests exercise cleanup races, the evidence contract, and disposabl
 
 The narrow JSON-RPC client uses `initialize`, `initialized`, `thread/start`, `thread/read`, `turn/start`, `turn/steer`, and `turn/interrupt`. It consumes thread status and turn completion notifications. Its wire types stay inside that client.
 
-## Run the voice probe
+## Run the voice probe without a key
+
+The default `piarre.a00.voiceProvider` is `mock`. It captures the real microphone and simulates provider responses locally. No API key, provider connection, or billing is involved.
+
+1. Press F5 and select **Piarre A00 development host**.
+2. Run **Piarre A00: Open voice probe** and describe your audio setup.
+3. Confirm the persistent **Mock · simulated provider · microphone active when started** banner.
+4. Select a scenario and click **Start**. Allow microphone access. The simulated connection waits 750 ms.
+5. Click **Simulate response** to hear a short local tone. Wait for `mock · response-done` before another response.
+6. Click **Inject provider failure** to test capture and playback cleanup, or click **End**.
+7. Record what you observed and click **Save finding**. Find the evidence directory in **Piarre A00** output.
+
+To test End during startup, click **End** within the 750 ms delay. For repeated cycles, run Start, End, Start, End. Mock controls are disabled until active. End and panel disposal cancel pending delays, events, and tones.
+
+Mock evidence tests local capture, cleanup, controls, and simulated event order. It does not test speech recognition, VAD, transcription, network transport, provider audio, credentials, or OpenAI availability. Record those live capabilities as **not-tested** or **blocked**. Every report with a mock voice result remains **no-go**, even when all local mock findings are verified.
+
+## Switch to the live OpenAI voice probe
+
+Set `piarre.a00.voiceProvider` to `openai` before opening the first voice probe. Restart the development host if an evidence run already exists. The provider configuration stays fixed for that run.
 
 Realtime requires an OpenAI API credential and API billing access. A Codex subscription does not establish Realtime API entitlement. Live Start can incur audio charges. The package neither records raw audio nor applies an account spending limit.
 
 1. Set an account usage limit suitable for the trial before opening a live session.
 2. Press F5 and select **Piarre A00 development host**.
 3. In the development host, run **Piarre A00: Set voice credential**.
-4. Enter your OpenAI API key. The extension stores it in SecretStorage.
+4. Enter your OpenAI API key in that command's password input. The extension stores it in VS Code SecretStorage under `a00.voice`. Do not put it in settings, a repository file, or a `.env` file. The probe does not load `.env` files.
 5. Run **Piarre A00: Open voice probe**.
 6. Describe the microphone and headset or speakers when prompted.
 7. Find the evidence directory in the **Piarre A00** output channel.
@@ -113,7 +131,7 @@ Review notes and fixture diffs before copying a bundle into `evidence/<run-id>/`
 
 The matrix uses `verified`, `unsupported`, `failed`, `blocked`, and `not-tested`. The report separates investigation completion from the integration recommendation.
 
-- **Go** requires every bounded scenario to be verified.
+- **Go** requires live OpenAI voice evidence and every bounded scenario to be verified.
 - **Conditional go** requires verified voice, start, status, and the stop, reconcile, and restart fallback. Native control limitations must be attempted and recorded.
 - **No-go** applies when required behavior or a safe replacement path remains unverified.
 
@@ -121,7 +139,7 @@ A completed investigation with failed audio does not satisfy the issue's working
 
 ## Review the implementation boundary
 
-`src/webview/lifecycle.ts` owns one attempt and its media resources. `src/extension.ts` owns panel lifetime, credentials, and voice evidence. `src/coding.ts` owns each coding experiment. `src/codex.ts` owns JSON-RPC. `src/fixture.ts` owns disposable fixture observations. `src/shared/scenarios.ts` owns required cases. `src/shared/evidence.ts` owns evidence validity and the decision rules.
+`src/webview/lifecycle.ts` owns one attempt and its media resources. `src/webview/transport.ts` selects the OpenAI connection or the deterministic local transport in `src/webview/mock.ts`. Both providers share microphone capture and lifecycle cleanup. `src/shared/provider.ts` validates provider configuration. `src/extension.ts` owns panel lifetime, credentials, and voice evidence. `src/coding.ts` owns each coding experiment. `src/codex.ts` owns JSON-RPC. `src/fixture.ts` owns disposable fixture observations. `src/shared/scenarios.ts` owns required cases. `src/shared/evidence.ts` owns evidence validity and the decision rules.
 
 The browser build has no Node or VS Code types. Its build target rejects Node built-ins. Production adapters, persistence, voice-to-coding routing, previews, Cursor compatibility, and full product UI remain later backlog work.
 

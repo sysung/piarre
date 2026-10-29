@@ -8,7 +8,7 @@ const cell = (value: string) => value.replaceAll('|', '\\|').replaceAll('\n', ' 
 export function renderReport(results: readonly ExperimentResult[]): string {
   if (results.length !== 2 || new Set(results.map(r => r.manifest.experiment)).size !== 2) throw new Error('Provide one voice result and one coding result.');
   const findings = results.flatMap(result => result.findings);
-  const decision = decide(findings);
+  const decision = decide(results);
   const complete = findings.every(finding => !['not-tested', 'blocked'].includes(finding.kind));
   const rows = results.flatMap(result => result.findings.map(finding => {
     const detail = 'observed' in finding ? finding.observed : 'reason' in finding ? finding.reason : finding.prerequisite;

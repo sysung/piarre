@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { parseWebviewMessage } from '../src/protocol';
 import { EvidenceWriter } from '../src/evidence';
 import { manifestSchema, observationInputSchema, parseResult, untestedFindings, decide, type Finding } from '../src/shared/evidence';
-import { scenarioIds, type ScenarioId } from '../src/shared/scenarios';
+import { scenarioIds, scenarios, type ScenarioId } from '../src/shared/scenarios';
 import { renderReport } from '../src/report';
 
 const manifest = manifestSchema.parse({ experiment: 'voice', probeVersion: 'test', probeRevision: 'test', os: 'test', node: 'test', startedAt: new Date(0).toISOString(), authMechanism: 'test', billing: 'test', usage: 'unavailable', editor: 'test', provider: 'OpenAI Realtime', model: 'test', audioSetup: 'test', vad: 'test' });
@@ -44,21 +44,21 @@ test('incremental observations survive before an atomically finalized result', a
   assert.equal(result.observations.length, 1);
 });
 test('unrun experiments produce no-go and reports require both experiment types', () => {
-  assert.equal(decide([...untestedFindings('voice'), ...untestedFindings('coding')]).kind, 'no-go');
+  assert.equal(decide(decisionResults([...untestedFindings('voice'), ...untestedFindings('coding')])).kind, 'no-go');
   const result = parseResult({ schemaVersion: 1, manifest, observations: [], findings: untestedFindings('voice') });
   assert.throws(() => renderReport([result, result]));
 });
 test('decision reports go only when every bounded scenario is verified', () => {
   const findings = [...scenarioIds('voice'), ...scenarioIds('coding')].map(scenario => basicFinding(scenario, 'verified'));
-  assert.equal(decide(findings).kind, 'go');
+  assert.equal(decide(decisionResults(findings)).kind, 'go');
 });
 test('decision reports conditional go when native controls fail but restart is verified', () => {
   const findings = [...scenarioIds('voice'), ...scenarioIds('coding')].map(scenario => basicFinding(
     scenario,
     scenario === 'coding-steer' ? 'unsupported' : scenario === 'coding-cancel' ? 'failed' : 'verified'
   ));
-  assert.equal(decide(findings).kind, 'conditional-go');
-  assert.equal(decide(findings.map(finding => finding.scenario === 'coding-restart' ? basicFinding(finding.scenario, 'blocked') : finding)).kind, 'no-go');
+  assert.equal(decide(decisionResults(findings)).kind, 'conditional-go');
+  assert.equal(decide(decisionResults(findings.map(finding => finding.scenario === 'coding-restart' ? basicFinding(finding.scenario, 'blocked') : finding))).kind, 'no-go');
 });
 test('an acknowledgment and a note alone cannot verify a live capability', () => {
   const findings = untestedFindings('voice').map(finding => finding.scenario === 'voice-two-turns' ? { scenario: finding.scenario, kind: 'verified', observed: 'Heard audio', evidence: [1, 2] } : finding);
@@ -120,3 +120,70 @@ function basicFinding(scenario: ScenarioId, kind: Finding['kind']): Finding {
     case 'not-tested': return { scenario, kind, reason: 'Not tested.' };
   }
 }
+
+function decisionResults(findings: Finding[]) {
+  return (['voice', 'coding'] satisfies ('voice' | 'coding')[]).map(experiment => {
+    const observations: object[] = [];
+    const experimentFindings = findings.filter(finding => scenarios[finding.scenario].experiment === experiment).map(finding => {
+      if (finding.kind === 'not-tested') return finding;
+      const evidence: number[] = [];
+      for (const trial of finding.scenario === 'voice-repeat' ? [1, 2] : [1]) {
+        const events = experiment === 'voice' ? [
+          { event: 'action', action: 'start' }, { event: 'voice-state', state: 'starting', liveTracks: 1 },
+          { event: 'voice-state', state: 'active', liveTracks: 1 },
+          { event: 'provider-event', name: 'input-speech-started' }, { event: 'provider-event', name: 'response-created' },
+          { event: 'provider-event', name: 'response-done' }, { event: 'provider-event', name: 'response-done' },
+          { event: 'failure', code: 'permission-denied' }, { event: 'voice-state', state: 'failed', liveTracks: 0 },
+          { event: 'action', action: 'end' }, { event: 'action', action: 'dispose' },
+          { event: 'voice-state', state: 'ended', liveTracks: 0 }, { event: 'resource-closed', resource: 'capture', liveTracks: 0 },
+          { event: 'operator-observation', source: 'operator', note: 'Fixture observation.' }
+        ] : [
+          { event: 'backend-state', state: 'active' }, { event: 'backend-state', state: 'completed' },
+          { event: 'backend-state', state: 'interrupted' }, { event: 'acknowledgment', operation: 'steer' },
+          { event: 'fixture-check', result: 'alpha', userMarkerPreserved: true, helperStopped: true, helperExit: 'signal' },
+          { event: 'fixture-check', result: 'beta', userMarkerPreserved: true, helperStopped: true, helperExit: 'signal' },
+          { event: 'writer-stopped', mode: 'forced', backendExited: true, groupEmpty: true, helperStopped: true }
+        ];
+        for (const event of events) {
+          const sequence = observations.length + 1;
+          observations.push({ scenario: finding.scenario, source: 'probe', trial, ...event, sequence, elapsedMs: sequence });
+          evidence.push(sequence);
+        }
+      }
+      return { ...finding, evidence, ...(experiment === 'voice' ? { trials: finding.scenario === 'voice-repeat' ? [1, 2] : [1] } : {}) };
+    });
+    const resultManifest = experiment === 'voice' ? manifest : manifestSchema.parse({
+      probeVersion: 'test', probeRevision: 'test', os: 'test', node: 'test', startedAt: new Date(0).toISOString(), authMechanism: 'test', billing: 'test', usage: 'unavailable', model: 'test', experiment: 'coding', backend: 'Codex App Server', backendVersion: 'test', sandbox: 'workspace-write', approvalPolicy: 'never', fixture: 'temporary synthetic Git workspace'
+    });
+    return parseResult({ schemaVersion: 1, manifest: resultManifest, observations, findings: experimentFindings });
+  });
+}
+
+test('mock manifests require no credential, no billing, and the fixed mock model', () => {
+  const mock = { ...manifest, provider: 'Local deterministic mock', model: 'piarre-deterministic-mock-v1', authMechanism: 'None. No credential is read.', billing: 'None. Local simulation has no provider billing.' };
+  const parsed = manifestSchema.parse(mock);
+  assert.equal(parsed.experiment === 'voice' && parsed.provider, 'Local deterministic mock');
+  for (const change of [{ model: 'gpt-realtime' }, { billing: 'Charged' }, { authMechanism: 'API credential' }]) assert.throws(() => manifestSchema.parse({ ...mock, ...change }));
+});
+test('mock evidence remains no-go even when every bounded finding is verified', () => {
+  const results = decisionResults([...scenarioIds('voice'), ...scenarioIds('coding')].map(scenario => basicFinding(scenario, 'verified')));
+  const mockResults = results.map(result => result.manifest.experiment === 'voice' ? parseResult({ ...result, manifest: { ...result.manifest, provider: 'Local deterministic mock', model: 'piarre-deterministic-mock-v1', authMechanism: 'None. No credential is read.', billing: 'None. Local simulation has no provider billing.' }, observations: result.observations.map(event => ({ ...event, source: event.source === 'operator' ? 'operator' : 'mock' })) }) : result);
+  assert.equal(decide(mockResults).kind, 'no-go');
+  assert.match(renderReport(mockResults), /Local deterministic mock/);
+  assert.match(renderReport(mockResults), /Recommendation no-go/);
+});
+
+test('simulated observations cannot be presented as live OpenAI evidence', () => {
+  assert.throws(() => parseResult({ schemaVersion: 1, manifest, findings: untestedFindings('voice'), observations: [
+    { sequence: 1, elapsedMs: 0, scenario: 'voice-two-turns', source: 'mock', trial: 1, event: 'action', action: 'start' }
+  ] }));
+});
+test('simulated observations cannot be presented as coding evidence', async () => {
+  const result = JSON.parse(await readFile('evidence/coding-2026-10-28/result.json', 'utf8'));
+  result.observations.push({ sequence: result.observations.length + 1, elapsedMs: result.observations.at(-1).elapsedMs + 1, scenario: 'coding-start', source: 'mock', event: 'backend-state', state: 'completed' });
+  assert.throws(() => parseResult(result));
+});
+test('committed live coding evidence still parses', async () => {
+  const result = parseResult(JSON.parse(await readFile('evidence/coding-2026-10-28/result.json', 'utf8')));
+  assert.equal(result.manifest.experiment, 'coding');
+});

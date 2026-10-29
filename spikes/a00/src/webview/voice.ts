@@ -1,4 +1,6 @@
 import { createVoiceLifecycle } from './lifecycle';
+import { createVoiceTransport } from './transport';
+import { voiceProviderSchema } from '../shared/provider';
 
 declare function acquireVsCodeApi(): { postMessage(message: unknown): void };
 const vscode = acquireVsCodeApi();
@@ -17,12 +19,23 @@ const log = element('log', HTMLPreElement);
 const audio = element('audio', HTMLAudioElement);
 let stream: MediaStream | undefined;
 let sessionRequest = 0;
-let currentTrial = 0;
+const provider = voiceProviderSchema.parse(document.body.dataset.provider);
+const simulate = element('simulate', HTMLButtonElement);
+const inject = element('inject', HTMLButtonElement);
+let transport: ReturnType<typeof createVoiceTransport> | undefined;
+let activeAttempt = { scenario: scenario.value, trial: 0 };
+let active = false;
+let responding = false;
 let nextTrial = Date.now();
 const trialHistory = new Map<string, number[]>();
 const pending = new Map<number, { resolve(value: string): void; reject(error: Error): void }>();
-const observe = (event: object) => vscode.postMessage({ kind: 'observe', observation: { scenario: scenario.value, source: 'probe', trial: currentTrial, ...event } });
-const credential = (signal: AbortSignal) => new Promise<string>((resolve, reject) => {
+const observeFor = (attempt: typeof activeAttempt) => (event: object) => {
+  vscode.postMessage({ kind: 'observe', observation: { ...attempt, source: provider === 'mock' ? 'mock' : 'probe', ...event } });
+  if ('event' in event && event.event === 'provider-event' && 'name' in event) log.textContent = `${provider === 'mock' ? 'mock · ' : ''}${String(event.name)}\n${log.textContent ?? ''}`.slice(0, 4000);
+};
+const observe = (event: object) => observeFor(activeAttempt)(event);
+const controls = () => { simulate.disabled = !active || responding; inject.disabled = !active; };
+const credential = (signal: AbortSignal, attempt: typeof activeAttempt) => new Promise<string>((resolve, reject) => {
   const requestId = ++sessionRequest;
   const abort = () => {
     pending.delete(requestId);
@@ -35,71 +48,44 @@ const credential = (signal: AbortSignal) => new Promise<string>((resolve, reject
     resolve(value) { signal.removeEventListener('abort', abort); resolve(value); },
     reject(error) { signal.removeEventListener('abort', abort); reject(error); }
   });
-  vscode.postMessage({ kind: 'session-request', requestId, scenario: scenario.value, trial: currentTrial });
+  vscode.postMessage({ kind: 'session-request', requestId, ...attempt });
 });
 
-const providerEvents = new Map([
-  ['input_audio_buffer.speech_started', 'input-speech-started'], ['input_audio_buffer.speech_stopped', 'input-speech-stopped'],
-  ['response.created', 'response-created'], ['response.done', 'response-done'],
-  ['conversation.item.input_audio_transcription.completed', 'input-transcribed'],
-  ['response.output_audio_transcript.done', 'output-transcribed'], ['error', 'error']
-]);
 const voice = createVoiceLifecycle({
   async acquire(signal) {
+    const observe = observeFor(activeAttempt);
     const captured = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
     if (!signal.aborted) stream = captured;
     return { close() { captured.getTracks().forEach(track => track.stop()); if (stream === captured) stream = undefined; observe({ event: 'resource-closed', resource: 'capture', liveTracks: captured.getTracks().filter(track => track.readyState === 'live').length }); } };
   },
   async connect(context) {
-    const peer = new RTCPeerConnection();
-    context.retain({ close() { peer.close(); audio.pause(); audio.srcObject = null; observe({ event: 'resource-closed', resource: 'transport', liveTracks: 0 }); observe({ event: 'resource-closed', resource: 'playback', liveTracks: 0 }); } });
-    peer.addEventListener('connectionstatechange', () => {
-      if (peer.connectionState === 'failed' && !context.signal.aborted) { observe({ event: 'failure', code: 'provider-unavailable' }); voice.end(); }
-    });
-    peer.ontrack = event => {
-      if (context.signal.aborted) { event.track.stop(); return; }
-      audio.srcObject = event.streams[0] ?? new MediaStream([event.track]);
-      void audio.play().catch(() => { status.textContent = 'Playback blocked. Click the audio play control and record the limitation.'; });
-    };
-    const captured = stream;
-    if (!captured) throw new Error('Microphone unavailable.');
-    for (const track of captured.getTracks()) peer.addTrack(track, captured);
-    const channel = peer.createDataChannel('oai-events');
-    context.retain({ close() { channel.close(); } });
-    channel.onmessage = event => {
-      let payload: unknown;
-      try { payload = JSON.parse(typeof event.data === 'string' ? event.data : 'null'); } catch { return; }
-      if (typeof payload !== 'object' || payload === null || !('type' in payload) || typeof payload.type !== 'string') return;
-      const name = providerEvents.get(payload.type);
-      if (!name) return;
-      observe({ source: 'provider', event: 'provider-event', name });
-      log.textContent = `${name}\n${log.textContent ?? ''}`.slice(0, 4000);
-    };
-    const token = await credential(context.signal);
-    if (context.signal.aborted) return;
-    const offer = await peer.createOffer();
-    await peer.setLocalDescription(offer);
-    const response = await fetch('https://api.openai.com/v1/realtime/calls', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/sdp' }, body: offer.sdp ?? '', signal: context.signal });
-    if (!response.ok) throw new Error('Provider connection failed.');
-    const answer = await response.text();
-    if (context.signal.aborted) return;
-    await peer.setRemoteDescription({ type: 'answer', sdp: answer });
-    await new Promise<void>((resolve, reject) => {
-      const abort = () => { clean(); reject(new DOMException('Ended', 'AbortError')); };
-      const timer = setTimeout(() => { clean(); reject(new Error('Connection timeout.')); }, 15000);
-      const clean = () => { clearTimeout(timer); context.signal.removeEventListener('abort', abort); peer.removeEventListener('connectionstatechange', changed); };
-      const changed = () => {
-        if (peer.connectionState === 'connected') { clean(); resolve(); }
-        if (['failed', 'closed'].includes(peer.connectionState)) { clean(); reject(new Error('Connection failed.')); }
-      };
-      context.signal.addEventListener('abort', abort, { once: true });
-      peer.addEventListener('connectionstatechange', changed);
-      if (context.signal.aborted) abort(); else changed();
-    });
-    observe({ event: 'acknowledgment', operation: 'connected' });
+    const attempt = activeAttempt;
+    const observe = observeFor(attempt);
+    const common = { ...context, observe, failed: () => voice.end() };
+    if (provider === 'mock') {
+      transport = createVoiceTransport({ ...common, provider, failed() { voice.end(); status.textContent = 'Mock provider failure injected. Capture and playback ended.'; }, responding(value) { responding = value; controls(); }, tone() {
+        const context = new AudioContext();
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.frequency.value = 440;
+        gain.gain.value = 0.08;
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        oscillator.start();
+        void context.resume().catch(() => { if (!common.signal.aborted) status.textContent = 'Mock tone playback blocked.'; });
+        return { close() { oscillator.stop(); oscillator.disconnect(); gain.disconnect(); void context.close(); } };
+      } });
+    } else {
+      const captured = stream;
+      if (!captured) throw new Error('Microphone unavailable.');
+      transport = createVoiceTransport({ ...common, provider, stream: captured, audio, credential: signal => credential(signal, attempt), notice(text) { if (!context.signal.aborted) status.textContent = text; } });
+    }
+    await transport.connect();
   },
   changed(state) {
     const liveTracks = stream?.getTracks().filter(track => track.readyState === 'live').length ?? 0;
+    active = state === 'active';
+    controls();
     start.disabled = state === 'starting' || state === 'active' || state === 'cleanup-pending';
     scenario.disabled = start.disabled;
     status.textContent = `${state}. Live tracks ${liveTracks}.`;
@@ -111,11 +97,14 @@ const voice = createVoiceLifecycle({
   }
 });
 start.onclick = () => {
-  currentTrial = ++nextTrial;
-  trialHistory.set(scenario.value, [...(trialHistory.get(scenario.value) ?? []), currentTrial].slice(-2));
+  if (start.disabled) return;
+  activeAttempt = Object.freeze({ scenario: scenario.value, trial: ++nextTrial });
+  trialHistory.set(activeAttempt.scenario, [...(trialHistory.get(activeAttempt.scenario) ?? []), activeAttempt.trial].slice(-2));
   observe({ event: 'action', action: 'start' });
   void voice.start();
 };
+simulate.onclick = () => { transport?.respond(); };
+inject.onclick = () => { transport?.fail(); };
 end.onclick = () => { observe({ event: 'action', action: 'end' }); voice.end(); };
 element('save', HTMLButtonElement).onclick = () => {
   const trials = trialHistory.get(scenario.value) ?? [];

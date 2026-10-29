@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.base.json",
-  "compilerOptions": { "lib": ["ES2022", "DOM"], "types": [], "rootDir": "src/webview", "module": "ESNext", "moduleResolution": "Bundler" },
-  "include": ["src/webview/**/*.ts"]
+  "compilerOptions": { "lib": ["ES2022", "DOM"], "types": [], "rootDir": "src", "module": "ESNext", "moduleResolution": "Bundler" },
+  "include": ["src/webview/**/*.ts", "src/shared/provider.ts"]
 }
