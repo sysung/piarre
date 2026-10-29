@@ -184,10 +184,13 @@ def main() -> None:
         print(output)
         return
 
-    output = args.output or ROOT / ".audit" / "issue-payloads-v0.2.json"
     payloads = issue_payloads(manifest)
-    output.write_text(json.dumps(payloads, indent=2) + "\n", encoding="utf-8")
-    print(output)
+    serialized = json.dumps(payloads, indent=2) + "\n"
+    if args.output:
+        args.output.write_text(serialized, encoding="utf-8")
+        print(args.output)
+        return
+    print(serialized, end="")
 
 
 if __name__ == "__main__":

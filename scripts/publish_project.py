@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Publish, verify, and retire Piarre GitHub Project plans."""
+"""Publish and verify the Piarre GitHub Project plan."""
 
 from __future__ import annotations
 
@@ -15,7 +15,6 @@ import backlog
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = ROOT / "planning" / "backlog-v0.2.json"
-AUDIT = ROOT / ".audit"
 OWNER = "sysung"
 REPO = "piarre"
 
@@ -35,16 +34,6 @@ def project_items() -> dict[str, Any]:
 
 def project_fields() -> dict[str, Any]:
     return gh("project", "field-list", "8", "--owner", "@me", "--format", "json", json_output=True)
-
-
-def save(path: Path, value: Any) -> None:
-    path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-
-
-def snapshot() -> None:
-    value = {"project": gh("project", "view", "8", "--owner", "@me", "--format", "json", json_output=True), "fields": project_fields(), "items": project_items()}
-    save(AUDIT / "project8-before-v0.2.json", value)
-    print(f"snapshot {value['items']['totalCount']} items")
 
 
 def existing_issues() -> dict[str, dict[str, Any]]:
@@ -144,31 +133,16 @@ def verify() -> None:
         if actual != wanted:
             failures.append(f"{story['id']} dependencies: {sorted(actual)} != {sorted(wanted)}")
         edges += len(actual)
-    report = {"stories": len(issues), "edges": edges, "totals": totals, "failures": failures, "issues": {key: value["html_url"] for key, value in sorted(issues.items())}}
-    save(AUDIT / "project8-verification-v0.2.json", report)
     if failures:
         raise SystemExit("\n".join(failures))
     print(json.dumps({"stories": len(issues), "edges": edges, "totals": totals}, sort_keys=True))
 
 
-def retire() -> None:
-    items = project_items()["items"]
-    legacy = [item for item in items if re.fullmatch(r"\[A(0\d|1[0-7])\].*", item.get("title", ""))]
-    if len(legacy) != 18:
-        raise SystemExit(f"expected 18 legacy items, found {len(legacy)}")
-    for item in legacy:
-        number = item["content"]["number"]
-        gh("project", "item-delete", "8", "--owner", "@me", "--id", item["id"])
-        gh("issue", "close", str(number), "--repo", f"{OWNER}/{REPO}", "--reason", "not planned", "--comment", "Superseded by the verified Piarre v0.2 B-series plan in Project 8. Historical context remains available in this issue.")
-        time.sleep(0.2)
-    print("retired 18 A-series items")
-
-
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=("snapshot", "publish", "verify", "retire"))
+    parser.add_argument("command", choices=("publish", "verify"))
     args = parser.parse_args()
-    {"snapshot": snapshot, "publish": publish, "verify": verify, "retire": retire}[args.command]()
+    {"publish": publish, "verify": verify}[args.command]()
 
 
 if __name__ == "__main__":

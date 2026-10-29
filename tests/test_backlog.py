@@ -1,6 +1,8 @@
 import copy
 import importlib.util
 import json
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -46,10 +48,37 @@ class BacklogContractTests(unittest.TestCase):
         actual = (ROOT / "docs" / "03_IMPLEMENTATION_BACKLOG.md").read_text(encoding="utf-8")
         self.assertEqual(expected, actual)
 
-    def test_generated_issue_payloads_match_manifest(self) -> None:
-        expected = BACKLOG.issue_payloads(self.manifest)
-        actual = json.loads((ROOT / ".audit" / "issue-payloads-v0.2.json").read_text(encoding="utf-8"))
-        self.assertEqual(expected, actual)
+    def test_issue_payloads_preserve_manifest_contract(self) -> None:
+        payloads = BACKLOG.issue_payloads(self.manifest)
+        stories = self.manifest["stories"]
+        self.assertEqual([story["id"] for story in stories], [payload["id"] for payload in payloads])
+        for story, payload in zip(stories, payloads, strict=True):
+            self.assertEqual(f"[{story['id']}] {story['title']}", payload["title"])
+            self.assertIn(f"<!-- piarre-backlog:{story['id']}:v0.2 -->", payload["body"])
+            self.assertEqual(story["dependsOn"], payload["dependsOn"])
+            self.assertEqual(story["estimateHours"], payload["estimateHours"])
+            self.assertEqual(story["priority"], payload["priority"])
+            self.assertEqual(story["size"], payload["size"])
+            self.assertEqual(self.manifest["publicationDefaults"]["status"], payload["status"])
+            self.assertEqual(self.manifest["publicationDefaults"]["labels"], payload["labels"])
+
+    def test_issues_command_writes_only_when_output_is_explicit(self) -> None:
+        result = subprocess.run(
+            ["python3", str(ROOT / "scripts" / "backlog.py"), "issues"],
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(BACKLOG.issue_payloads(self.manifest), json.loads(result.stdout))
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "issues.json"
+            subprocess.run(
+                ["python3", str(ROOT / "scripts" / "backlog.py"), "issues", "--output", str(output)],
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(BACKLOG.issue_payloads(self.manifest), json.loads(output.read_text(encoding="utf-8")))
 
 
 if __name__ == "__main__":
