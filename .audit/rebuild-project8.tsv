@@ -1,0 +1,7 @@
+timestamp_utc	phase	decision	rationale	evidence	result
+2026-10-29T14:20:00Z	frame	Replace the v0.1 A00-A17 backlog with a v0.2 delivery graph	The accepted product direction changed from a capability probe into a voice-first IDE and agent control plane	README.md and docs/01_PRODUCT_PRD.md	in_progress
+2026-10-29T14:28:00Z	branch	Build v0.2 from origin/master and carry only product documents	The obsolete spike was never merged, so a clean branch avoids a synthetic 3,600-line deletion commit	git diff origin/master...codex/a00-capability-spike	complete
+2026-10-29T14:38:00Z	architecture	Use Candidate B as the base and graft five Candidate A invariants	The cross-judge scored the smaller 23-story graph 30 of 30 and identified concrete safety improvements	/tmp/piarre-arena/judgment.md	complete
+2026-10-29T14:43:00Z	backlog	Make planning/backlog-v0.2.json the publication source of truth	One registry prevents drift among docs, issue bodies, totals, and dependencies	python3 scripts/backlog.py validate	complete
+2026-10-29T14:45:00Z	cleanup	Retire executable A00 locally and preserve dated findings only	The spike was bounded evidence rather than product architecture	docs/history/a00-findings.md	complete
+2026-10-29T14:51:21Z	verification	Validate 23 stories, the dependency DAG, totals, and the B15 P1 gate	Behavior tests reject unknown dependencies, cycles, and release-gate bypasses	python3 -m unittest discover -s tests -v	complete
