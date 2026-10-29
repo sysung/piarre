@@ -3,7 +3,7 @@
   "planVersion": "0.2",
   "repository": "sysung/piarre",
   "projectNumber": 8,
-  "publicationDefaults": {"status": "Todo", "labels": ["implementation"]},
+  "publicationDefaults": {"status": "Backlog", "labels": ["piarre-v0.2"]},
   "estimateBasis": "Focused engineering hours for one experienced TypeScript developer, including automated tests and a short evidence note. Product studies, review latency, and unknown provider defects are excluded.",
   "milestones": [
     {"id": "M0", "title": "Honest control loop", "exit": "A typed command can propose, approve, run, verify, review, and recover one bounded task."},

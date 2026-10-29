@@ -1,6 +1,6 @@
 # Retired A00 findings
 
-The A00 spike was developed on October 28, 2026. Its local executable was retired from the v0.2 branch on October 29, 2026. It was never merged into `master`. Its source remains recoverable from Git commit `96a46f6` while repository history is retained. GitHub retirement is recorded separately after the draft PR and old Project items are verified closed or removed.
+The A00 spike was developed on October 28, 2026, and retired on October 29, 2026. It was never merged into `master`. Draft pull request #19 is closed, its remote branch is deleted, and A00 through A17 are closed as not planned and removed from Project 8. Its source remains recoverable from Git commit `96a46f6` while repository history is retained.
 
 ## Bounded observations
 
