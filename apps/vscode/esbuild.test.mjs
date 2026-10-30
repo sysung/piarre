@@ -1,10 +1,13 @@
 import { build } from "esbuild";
 
 await build({
-  bundle: false,
+  bundle: true,
+  external: ["vscode", "mocha"],
   entryPoints: [
     "test/suite/activation.test.ts",
     "test/suite/index.ts",
+    "test/suite/project.test.ts",
+    "test/suite/untrusted.test.ts",
   ],
   format: "cjs",
   logLevel: "info",

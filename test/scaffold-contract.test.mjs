@@ -12,11 +12,19 @@ const rootManifestUrl = new URL("../package.json", import.meta.url);
 test("the extension exposes the Piarre: Open activation seam", async () => {
   const manifest = JSON.parse(await readFile(extensionManifestUrl, "utf8"));
 
-  assert.deepEqual(manifest.activationEvents, ["onCommand:piarre.open"]);
+  assert.deepEqual(manifest.activationEvents, [
+    "onCommand:piarre.open",
+    "workspaceContains:.git",
+  ]);
   assert.deepEqual(manifest.contributes?.commands, [
     {
       command: "piarre.open",
       title: "Piarre: Open",
+    },
+    {
+      command: "piarre.renameProject",
+      title: "Piarre: Rename Project",
+      enablement: "isWorkspaceTrusted",
     },
   ]);
 });
