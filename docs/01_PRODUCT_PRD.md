@@ -34,6 +34,23 @@ Piarre tests the following product hypothesis:
 
 This hypothesis remains unverified. The product must compare Piarre with the developer's current workflow before it claims a productivity advantage.
 
+### Objective: reduce AI fatigue
+
+Piarre aims to reduce the mental effort of keeping up with AI-generated work. Developers should spend less attention reading agent output, reconstructing progress, checking repeated claims, and deciding which updates matter to their project.
+
+Piarre must provide useful updates when they change what the developer needs to know or do. Routine execution details belong in an inspectable Activity history. The default experience prioritizes decisions, actionable blockers, material changes to scope or risk, failures that affect the outcome, and results ready for review.
+
+The product must:
+
+- Stay quiet when authorized work continues without a meaningful change. Deduplicate repeated updates and batch related non-urgent changes.
+- Lead each necessary update with what changed, its effect on the project, and any action required from the user.
+- Present a concise review summary with the changed scope, current check results, unresolved uncertainty, and links to exact diffs or evidence. Reveal detailed logs on demand.
+- Run authorized automated checks and report their observed results so the user does not have to repeat routine validation or interpret unsupported completion claims.
+- Keep outstanding decisions and review items visible until resolved, without repeatedly interrupting the user about unchanged items.
+- Let the user request more detail or a progress update. Keep essential approvals, material failures, and uncertainty visible even when updates are reduced.
+
+Fewer messages alone do not establish success. Reduced reading and interruption must not hide defects, weaken review, or transfer unrecognized risk to the developer. AI-fatigue reduction is a product objective to validate, not a current capability claim.
+
 ## 3. Audience
 
 ### Primary audience
@@ -108,6 +125,7 @@ The product earns its place only if persistent supervision is better than using 
 8. **Voice is optional.** Every essential action has a keyboard, mouse, or typed-command path.
 9. **Interrupt only for decisions.** Piarre stays quiet during authorized work unless the user asks, work completes, or a decision blocks progress.
 10. **Start narrow.** Prove one supervised writer before adding concurrent writers.
+11. **Protect developer attention.** Send updates that affect project decisions or outcomes. Keep routine detail available on demand and consolidate review evidence.
 
 ## 7. Product model
 
@@ -410,6 +428,8 @@ Evidence belongs to a workspace revision and plan version. A relevant code chang
 ### Primary outcome
 
 Measure accepted, verified tasks per hour of active developer supervision. Compare Piarre with the same developer's current agent workflow.
+
+Also compare perceived mental workload, time spent reading updates and assembling review evidence, and avoidable interruptions per accepted task. Use comparable tasks and record review accuracy, missed material failures, and defects after acceptance alongside attention measures. A quieter interface that causes missed decisions or worse review does not meet the AI-fatigue objective. Establish a baseline before setting reduction targets.
 
 ### Supporting measures
 

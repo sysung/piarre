@@ -4,5 +4,5 @@
     "lib": ["ES2022"],
     "types": ["node", "vscode", "mocha"]
   },
-  "include": ["src/**/*.ts", "test/suite/**/*.ts"]
+  "include": ["src/**/*.ts", "test/suite/**/*.ts", "../../packages/core/src/**/*.ts"]
 }

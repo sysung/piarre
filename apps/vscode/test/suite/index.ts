@@ -3,7 +3,12 @@ import Mocha from "mocha";
 
 export function run(): Promise<void> {
   const mocha = new Mocha({ color: true, ui: "tdd" });
-  mocha.addFile(path.resolve(__dirname, "activation.test.js"));
+  if (process.env.PIARRE_UNTRUSTED_TEST === "1") {
+    mocha.addFile(path.resolve(__dirname, "untrusted.test.js"));
+  } else {
+    mocha.addFile(path.resolve(__dirname, "activation.test.js"));
+    mocha.addFile(path.resolve(__dirname, "project.test.js"));
+  }
 
   return new Promise((resolve, reject) => {
     mocha.run((failures) => {

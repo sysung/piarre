@@ -16,7 +16,8 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:piarre.open"
+    "onCommand:piarre.open",
+    "workspaceContains:.git"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -24,8 +25,19 @@
       {
         "command": "piarre.open",
         "title": "Piarre: Open"
+      },
+      {
+        "command": "piarre.renameProject",
+        "title": "Piarre: Rename Project",
+        "enablement": "isWorkspaceTrusted"
       }
     ]
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "Piarre requires workspace trust before creating or changing projects."
+    }
   },
   "files": [
     "dist/extension.js",
