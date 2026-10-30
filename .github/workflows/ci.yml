@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm run package
+      - run: xvfb-run -a npm test
+      - if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: b00-evidence
+          path: |
+            apps/vscode/dist-package/*.vsix
+            apps/vscode/dist-package/contents.txt
+            apps/vscode/dist-test/smoke.log
+          retention-days: 7

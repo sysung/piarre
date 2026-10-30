@@ -1,0 +1,8 @@
+.artifacts/
+node_modules/
+dist/
+dist-test/
+dist-package/
+.vscode-test/
+*.vsix
+*.tsbuildinfo
