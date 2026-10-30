@@ -23,4 +23,4 @@ The chosen shape makes a durable typed supervision loop work before voice and ma
 
 ## Verification
 
-The machine-readable manifest validates unique IDs, known dependencies, an acyclic graph, issue evidence fields, estimate arithmetic, and the B15 gate for every P1 story. GitHub publication must independently read back issue markers, project fields, and native dependency edges before A-series retirement.
+The reviewed backlog has unique IDs, known dependencies, an acyclic graph, issue evidence fields, consistent estimate totals, and a B15 dependency for every P1 story. GitHub publication must independently read back issue markers, project fields, and native dependency edges before A-series retirement.

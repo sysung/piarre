@@ -1,6 +1,6 @@
 # Implementation backlog
 
-This document is generated from `planning/backlog-v0.2.json`. Edit the manifest, then run `python3 scripts/backlog.py render`.
+This document is the source of truth for the v0.2 implementation sequence.
 
 ## Estimate basis
 
@@ -46,7 +46,7 @@ P0 totals **184 hours**. P1 totals **84 hours**. The combined planning sum is **
 
 ## Publication contract
 
-Every GitHub issue is generated from the same manifest. Its marker is `piarre-backlog:<ID>:v0.2`. The publication verifier must read back issue markers, fields, estimates, and native dependency edges. New B-series items must pass verification before old A-series items are retired.
+Each published GitHub issue carries the marker `piarre-backlog:<ID>:v0.2`. A backlog change must update this document and Project 8. Read back issue markers, fields, estimates, and native dependency edges after publication.
 
 ## Delivery rule
 

@@ -139,4 +139,4 @@ Voice capture starts only after an explicit user action and keeps microphone sta
 
 ## Delivery architecture
 
-The implementation sequence is defined by `planning/backlog-v0.2.json`. B15 gates the supervised-writer release. Every P1 story transitively depends on B15. Read-only concurrency precedes isolated coding workers. Integration into the primary workspace always creates a review and fresh verification step.
+The implementation sequence is defined by `docs/03_IMPLEMENTATION_BACKLOG.md`. B15 gates the supervised-writer release. Every P1 story transitively depends on B15. Read-only concurrency precedes isolated coding workers. Integration into the primary workspace always creates a review and fresh verification step.

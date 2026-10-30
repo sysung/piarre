@@ -20,4 +20,4 @@ P0 supports one user, one local workspace, and one active coding writer. P1 can 
 ## Suggested execution order
 Durable typed control loop → voice and typed control → trustworthy supervision → supervised-writer release gate → isolated worker experiments.
 
-The product design, technical design, machine-readable backlog, and evaluation plan share the v0.2 direction. Historical A00 observations remain evidence only and cannot satisfy a B-series release gate.
+The product design, technical design, implementation backlog, and evaluation plan share the v0.2 direction. Historical A00 observations remain evidence only and cannot satisfy a B-series release gate.
