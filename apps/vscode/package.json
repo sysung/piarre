@@ -1,0 +1,41 @@
+{
+  "name": "piarre",
+  "displayName": "Piarre",
+  "description": "Voice-first control plane for coding agents.",
+  "version": "0.0.1",
+  "private": true,
+  "publisher": "sysung",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sysung/piarre.git"
+  },
+  "engines": {
+    "vscode": "^1.144.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:piarre.open"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "piarre.open",
+        "title": "Piarre: Open"
+      }
+    ]
+  },
+  "files": [
+    "dist/extension.js",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "build:watch": "node esbuild.mjs --watch",
+    "package": "node scripts/package.mjs",
+    "test:compile": "node esbuild.test.mjs",
+    "test:smoke": "npm run build && npm run test:compile && node test/run.mjs"
+  }
+}
