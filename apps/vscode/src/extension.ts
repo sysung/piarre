@@ -26,6 +26,13 @@ export function activate(context: vscode.ExtensionContext): void {
       return;
     }
     const folders = vscode.workspace.workspaceFolders ?? [];
+    if (folders.length === 0) {
+      if (interactive)
+        await vscode.window.showInformationMessage(
+          "Open a local Git repository folder in VS Code, then run Piarre: Open.",
+        );
+      return;
+    }
     const folder =
       folders.length === 1
         ? folders[0]
@@ -88,6 +95,7 @@ export function activate(context: vscode.ExtensionContext): void {
     },
     vscode.commands.registerCommand("piarre.open", () => requestOpen(true)),
     vscode.commands.registerCommand("piarre.renameProject", async () => {
+      if (!repository) await requestOpen(true);
       if (!repository || !isTrusted()) return;
       const current = repository;
       try {
