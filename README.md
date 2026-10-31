@@ -2,7 +2,7 @@
 
 Piarre is a proposed voice-first IDE for directing, observing, and verifying coding agents.
 
-The implementation plan lives in [GitHub Project 8](https://github.com/users/sysung/projects/8/views/1) and the [backlog document](docs/03_IMPLEMENTATION_BACKLOG.md). The retired A00 experiment is preserved only as [dated findings](docs/history/a00-findings.md).
+The implementation plan lives in [GitHub Project 8](https://github.com/users/sysung/projects/8/views/1) and the [backlog document](docs/03_IMPLEMENTATION_BACKLOG.md).
 
 The [product design](docs/01_PRODUCT_PRD.md) describes the audience, product model, proposed features, voice interaction, primary UI, trust boundaries, and staged path from one supervised worker to an isolated agent team.
 
@@ -24,5 +24,3 @@ On headless Linux, run the smoke test with `xvfb-run -a npm test`.
 To launch the extension manually, open this repository in VS Code, select **Run Piarre Extension**, and press F5. In the Extension Development Host, open the Command Palette and run **Piarre: Open**.
 
 Open and trust a local Git repository in the development host. Piarre shows its Work tab with the project name, ID, and revision. **Piarre: Rename Project** changes the name. Reloading the window restores the project from its event log. Project data is stored in VS Code extension storage, outside the repository.
-
-Follow [Test a reviewable task proposal](docs/how-to-test-reviewable-task.md) to create and verify a typed B02 proposal.
