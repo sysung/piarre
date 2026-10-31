@@ -17,6 +17,7 @@ test("F5 opens the contributor repository in the development host", async () => 
     ({ name }) => name === "Run Piarre Extension",
   );
   assert.ok(configuration.args.includes("${workspaceFolder}"));
+  assert.ok(configuration.args.includes("--disable-extensions"));
 });
 
 test("the extension exposes the Piarre: Open activation seam", async () => {
@@ -34,6 +35,11 @@ test("the extension exposes the Piarre: Open activation seam", async () => {
     {
       command: "piarre.renameProject",
       title: "Piarre: Rename Project",
+      enablement: "isWorkspaceTrusted",
+    },
+    {
+      command: "piarre.proposeTask",
+      title: "Piarre: Propose Task",
       enablement: "isWorkspaceTrusted",
     },
   ]);

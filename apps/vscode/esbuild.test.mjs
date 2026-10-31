@@ -7,6 +7,7 @@ await build({
     "test/suite/activation.test.ts",
     "test/suite/index.ts",
     "test/suite/project.test.ts",
+    "test/suite/proposal.test.ts",
     "test/suite/untrusted.test.ts",
   ],
   format: "cjs",

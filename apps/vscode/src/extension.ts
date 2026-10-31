@@ -4,7 +4,9 @@ import { execFile } from "node:child_process";
 import { mkdir, realpath } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
+import { GoalInterpreter } from "./goal-interpreter.js";
 import { SqliteProjectRepository } from "./sqlite-project-repository.js";
+import { assertStorageOutsideRepository } from "./storage-boundary.js";
 import { WorkView } from "./work-view.js";
 
 const execute = promisify(execFile);
@@ -12,6 +14,7 @@ const isTrusted = (): boolean => vscode.workspace.isTrusted;
 
 export function activate(context: vscode.ExtensionContext): void {
   const view = new WorkView();
+  const interpreter = new GoalInterpreter();
   const output = vscode.window.createOutputChannel("Piarre");
   let repository: SqliteProjectRepository | undefined;
   let opening: Promise<void> | undefined;
@@ -52,6 +55,10 @@ export function activate(context: vscode.ExtensionContext): void {
     const repositoryUri = vscode.Uri.file(root).toString();
     const key = createHash("sha256").update(repositoryUri).digest("hex");
     const storage = path.join(context.globalStorageUri.fsPath, "projects", key);
+    await assertStorageOutsideRepository({
+      repositoryRoot: root,
+      storagePath: storage,
+    });
     await mkdir(storage, { recursive: true });
     if (!isCurrent()) return;
     const next = new SqliteProjectRepository(
@@ -127,6 +134,62 @@ export function activate(context: vscode.ExtensionContext): void {
         );
       }
     }),
+    vscode.commands.registerCommand(
+      "piarre.proposeTask",
+      async (commandGoal: unknown) => {
+        if (!repository) await requestOpen(true);
+        if (!repository || !isTrusted()) return;
+        const current = repository;
+        const observedGeneration = generation;
+        try {
+          const snapshot = current.read();
+          const goal =
+            typeof commandGoal === "string"
+              ? commandGoal
+              : await vscode.window.showInputBox({
+                  prompt: "What should Piarre help you accomplish?",
+                  validateInput: (value) =>
+                    value.trim() ? undefined : "Enter a goal.",
+                });
+          if (
+            goal === undefined ||
+            !goal.trim() ||
+            !isTrusted() ||
+            repository !== current ||
+            generation !== observedGeneration
+          )
+            return;
+          const draft = await interpreter.propose(goal.trim());
+          if (
+            !isTrusted() ||
+            repository !== current ||
+            generation !== observedGeneration
+          )
+            return;
+          const result = current.dispatch({
+            commandId: randomUUID(),
+            projectId: snapshot.projectId,
+            expectedProjectRevision: snapshot.revision,
+            action: { kind: "propose-tasks", draft },
+          });
+          if (result.kind === "applied" || result.kind === "duplicate")
+            view.show(result.snapshot);
+          else
+            await vscode.window.showWarningMessage(
+              "The project changed. Review the latest Work view and try again.",
+            );
+        } catch (error) {
+          if (
+            isTrusted() &&
+            repository === current &&
+            generation === observedGeneration
+          )
+            await vscode.window.showErrorMessage(
+              `Piarre could not create the proposal. ${error instanceof Error ? error.message : String(error)}`,
+            );
+        }
+      },
+    ),
     vscode.workspace.onDidGrantWorkspaceTrust(() => {
       void requestOpen(false);
     }),
