@@ -8,6 +8,7 @@ export function run(): Promise<void> {
   } else {
     mocha.addFile(path.resolve(__dirname, "activation.test.js"));
     mocha.addFile(path.resolve(__dirname, "project.test.js"));
+    mocha.addFile(path.resolve(__dirname, "proposal.test.js"));
   }
 
   return new Promise((resolve, reject) => {

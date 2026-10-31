@@ -68,4 +68,4 @@ After B15, run opt-in sessions that compare voice-first supervision with typed c
 
 ## Promotion rule
 
-Piarre can advertise only capabilities backed by current revision-bound evidence. Historical A00 observations remain in `docs/history/a00-findings.md` and cannot satisfy B-series release gates.
+Piarre can advertise only capabilities backed by current revision-bound evidence. Historical A00 observations cannot satisfy B-series release gates.

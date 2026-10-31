@@ -30,6 +30,11 @@
         "command": "piarre.renameProject",
         "title": "Piarre: Rename Project",
         "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "piarre.proposeTask",
+        "title": "Piarre: Propose Task",
+        "enablement": "isWorkspaceTrusted"
       }
     ]
   },

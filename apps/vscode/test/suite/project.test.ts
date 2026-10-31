@@ -4,7 +4,11 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { SqliteProjectRepository } from "../../src/sqlite-project-repository";
-import type { ProjectCommand } from "../../../../packages/core/src/index.js";
+import type {
+  ProjectCommand,
+  ProposalDraft,
+} from "../../../../packages/core/src/index.js";
+import { GoalInterpreter } from "../../src/goal-interpreter.js";
 import { renderWorkView } from "../../src/work-view.js";
 
 suite("Durable projects", () => {
@@ -126,5 +130,191 @@ suite("Durable projects", () => {
     assert.ok(!html.includes("<script>"));
     assert.ok(html.includes("&lt;script&gt;"));
     assert.ok(html.includes("default-src 'none'"));
+  });
+  test("persists one complete unapproved proposal with stable task identities", async () => {
+    const initial = repository.open(identity);
+    const interpreter = new GoalInterpreter(() => ({
+      tasks: [
+        {
+          key: "pricing-page",
+          title: "Add the pricing page",
+          requirements: [
+            { key: "pricing-content", text: "Show the available plans." },
+          ],
+          proposedScope: {
+            included: ["src/pages/pricing.tsx"],
+            excluded: ["src/billing/**"],
+          },
+          checks: [
+            {
+              key: "pricing-visible",
+              requirementKeys: ["pricing-content"],
+              description: "Confirm the page shows each available plan.",
+            },
+          ],
+          proposedBudget: {
+            maxAttempts: 1,
+            maxElapsedMinutes: 15,
+            maxTokens: 20_000,
+          },
+          dependsOn: [],
+        },
+      ],
+    }));
+    const draft = await interpreter.propose("Add a pricing page");
+
+    const result = repository.dispatch({
+      commandId: "proposal-one",
+      projectId: initial.projectId,
+      expectedProjectRevision: initial.revision,
+      action: { kind: "propose-tasks", draft },
+    });
+
+    assert.ok(result.kind === "applied");
+    assert.deepEqual(result.snapshot.proposals, [
+      {
+        groupId: "proposal:proposal-one",
+        goal: "Add a pricing page",
+        source: "deterministic-draft",
+        taskIds: ["task:proposal-one:pricing-page"],
+      },
+    ]);
+    assert.deepEqual(result.snapshot.tasks, [
+      {
+        taskId: "task:proposal-one:pricing-page",
+        groupId: "proposal:proposal-one",
+        planVersion: 1,
+        state: { kind: "unapproved" },
+        title: "Add the pricing page",
+        requirements: [
+          { key: "pricing-content", text: "Show the available plans." },
+        ],
+        proposedScope: {
+          included: ["src/pages/pricing.tsx"],
+          excluded: ["src/billing/**"],
+        },
+        checks: [
+          {
+            key: "pricing-visible",
+            requirementKeys: ["pricing-content"],
+            description: "Confirm the page shows each available plan.",
+          },
+        ],
+        proposedBudget: {
+          maxAttempts: 1,
+          maxElapsedMinutes: 15,
+          maxTokens: 20_000,
+        },
+        dependsOn: [],
+      },
+    ]);
+    const html = renderWorkView(result.snapshot);
+    assert.ok(html.includes("Add a pricing page"));
+    assert.ok(html.includes("Show the available plans."));
+    assert.ok(html.includes("src/pages/pricing.tsx"));
+    assert.ok(html.includes("No dependencies"));
+    assert.ok(html.includes("Confirm the page shows each available plan."));
+    assert.ok(html.includes("20,000 tokens"));
+    assert.ok(html.includes("Plan version 1"));
+    assert.ok(html.includes("Unapproved"));
+    const beforeRestart = result.snapshot;
+    repository.close();
+    repository = new SqliteProjectRepository(
+      path.join(directory, "project.sqlite"),
+    );
+    assert.deepEqual(repository.open(identity), beforeRestart);
+  });
+  test("duplicate proposal returns its historical receipt after rename", async () => {
+    const initial = repository.open(identity);
+    const interpreter = new GoalInterpreter(() => ({
+      tasks: [
+        {
+          key: "task",
+          title: "Review the goal",
+          requirements: [{ key: "goal", text: "Preserve the goal." }],
+          proposedScope: { included: ["src/**"], excluded: [] },
+          checks: [
+            {
+              key: "review",
+              requirementKeys: ["goal"],
+              description: "Review the result.",
+            },
+          ],
+          proposedBudget: {
+            maxAttempts: 1,
+            maxElapsedMinutes: 15,
+            maxTokens: 20_000,
+          },
+          dependsOn: [],
+        },
+      ],
+    }));
+    const command = {
+      commandId: "proposal-one",
+      projectId: initial.projectId,
+      expectedProjectRevision: initial.revision,
+      action: {
+        kind: "propose-tasks",
+        draft: await interpreter.propose("Preserve the goal"),
+      },
+    } satisfies ProjectCommand;
+    const first = repository.dispatch(command);
+    assert.ok(first.kind === "applied");
+    repository.dispatch({
+      commandId: "rename-after-proposal",
+      projectId: initial.projectId,
+      expectedProjectRevision: 2,
+      action: { kind: "rename-project", name: "Renamed" },
+    });
+
+    assert.deepEqual(repository.dispatch(command), {
+      kind: "duplicate",
+      snapshot: first.snapshot,
+    });
+    assert.equal(repository.read().revision, 3);
+  });
+  test("canonical task identities cannot collide across tuple boundaries", () => {
+    const initial = repository.open(identity);
+    const draft = (key: string): ProposalDraft => ({
+      goal: "Review identity",
+      source: "deterministic-draft",
+      tasks: [
+        {
+          key,
+          title: "Review identity",
+          requirements: [{ key: "identity", text: "Keep IDs distinct." }],
+          proposedScope: { included: [], excluded: [] },
+          checks: [
+            {
+              key: "review",
+              requirementKeys: ["identity"],
+              description: "Compare the task IDs.",
+            },
+          ],
+          proposedBudget: {
+            maxAttempts: 1,
+            maxElapsedMinutes: 15,
+            maxTokens: 20_000,
+          },
+          dependsOn: [],
+        },
+      ],
+    });
+    const first = repository.dispatch({
+      commandId: "a:b",
+      projectId: initial.projectId,
+      expectedProjectRevision: 1,
+      action: { kind: "propose-tasks", draft: draft("c") },
+    });
+    const second = repository.dispatch({
+      commandId: "a",
+      projectId: initial.projectId,
+      expectedProjectRevision: 2,
+      action: { kind: "propose-tasks", draft: draft("b:c") },
+    });
+
+    assert.ok(first.kind === "applied");
+    assert.ok(second.kind === "applied");
+    assert.notEqual(first.snapshot.tasks[0]?.taskId, second.snapshot.tasks[1]?.taskId);
   });
 });
