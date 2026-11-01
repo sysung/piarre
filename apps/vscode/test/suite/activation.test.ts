@@ -4,6 +4,13 @@ import { createHash } from "node:crypto";
 import { lstat, readFile, readdir, readlink } from "node:fs/promises";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import {
+  approvalSummary,
+  approvedExecutionGrant,
+  codexMediationVersion,
+  runnableTasks,
+} from "../../src/extension.js";
+import type { ProposedTask } from "../../../../packages/core/src/index.js";
 
 async function inventory(root: string, relative = ""): Promise<readonly string[]> {
   const directory = path.join(root, relative);
@@ -73,5 +80,77 @@ suite("Piarre extension", () => {
     );
 
     assert.deepEqual(await inventory(folder.uri.fsPath), before);
+  });
+  test("execution approval names every effective bound", async () => {
+    const commands = await vscode.commands.getCommands(true);
+    assert.ok(commands.includes("piarre.approveAndRunTask"));
+    const task: ProposedTask = {
+      taskId: "task-one",
+      groupId: "group-one",
+      planVersion: 1,
+      state: { kind: "unapproved" },
+      title: "Change one file",
+      requirements: [{ key: "change", text: "Change one file." }],
+      proposedScope: { included: ["src/one.ts"], excluded: [] },
+      checks: [],
+      proposedBudget: {
+        maxAttempts: 1,
+        maxElapsedMinutes: 15,
+        maxTokens: 20_000,
+      },
+      dependsOn: [],
+    };
+
+    const summary = approvalSummary({
+      task,
+      repositoryRoot: "/canonical/repository",
+    });
+
+    assert.match(summary, /Change one file/);
+    assert.match(summary, /Plan version: 1/);
+    assert.match(summary, /Writable root: \/canonical\/repository/);
+    assert.match(summary, /\["git","status","--short"\]/);
+    assert.match(summary, /Attempts: 1/);
+    assert.match(summary, /Elapsed time: 15 minutes/);
+    assert.match(summary, /20,000 observed soft budget/);
+    assert.equal(codexMediationVersion("codex-cli 0.164.0\n"), "0.164.0");
+    assert.equal(codexMediationVersion("codex-cli 0.165.0\n"), undefined);
+    assert.equal(
+      approvedExecutionGrant({
+        approvalId: "cancelled",
+        task,
+        repositoryRoot: "/canonical/repository",
+        cliVersion: "0.164.0",
+        confirmed: false,
+      }),
+      undefined,
+    );
+    assert.equal(
+      approvedExecutionGrant({
+        approvalId: "wrong-version",
+        task,
+        repositoryRoot: "/canonical/repository",
+        cliVersion: undefined,
+        confirmed: true,
+      }),
+      undefined,
+    );
+    const approvedTask: ProposedTask = {
+      ...task,
+      state: { kind: "approved", approvalId: "approval-one" },
+    };
+    assert.deepEqual(
+      runnableTasks({
+        projectId: "project-one",
+        repositoryUri: "file:///canonical/repository",
+        name: "repository",
+        revision: 3,
+        proposals: [],
+        tasks: [approvedTask],
+        grants: [],
+        runs: [],
+      }),
+      [approvedTask],
+    );
   });
 });

@@ -35,6 +35,11 @@
         "command": "piarre.proposeTask",
         "title": "Piarre: Propose Task",
         "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "piarre.approveAndRunTask",
+        "title": "Piarre: Approve and Run Task",
+        "enablement": "isWorkspaceTrusted"
       }
     ]
   },
@@ -53,6 +58,7 @@
     "build:watch": "node esbuild.mjs --watch",
     "package": "node scripts/package.mjs",
     "test:compile": "node esbuild.test.mjs",
-    "test:smoke": "npm run build && npm run test:compile && node test/run.mjs"
+    "test:smoke": "npm run build && npm run test:compile && node test/run.mjs",
+    "test:live:codex": "node test/live/codex-app-server-probe.mjs"
   }
 }

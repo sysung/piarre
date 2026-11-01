@@ -15,6 +15,7 @@ const fixturePath = path.join(testRoot, "workspace");
 const userDataPath = path.join(testRoot, "user-data");
 const extensionsPath = path.join(testRoot, "extensions");
 const logPath = path.join(packageRoot, "dist-test", "smoke.log");
+const cachePath = process.env.PIARRE_VSCODE_CACHE_PATH;
 
 await Promise.all([
   mkdir(fixturePath, { recursive: true }),
@@ -52,6 +53,7 @@ try {
       extensionsPath,
     ],
     version: vscodeVersion,
+    ...(cachePath ? { cachePath } : {}),
   });
   await writeFile(logPath, `${environment}\nResult: passed\n`, "utf8");
   const restrictedUserData = path.join(testRoot, "restricted-user-data");
@@ -61,7 +63,9 @@ try {
     "security.workspace.trust.startupPrompt": "never",
     "security.workspace.trust.emptyWindow": false,
   }));
-  const executable = await downloadAndUnzipVSCode(vscodeVersion);
+  const executable = await downloadAndUnzipVSCode(
+    cachePath ? { version: vscodeVersion, cachePath } : vscodeVersion,
+  );
   await new Promise((resolve, reject) => {
     const child = spawn(executable, [fixturePath, "--no-sandbox", "--skip-welcome",
       "--disable-extensions", "--user-data-dir", restrictedUserData,

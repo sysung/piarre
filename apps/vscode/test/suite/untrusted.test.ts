@@ -12,5 +12,11 @@ suite("Restricted workspace", () => {
         .filter((tab) => tab.label === "Piarre Work").length,
       0,
     );
+    await vscode.commands.executeCommand("piarre.approveAndRunTask");
+    assert.equal(
+      vscode.window.tabGroups.all.flatMap((group) => group.tabs)
+        .filter((tab) => tab.label === "Piarre Work").length,
+      0,
+    );
   });
 });

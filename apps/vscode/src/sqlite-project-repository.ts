@@ -8,6 +8,11 @@ import {
   type ProjectCommand,
   type CommandResult,
   type ProposedTask,
+  type ApprovedCommand,
+  type ExecutionGrant,
+  type TaskRun,
+  isExecutionGrantForTask,
+  ownsWriter,
 } from "../../../packages/core/src/index.js";
 
 function isRecord(value: unknown): value is Record<PropertyKey, unknown> {
@@ -100,6 +105,79 @@ function parseStoredTask(value: unknown): ProposedTask {
   };
 }
 
+function readPositiveInteger(
+  value: Record<PropertyKey, unknown>,
+  key: string,
+): number {
+  const item = value[key];
+  if (typeof item !== "number" || !Number.isSafeInteger(item) || item < 1)
+    throw new Error("Invalid project history: malformed event");
+  return item;
+}
+
+function parseStoredCommand(value: unknown): ApprovedCommand {
+  if (!isRecord(value) || !Array.isArray(value.argv) || value.argv.length === 0)
+    throw new Error("Invalid project history: malformed event");
+  const argv = value.argv.map((item) => {
+    if (typeof item !== "string" || !item)
+      throw new Error("Invalid project history: malformed event");
+    return item;
+  });
+  const [executable, ...arguments_] = argv;
+  if (!executable)
+    throw new Error("Invalid project history: malformed event");
+  return { argv: [executable, ...arguments_] };
+}
+
+function parseStoredGrant(value: unknown): ExecutionGrant {
+  if (
+    !isRecord(value) ||
+    value.planVersion !== 1 ||
+    !Array.isArray(value.commands) ||
+    !isRecord(value.budget)
+  )
+    throw new Error("Invalid project history: malformed event");
+  return {
+    approvalId: readString(value, "approvalId"),
+    taskId: readString(value, "taskId"),
+    planVersion: 1,
+    repositoryRoot: readString(value, "repositoryRoot"),
+    writableRoot: readString(value, "writableRoot"),
+    commands: value.commands.map(parseStoredCommand),
+    budget: {
+      maxAttempts: readPositiveInteger(value.budget, "maxAttempts"),
+      maxElapsedMinutes: readPositiveInteger(value.budget, "maxElapsedMinutes"),
+      maxTokens: readPositiveInteger(value.budget, "maxTokens"),
+    },
+  };
+}
+
+function parseStoredRun(value: unknown): TaskRun {
+  if (
+    !isRecord(value) ||
+    !("state" in value) ||
+    (value.state !== "reserved" &&
+      value.state !== "running" &&
+      value.state !== "completed" &&
+      value.state !== "failed" &&
+      value.state !== "reconciliation-required")
+  )
+    throw new Error("Invalid project history: malformed event");
+  const base = {
+    runId: readString(value, "runId"),
+    taskId: readString(value, "taskId"),
+    approvalId: readString(value, "approvalId"),
+    adapterId: readString(value, "adapterId"),
+  };
+  const externalRunId =
+    "externalRunId" in value && typeof value.externalRunId === "string"
+      ? value.externalRunId
+      : undefined;
+  return externalRunId
+    ? { ...base, externalRunId, state: value.state }
+    : { ...base, state: value.state };
+}
+
 function parseEvent(value: unknown): ProjectEvent {
   if (
     !isRecord(value) ||
@@ -143,6 +221,28 @@ function parseEvent(value: unknown): ProjectEvent {
         taskIds: readStrings(value.group, "taskIds"),
       },
       tasks: value.tasks.map(parseStoredTask),
+    };
+  if (value.kind === "task-approved" && "grant" in value)
+    return { kind: value.kind, grant: parseStoredGrant(value.grant) };
+  if (value.kind === "run-reserved" && "run" in value)
+    return { kind: value.kind, run: parseStoredRun(value.run) };
+  if (value.kind === "run-bound")
+    return {
+      kind: value.kind,
+      runId: readString(value, "runId"),
+      externalRunId: readString(value, "externalRunId"),
+    };
+  if (
+    value.kind === "run-finished" &&
+    "outcome" in value &&
+    (value.outcome === "completed" ||
+      value.outcome === "failed" ||
+      value.outcome === "reconciliation-required")
+  )
+    return {
+      kind: value.kind,
+      runId: readString(value, "runId"),
+      outcome: value.outcome,
     };
   throw new Error("Invalid project history: unknown event");
 }
@@ -231,12 +331,19 @@ export class SqliteProjectRepository {
         command.action.kind,
         command.action.name,
       ]);
-    } else {
+    } else if (command.action.kind === "propose-tasks") {
       input = JSON.stringify([
         command.projectId,
         command.expectedProjectRevision,
         command.action.kind,
         command.action.draft,
+      ]);
+    } else {
+      input = JSON.stringify([
+        command.projectId,
+        command.expectedProjectRevision,
+        command.action.kind,
+        command.action,
       ]);
     }
     return this.transaction(() => {
@@ -259,6 +366,61 @@ export class SqliteProjectRepository {
         return { kind: "wrong-project" };
       if (snapshot.revision !== command.expectedProjectRevision)
         return { kind: "stale", actualRevision: snapshot.revision };
+      const action = command.action;
+      switch (action.kind) {
+        case "approve-task": {
+          const task = snapshot.tasks.find(
+            ({ taskId }) => taskId === action.grant.taskId,
+          );
+          if (
+            !task ||
+            !isExecutionGrantForTask(action.grant, task) ||
+            task.state.kind !== "unapproved"
+          )
+            return { kind: "task-not-ready" };
+          break;
+        }
+        case "reserve-run": {
+          const task = snapshot.tasks.find(
+            ({ taskId }) => taskId === action.taskId,
+          );
+          const grant = snapshot.grants.find(
+            ({ approvalId }) => approvalId === action.approvalId,
+          );
+          if (!task || task.state.kind !== "approved" || !grant)
+            return { kind: "task-not-ready" };
+          if (
+            task.state.approvalId !== grant.approvalId ||
+            grant.taskId !== task.taskId
+          )
+            return { kind: "approval-stale" };
+          if (snapshot.runs.some(ownsWriter)) return { kind: "writer-busy" };
+          if (
+            snapshot.runs.filter(({ taskId }) => taskId === task.taskId)
+              .length >= grant.budget.maxAttempts
+          )
+            return { kind: "attempt-budget-exhausted" };
+          break;
+        }
+        case "bind-run": {
+          const run = snapshot.runs.find(
+            ({ runId }) => runId === action.runId,
+          );
+          if (!run || run.state !== "reserved")
+            return { kind: "run-not-active" };
+          break;
+        }
+        case "finish-run": {
+          const run = snapshot.runs.find(
+            ({ runId }) => runId === action.runId,
+          );
+          if (!run || !ownsWriter(run)) return { kind: "run-not-active" };
+          break;
+        }
+        case "rename-project":
+        case "propose-tasks":
+          break;
+      }
       const event = decideProjectEvent(command);
       const revision = snapshot.revision + 1;
       this.database

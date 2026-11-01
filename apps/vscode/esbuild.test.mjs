@@ -9,6 +9,8 @@ await build({
     "test/suite/project.test.ts",
     "test/suite/proposal.test.ts",
     "test/suite/untrusted.test.ts",
+    "test/suite/worker-contract.test.ts",
+    "test/suite/codex-app-server-worker.test.ts",
   ],
   format: "cjs",
   logLevel: "info",

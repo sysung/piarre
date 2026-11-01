@@ -4,10 +4,16 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { SqliteProjectRepository } from "../../src/sqlite-project-repository";
+import { MockWorker } from "../../src/mock-worker.js";
+import {
+  TaskRunner,
+  type DeadlineScheduler,
+} from "../../src/task-runner.js";
 import type {
   ProjectCommand,
   ProposalDraft,
 } from "../../../../packages/core/src/index.js";
+import { taskStatus } from "../../../../packages/core/src/index.js";
 import { GoalInterpreter } from "../../src/goal-interpreter.js";
 import { renderWorkView } from "../../src/work-view.js";
 
@@ -25,6 +31,113 @@ suite("Durable projects", () => {
     rmSync(directory, { recursive: true, force: true });
   });
   const identity = { repositoryUri: "file:///project", name: "Project" };
+  const proposeOneTask = () => {
+    const initial = repository.open(identity);
+    const proposed = repository.dispatch({
+      commandId: "proposal-runner",
+      projectId: initial.projectId,
+      expectedProjectRevision: initial.revision,
+      action: {
+        kind: "propose-tasks",
+        draft: {
+          goal: "Run one task",
+          source: "deterministic-draft",
+          tasks: [
+            {
+              key: "one",
+              title: "Task one",
+              requirements: [{ key: "result", text: "Produce a result." }],
+              proposedScope: { included: ["src/**"], excluded: [] },
+              checks: [
+                {
+                  key: "result",
+                  requirementKeys: ["result"],
+                  description: "Inspect the result.",
+                },
+              ],
+              proposedBudget: {
+                maxAttempts: 1,
+                maxElapsedMinutes: 15,
+                maxTokens: 20_000,
+              },
+              dependsOn: [],
+            },
+          ],
+        },
+      },
+    });
+    assert.ok(proposed.kind === "applied");
+    const task = proposed.snapshot.tasks[0];
+    assert.ok(task);
+    return { snapshot: proposed.snapshot, task };
+  };
+  const approveOneTask = () => {
+    const proposed = proposeOneTask();
+    const approved = repository.dispatch({
+      commandId: "approve-runner",
+      projectId: proposed.snapshot.projectId,
+      expectedProjectRevision: proposed.snapshot.revision,
+      action: {
+        kind: "approve-task",
+        grant: {
+          approvalId: "approval-one",
+          taskId: proposed.task.taskId,
+          planVersion: 1,
+          repositoryRoot: "/project",
+          writableRoot: "/project",
+          commands: [{ argv: ["git", "status", "--short"] }],
+          budget: proposed.task.proposedBudget,
+        },
+      },
+    });
+    assert.ok(approved.kind === "applied");
+    return { snapshot: approved.snapshot, task: proposed.task };
+  };
+  test("approval rejects authority that differs from the proposed task", () => {
+    const { snapshot, task } = proposeOneTask();
+    const result = repository.dispatch({
+      commandId: "approve-invalid",
+      projectId: snapshot.projectId,
+      expectedProjectRevision: snapshot.revision,
+      action: {
+        kind: "approve-task",
+        grant: {
+          approvalId: "approval-invalid",
+          taskId: task.taskId,
+          planVersion: 1,
+          repositoryRoot: "/project",
+          writableRoot: "/other-project",
+          commands: [{ argv: ["git", "status", "--short"] }],
+          budget: { ...task.proposedBudget, maxAttempts: 2 },
+        },
+      },
+    });
+
+    assert.equal(result.kind, "task-not-ready");
+    assert.deepEqual(repository.read().grants, []);
+  });
+  test("runner rejects capabilities that cannot enforce the grant", async () => {
+    const { task } = approveOneTask();
+    const worker = new MockWorker({
+      capabilities: { commandMediation: false },
+    });
+    const runner = new TaskRunner(repository, worker);
+
+    const result = await runner.startTask({
+      taskId: task.taskId,
+      approvalId: "approval-one",
+      runId: "run-one",
+      adapterId: "mock",
+      prompt: "Do the task",
+      reservationCommandId: "reserve-one",
+      bindCommandId: "bind-one",
+      terminalCommandId: "finish-one",
+    });
+
+    assert.equal(result.kind, "unsupported-capabilities");
+    assert.deepEqual(repository.read().runs, []);
+    assert.equal(worker.starts.length, 0);
+  });
   test("restart replays the same observable project", () => {
     const initial = repository.open(identity);
     const result = repository.dispatch({
@@ -113,6 +226,310 @@ suite("Durable projects", () => {
     } finally {
       other.close();
     }
+  });
+  test("a second approved task cannot reserve the repository writer", () => {
+    const initial = repository.open(identity);
+    const proposal = repository.dispatch({
+      commandId: "proposal-runs",
+      projectId: initial.projectId,
+      expectedProjectRevision: initial.revision,
+      action: {
+        kind: "propose-tasks",
+        draft: {
+          goal: "Run bounded work",
+          source: "deterministic-draft",
+          tasks: ["one", "two"].map((key) => ({
+            key,
+            title: `Task ${key}`,
+            requirements: [{ key: "result", text: "Produce the result." }],
+            proposedScope: { included: ["src/**"], excluded: [] },
+            checks: [
+              {
+                key: "result",
+                requirementKeys: ["result"],
+                description: "Inspect the result.",
+              },
+            ],
+            proposedBudget: {
+              maxAttempts: 1,
+              maxElapsedMinutes: 15,
+              maxTokens: 20_000,
+            },
+            dependsOn: [],
+          })),
+        },
+      },
+    });
+    assert.ok(proposal.kind === "applied");
+    let snapshot = proposal.snapshot;
+    for (const task of snapshot.tasks) {
+      const approved = repository.dispatch({
+        commandId: `approve-${task.taskId}`,
+        projectId: snapshot.projectId,
+        expectedProjectRevision: snapshot.revision,
+        action: {
+          kind: "approve-task",
+          grant: {
+            approvalId: `approval-${task.taskId}`,
+            taskId: task.taskId,
+            planVersion: 1,
+            repositoryRoot: "/project",
+            writableRoot: "/project",
+            commands: [{ argv: ["git", "status", "--short"] }],
+            budget: task.proposedBudget,
+          },
+        },
+      });
+      assert.ok(approved.kind === "applied");
+      snapshot = approved.snapshot;
+    }
+    const first = repository.dispatch({
+      commandId: "reserve-one",
+      projectId: snapshot.projectId,
+      expectedProjectRevision: snapshot.revision,
+      action: {
+        kind: "reserve-run",
+        runId: "run-one",
+        taskId: snapshot.tasks[0]?.taskId ?? "missing-task",
+        approvalId: snapshot.grants[0]?.approvalId ?? "missing-approval",
+        adapterId: "mock",
+      },
+    });
+    assert.ok(first.kind === "applied");
+    const other = new SqliteProjectRepository(
+      path.join(directory, "project.sqlite"),
+    );
+    try {
+      const second = other.dispatch({
+        commandId: "reserve-two",
+        projectId: first.snapshot.projectId,
+        expectedProjectRevision: first.snapshot.revision,
+        action: {
+          kind: "reserve-run",
+          runId: "run-two",
+          taskId: first.snapshot.tasks[1]?.taskId ?? "missing-task",
+          approvalId:
+            first.snapshot.grants[1]?.approvalId ?? "missing-approval",
+          adapterId: "mock",
+        },
+      });
+      assert.equal(second.kind, "writer-busy");
+    } finally {
+      other.close();
+    }
+  });
+  test("concurrent runners start exactly one repository writer", async () => {
+    const { task } = approveOneTask();
+    const other = new SqliteProjectRepository(
+      path.join(directory, "project.sqlite"),
+    );
+    const worker = new MockWorker();
+    const input = (suffix: string) => ({
+      taskId: task.taskId,
+      approvalId: "approval-one",
+      runId: `run-${suffix}`,
+      adapterId: "mock",
+      prompt: "Do the task",
+      reservationCommandId: `reserve-${suffix}`,
+      bindCommandId: `bind-${suffix}`,
+      terminalCommandId: `finish-${suffix}`,
+    });
+    try {
+      const results = await Promise.all([
+        new TaskRunner(repository, worker).startTask(input("one")),
+        new TaskRunner(other, worker).startTask(input("two")),
+      ]);
+
+      assert.deepEqual(
+        results.map(({ kind }) => kind).sort(),
+        ["started", "writer-busy"],
+      );
+      assert.equal(worker.starts.length, 1);
+      assert.equal(repository.read().runs.length, 1);
+    } finally {
+      other.close();
+    }
+  });
+  test("TaskRunner reserves the writer before starting the worker", async () => {
+    const { snapshot, task } = approveOneTask();
+    const worker = new MockWorker({
+      start: () => {
+        const duringStart = repository.read();
+        assert.equal(duringStart.runs[0]?.state, "reserved");
+        const html = renderWorkView(duringStart);
+        assert.ok(html.includes("Approved authority"));
+        assert.ok(html.includes("git status --short"));
+        assert.ok(html.includes("Writable root: /project"));
+        return { kind: "started", ref: { id: "external-one" } };
+      },
+    });
+    const runner = new TaskRunner(repository, worker);
+
+    const result = await runner.startTask({
+      taskId: task.taskId,
+      approvalId: "approval-one",
+      runId: "run-one",
+      adapterId: "mock",
+      prompt: "Do the task",
+      reservationCommandId: "reserve-one",
+      bindCommandId: "bind-one",
+      terminalCommandId: "finish-one",
+    });
+
+    assert.equal(result.kind, "started");
+    assert.equal(worker.starts.length, 1);
+    assert.equal(repository.read().runs[0]?.state, "running");
+    const runningHtml = renderWorkView(repository.read(), {
+      observe: true,
+      steer: true,
+      interrupt: true,
+      commandMediation: true,
+      writableRoot: "requested-root",
+    });
+    assert.ok(runningHtml.includes("running"));
+    assert.ok(runningHtml.includes("A second start is blocked"));
+    assert.ok(runningHtml.includes("Command mediation observed"));
+    assert.equal(snapshot.runs.length, 0);
+  });
+  test("indeterminate starts retain the writer without retrying", async () => {
+    const { task } = approveOneTask();
+    const worker = new MockWorker({
+      start: () => ({ kind: "indeterminate", reason: "lost response" }),
+    });
+    const runner = new TaskRunner(repository, worker);
+
+    const result = await runner.startTask({
+      taskId: task.taskId,
+      approvalId: "approval-one",
+      runId: "run-one",
+      adapterId: "mock",
+      prompt: "Do the task",
+      reservationCommandId: "reserve-one",
+      bindCommandId: "bind-one",
+      terminalCommandId: "finish-one",
+    });
+
+    assert.equal(result.kind, "indeterminate");
+    assert.equal(worker.starts.length, 1);
+    assert.equal(repository.read().runs[0]?.state, "reconciliation-required");
+    const reconciliationHtml = renderWorkView(repository.read());
+    assert.ok(reconciliationHtml.includes("Reconciliation required"));
+    assert.ok(reconciliationHtml.includes("A second start is blocked"));
+    const second = repository.dispatch({
+      commandId: "reserve-two",
+      projectId: repository.read().projectId,
+      expectedProjectRevision: repository.read().revision,
+      action: {
+        kind: "reserve-run",
+        runId: "run-two",
+        taskId: task.taskId,
+        approvalId: "approval-one",
+        adapterId: "mock",
+      },
+    });
+    assert.equal(second.kind, "writer-busy");
+  });
+  test("definite start failure releases the writer but exhausts attempts", async () => {
+    const { task } = approveOneTask();
+    const worker = new MockWorker({
+      start: () => ({ kind: "not-started", reason: "rejected before send" }),
+    });
+    const runner = new TaskRunner(repository, worker);
+    const result = await runner.startTask({
+      taskId: task.taskId,
+      approvalId: "approval-one",
+      runId: "run-one",
+      adapterId: "mock",
+      prompt: "Do the task",
+      reservationCommandId: "reserve-one",
+      bindCommandId: "bind-one",
+      terminalCommandId: "finish-one",
+    });
+    assert.equal(result.kind, "not-started");
+    assert.equal(repository.read().runs[0]?.state, "failed");
+
+    const current = repository.read();
+    const retry = repository.dispatch({
+      commandId: "reserve-retry",
+      projectId: current.projectId,
+      expectedProjectRevision: current.revision,
+      action: {
+        kind: "reserve-run",
+        runId: "run-two",
+        taskId: task.taskId,
+        approvalId: "approval-one",
+        adapterId: "mock",
+      },
+    });
+    assert.equal(retry.kind, "attempt-budget-exhausted");
+  });
+  test("proven completion releases the writer and needs verification", async () => {
+    const { task } = approveOneTask();
+    const worker = new MockWorker({ inspected: { kind: "completed" } });
+    const runner = new TaskRunner(repository, worker);
+    const started = await runner.startTask({
+      taskId: task.taskId,
+      approvalId: "approval-one",
+      runId: "run-one",
+      adapterId: "mock",
+      prompt: "Do the task",
+      reservationCommandId: "reserve-one",
+      bindCommandId: "bind-one",
+      terminalCommandId: "finish-one",
+    });
+    assert.ok(started.kind === "started");
+
+    const settled = await runner.settle({
+      runId: "run-one",
+      ref: started.ref,
+      commandId: "complete-one",
+    });
+
+    assert.equal(settled.kind, "applied");
+    const current = repository.read();
+    assert.deepEqual(taskStatus(current, task.taskId), {
+      kind: "needs-verification",
+      runId: "run-one",
+    });
+    assert.equal(current.runs[0]?.state, "completed");
+    const completedHtml = renderWorkView(current);
+    assert.ok(completedHtml.includes("Needs verification"));
+    assert.ok(!completedHtml.includes("accepted"));
+  });
+  test("elapsed budget interrupts supported workers and retains an unknown run", async () => {
+    const { task } = approveOneTask();
+    let expire: (() => Promise<void>) | undefined;
+    let scheduledMilliseconds = 0;
+    const deadlines: DeadlineScheduler = {
+      schedule: (input) => {
+        scheduledMilliseconds = input.milliseconds;
+        expire = input.expire;
+        return () => undefined;
+      },
+    };
+    const worker = new MockWorker({
+      capabilities: { interrupt: true },
+      inspected: { kind: "unknown" },
+    });
+    const runner = new TaskRunner(repository, worker, deadlines);
+    const started = await runner.startTask({
+      taskId: task.taskId,
+      approvalId: "approval-one",
+      runId: "run-one",
+      adapterId: "mock",
+      prompt: "Do the task",
+      reservationCommandId: "reserve-one",
+      bindCommandId: "bind-one",
+      terminalCommandId: "finish-one",
+    });
+    assert.equal(started.kind, "started");
+    assert.equal(scheduledMilliseconds, 15 * 60_000);
+    assert.ok(expire);
+
+    await expire();
+
+    assert.equal(worker.interrupts, 1);
+    assert.equal(repository.read().runs[0]?.state, "reconciliation-required");
   });
   test("corrupt history fails instead of recreating the project", () => {
     repository.open(identity);

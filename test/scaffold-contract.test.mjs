@@ -42,6 +42,11 @@ test("the extension exposes the Piarre: Open activation seam", async () => {
       title: "Piarre: Propose Task",
       enablement: "isWorkspaceTrusted",
     },
+    {
+      command: "piarre.approveAndRunTask",
+      title: "Piarre: Approve and Run Task",
+      enablement: "isWorkspaceTrusted",
+    },
   ]);
 });
 

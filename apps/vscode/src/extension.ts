@@ -5,18 +5,80 @@ import { mkdir, realpath } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { GoalInterpreter } from "./goal-interpreter.js";
+import { CodexAppServerWorker } from "./codex-app-server-worker.js";
 import { SqliteProjectRepository } from "./sqlite-project-repository.js";
 import { assertStorageOutsideRepository } from "./storage-boundary.js";
+import { TaskRunner } from "./task-runner.js";
 import { WorkView } from "./work-view.js";
+import type {
+  ExecutionGrant,
+  ProjectSnapshot,
+  ProposedTask,
+} from "../../../packages/core/src/index.js";
+import { ownsWriter } from "../../../packages/core/src/index.js";
 
 const execute = promisify(execFile);
 const isTrusted = (): boolean => vscode.workspace.isTrusted;
+const approvedCommands = [{ argv: ["git", "status", "--short"] }] as const;
+
+export function codexMediationVersion(stdout: string): string | undefined {
+  const match = /^codex-cli (\d+\.\d+\.\d+)\s*$/.exec(stdout);
+  return match?.[1] === "0.164.0" ? match[1] : undefined;
+}
+
+export function approvalSummary(input: {
+  readonly task: ProposedTask;
+  readonly repositoryRoot: string;
+}): string {
+  const { task, repositoryRoot } = input;
+  return [
+    `Task: ${task.title}`,
+    `Plan version: ${String(task.planVersion)}`,
+    `Writable root: ${repositoryRoot}`,
+    `Exact commands: ${approvedCommands.map(({ argv }) => JSON.stringify(argv)).join(", ")}`,
+    `Attempts: ${String(task.proposedBudget.maxAttempts)}`,
+    `Elapsed time: ${String(task.proposedBudget.maxElapsedMinutes)} minutes`,
+    `Tokens: ${task.proposedBudget.maxTokens.toLocaleString("en-US")} observed soft budget. Codex 0.164.0 does not expose a hard token limit.`,
+  ].join("\n");
+}
+
+export function approvedExecutionGrant(input: {
+  readonly approvalId: string;
+  readonly task: ProposedTask;
+  readonly repositoryRoot: string;
+  readonly cliVersion: string | undefined;
+  readonly confirmed: boolean;
+}): ExecutionGrant | undefined {
+  if (!input.confirmed || input.cliVersion !== "0.164.0") return undefined;
+  return {
+    approvalId: input.approvalId,
+    taskId: input.task.taskId,
+    planVersion: input.task.planVersion,
+    repositoryRoot: input.repositoryRoot,
+    writableRoot: input.repositoryRoot,
+    commands: approvedCommands,
+    budget: input.task.proposedBudget,
+  };
+}
+
+export function runnableTasks(project: ProjectSnapshot): readonly ProposedTask[] {
+  if (project.runs.some(ownsWriter)) return [];
+  return project.tasks.filter((task) => {
+    if (task.state.kind === "unapproved") return true;
+    const attempts = project.runs.filter(
+      ({ taskId }) => taskId === task.taskId,
+    ).length;
+    return attempts < task.proposedBudget.maxAttempts;
+  });
+}
 
 export function activate(context: vscode.ExtensionContext): void {
   const view = new WorkView();
   const interpreter = new GoalInterpreter();
   const output = vscode.window.createOutputChannel("Piarre");
   let repository: SqliteProjectRepository | undefined;
+  let repositoryRoot: string | undefined;
+  let worker: CodexAppServerWorker | undefined;
   let opening: Promise<void> | undefined;
   let generation = 0;
   const open = async (interactive: boolean, observedGeneration: number): Promise<void> => {
@@ -68,6 +130,7 @@ export function activate(context: vscode.ExtensionContext): void {
       const project = next.open({ repositoryUri, name: path.basename(root) });
       repository?.close();
       repository = next;
+      repositoryRoot = root;
       view.show(project);
     } catch (error) {
       next.close();
@@ -98,6 +161,7 @@ export function activate(context: vscode.ExtensionContext): void {
     {
       dispose: () => {
         repository?.close();
+        worker?.close();
       },
     },
     vscode.commands.registerCommand("piarre.open", () => requestOpen(true)),
@@ -190,6 +254,160 @@ export function activate(context: vscode.ExtensionContext): void {
         }
       },
     ),
+    vscode.commands.registerCommand("piarre.approveAndRunTask", async () => {
+      if (!isTrusted()) return;
+      if (!repository) await requestOpen(true);
+      if (!repository || !repositoryRoot || !isTrusted()) return;
+      const current = repository;
+      const root = repositoryRoot;
+      const observedGeneration = generation;
+      try {
+        const before = current.read();
+        const runnable = runnableTasks(before);
+        if (runnable.length === 0) {
+          await vscode.window.showInformationMessage(
+            before.runs.some((run) =>
+              run.state === "reserved" ||
+              run.state === "running" ||
+              run.state === "reconciliation-required",
+            )
+              ? "A coding task already owns the repository writer."
+              : "No unapproved task is ready to run.",
+          );
+          return;
+        }
+        const task =
+          runnable.length === 1
+            ? runnable[0]
+            : await vscode.window
+                .showQuickPick(
+                  runnable.map((candidate) => ({
+                    label: candidate.title,
+                    description: candidate.taskId,
+                    task: candidate,
+                  })),
+                  { placeHolder: "Choose one task to approve and run" },
+                )
+                .then((selection) => selection?.task);
+        if (!task) return;
+        const { stdout } = await execute("codex", ["--version"], {
+          cwd: root,
+          timeout: 5000,
+          maxBuffer: 1024 * 1024,
+        });
+        const cliVersion = codexMediationVersion(stdout);
+        if (!cliVersion) {
+          await vscode.window.showErrorMessage(
+            "Piarre cannot run this task because the installed Codex version has not passed the command-mediation probe.",
+          );
+          return;
+        }
+        const approvedState =
+          task.state.kind === "approved" ? task.state : undefined;
+        const existingGrant = approvedState
+          ? before.grants.find(
+              ({ approvalId }) => approvalId === approvedState.approvalId,
+            )
+          : undefined;
+        const approvalId = existingGrant?.approvalId ?? randomUUID();
+        let grant = existingGrant;
+        if (!grant) {
+          const approved = await vscode.window.showInformationMessage(
+            approvalSummary({ task, repositoryRoot: root }),
+            { modal: true },
+            "Approve and Run",
+          );
+          grant = approvedExecutionGrant({
+            approvalId,
+            task,
+            repositoryRoot: root,
+            cliVersion,
+            confirmed: approved === "Approve and Run",
+          });
+        }
+        if (
+          !grant ||
+          !isTrusted() ||
+          repository !== current ||
+          generation !== observedGeneration
+        )
+          return;
+        const approval = existingGrant
+          ? { kind: "duplicate" as const, snapshot: before }
+          : current.dispatch({
+              commandId: randomUUID(),
+              projectId: before.projectId,
+              expectedProjectRevision: before.revision,
+              action: { kind: "approve-task", grant },
+            });
+        if (approval.kind !== "applied" && approval.kind !== "duplicate") {
+          await vscode.window.showWarningMessage(
+            "The task changed before approval. Review the latest Work view and try again.",
+          );
+          return;
+        }
+        worker?.close();
+        worker = new CodexAppServerWorker({
+          mediationEvidence: {
+            cliVersion,
+            approvalPolicy: "untrusted",
+            sandboxPolicy: "workspaceWrite",
+          },
+        });
+        const capabilities = await worker.capabilities();
+        view.show(approval.snapshot, capabilities);
+        const runner = new TaskRunner(current, worker);
+        const runId = randomUUID();
+        const started = await runner.startTask({
+          taskId: task.taskId,
+          approvalId,
+          runId,
+          adapterId: "codex-app-server",
+          prompt: [
+            task.title,
+            ...task.requirements.map(({ text }) => `Requirement: ${text}`),
+            `Writable root: ${root}`,
+            `Approved commands: ${approvedCommands.map(({ argv }) => argv.join(" ")).join(", ")}`,
+          ].join("\n"),
+          reservationCommandId: randomUUID(),
+          bindCommandId: randomUUID(),
+          terminalCommandId: randomUUID(),
+        });
+        view.show(current.read(), capabilities);
+        if (started.kind !== "started") {
+          output.appendLine(`Run ${runId}: ${started.kind}`);
+          return;
+        }
+        const activeWorker = worker;
+        void (async () => {
+          try {
+            for await (const observation of activeWorker.observe(started.ref)) {
+              output.appendLine(
+                observation.kind === "message"
+                  ? `Run ${runId}: worker message observed`
+                  : `Run ${runId}: ${observation.kind}`,
+              );
+            }
+            if (repository === current && generation === observedGeneration) {
+              await runner.settle({
+                runId,
+                ref: started.ref,
+                commandId: randomUUID(),
+              });
+              view.show(current.read(), capabilities);
+            }
+          } catch (error) {
+            output.appendLine(
+              `Run ${runId}: observation failed: ${error instanceof Error ? error.message : String(error)}`,
+            );
+          }
+        })();
+      } catch (error) {
+        await vscode.window.showErrorMessage(
+          `Piarre could not run the task. ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }),
     vscode.workspace.onDidGrantWorkspaceTrust(() => {
       void requestOpen(false);
     }),
@@ -198,6 +416,9 @@ export function activate(context: vscode.ExtensionContext): void {
       opening = undefined;
       repository?.close();
       repository = undefined;
+      repositoryRoot = undefined;
+      worker?.close();
+      worker = undefined;
       view.dispose();
       void requestOpen(false);
     }),
