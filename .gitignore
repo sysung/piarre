@@ -6,3 +6,5 @@ dist-package/
 .vscode-test/
 *.vsix
 *.tsbuildinfo
+
+.DS_Store

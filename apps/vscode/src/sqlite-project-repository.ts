@@ -95,6 +95,8 @@ export class SqliteProjectRepository {
         command.action.kind,
         command.action.name,
       ]);
+    } else if (command.action.kind === "delete-proposal") {
+      input = JSON.stringify([command.projectId, command.expectedProjectRevision, command.action.kind, command.action.groupId]);
     } else {
       input = JSON.stringify([
         command.projectId,
@@ -123,6 +125,8 @@ export class SqliteProjectRepository {
         return { kind: "wrong-project" };
       if (snapshot.revision !== command.expectedProjectRevision)
         return { kind: "stale", actualRevision: snapshot.revision };
+      const action = command.action;
+      if (action.kind === "delete-proposal" && !snapshot.proposals.some(proposal => proposal.groupId === action.groupId)) throw new Error("Proposal no longer exists");
       const event = decideProjectEvent(command);
       const revision = snapshot.revision + 1;
       this.database

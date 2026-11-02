@@ -1,9 +1,9 @@
 import { execFileSync } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import assert from "node:assert/strict";
-import { downloadAndUnzipVSCode, resolveCliArgsFromVSCodeExecutablePath } from "@vscode/test-electron";
+import { downloadAndUnzipVSCode, resolveCliArgsFromVSCodeExecutablePath, runTests } from "@vscode/test-electron";
 import { vscodeVersion } from "../../../config/vscode-version.mjs";
 
 const temporaryProfile = await mkdtemp(path.join(tmpdir(), "piarre-package-"));
@@ -22,6 +22,18 @@ try {
   const expected = `${manifest.publisher}.${manifest.name}@${manifest.version}`;
   assert.ok(installed.split(/\r?\n/).includes(expected), `Installed package missing: ${expected}`);
   console.log(`Verified installed VSIX: ${expected}`);
+  const repository = path.join(temporaryProfile, "repository");
+  await mkdir(repository);
+  execFileSync("git", ["init", repository], { stdio: "ignore" });
+  execFileSync("npm", ["run", "test:compile"], { stdio: "inherit" });
+  await runTests({
+    extensionDevelopmentPath: path.join(temporaryProfile, "extensions", `${manifest.publisher}.${manifest.name}-${manifest.version}`),
+    extensionTestsPath: path.resolve("dist-test/suite/index.js"),
+    version: vscodeVersion,
+    extensionTestsEnv: { PIARRE_PACKAGE_TEST: "1" },
+    launchArgs: [repository, "--disable-workspace-trust", "--disable-extensions", ...profile],
+  });
+  console.log("Packaged extension opened a real repository successfully.");
 } finally {
   await rm(temporaryProfile, { recursive: true, force: true });
 }

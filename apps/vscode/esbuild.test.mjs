@@ -6,6 +6,7 @@ await build({
   entryPoints: [
     "test/suite/activation.test.ts",
     "test/suite/index.ts",
+    "test/suite/workspace.test.ts",
     "test/suite/project.test.ts",
     "test/suite/proposal.test.ts",
     "test/suite/foundations.test.ts",

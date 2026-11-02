@@ -5,6 +5,8 @@ export function run(): Promise<void> {
   const mocha = new Mocha({ color: true, ui: "tdd" });
   if (process.env.PIARRE_UNTRUSTED_TEST === "1") {
     mocha.addFile(path.resolve(__dirname, "untrusted.test.js"));
+  } else if (process.env.PIARRE_PACKAGE_TEST === "1") {
+    mocha.addFile(path.resolve(__dirname, "activation.test.js"));
   } else {
     mocha.addFile(path.resolve(__dirname, "activation.test.js"));
     mocha.addFile(path.resolve(__dirname, "project.test.js"));
@@ -12,6 +14,7 @@ export function run(): Promise<void> {
     mocha.addFile(path.resolve(__dirname, "foundations.test.js"));
     mocha.addFile(path.resolve(__dirname, "costs.test.js"));
     mocha.addFile(path.resolve(__dirname, "provider-settings.test.js"));
+    mocha.addFile(path.resolve(__dirname, "workspace.test.js"));
   }
 
   return new Promise((resolve, reject) => {

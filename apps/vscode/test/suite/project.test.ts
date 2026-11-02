@@ -9,7 +9,7 @@ import type {
   ProjectCommand,
   ProposalDraft,
 } from "../../../../packages/core/src/index.js";
-import { renderWorkView } from "../../src/work-view.js";
+import { renderInspection, renderWorkView } from "../../src/work-view.js";
 
 suite("Durable projects", () => {
   let directory: string;
@@ -209,7 +209,7 @@ suite("Durable projects", () => {
         dependsOn: [],
       },
     ]);
-    const html = renderWorkView(result.snapshot);
+    const html = renderInspection(result.snapshot, undefined, result.snapshot.proposals[0]?.groupId);
     assert.ok(html.includes("Add a pricing page"));
     assert.ok(html.includes("Show the available plans."));
     assert.ok(html.includes("src/pages/pricing.tsx"));

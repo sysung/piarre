@@ -72,6 +72,7 @@ export interface ProjectCommand {
   readonly expectedProjectRevision: number;
   readonly action:
     | { readonly kind: "rename-project"; readonly name: string }
+    | { readonly kind: "delete-proposal"; readonly groupId: string }
     | { readonly kind: "propose-tasks"; readonly draft: ProposalDraft };
 }
 
@@ -82,6 +83,7 @@ export type ProjectEvent =
       readonly repositoryUri: string;
       readonly name: string;
     }
+  | { readonly kind: "proposal-deleted"; readonly groupId: string }
   | { readonly kind: "project-renamed"; readonly name: string }
   | {
       readonly kind: "proposal-created";
@@ -122,6 +124,13 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
           revision: snapshot.revision + 1,
         };
         break;
+      case "proposal-deleted": {
+        if (!snapshot.proposals.some(proposal => proposal.groupId === event.groupId)) throw new Error("Invalid project history: unknown proposal deletion");
+        snapshot = { ...snapshot, revision: snapshot.revision + 1,
+          proposals: snapshot.proposals.filter(proposal => proposal.groupId !== event.groupId),
+          tasks: snapshot.tasks.filter(task => task.groupId !== event.groupId) };
+        break;
+      }
       case "proposal-created": {
         const knownGroups = new Set(snapshot.proposals.map(({ groupId }) => groupId));
         const knownTasks = new Set(snapshot.tasks.map(({ taskId }) => taskId));
@@ -165,6 +174,8 @@ export function decideProjectEvent(command: ProjectCommand): ProjectEvent {
   switch (command.action.kind) {
     case "rename-project":
       return { kind: "project-renamed", name: command.action.name };
+    case "delete-proposal":
+      return { kind: "proposal-deleted", groupId: command.action.groupId };
     case "propose-tasks": {
       const encodedCommandId = encodeURIComponent(command.commandId);
       const groupId = `proposal:${encodedCommandId}`;

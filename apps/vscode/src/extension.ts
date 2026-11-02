@@ -1,24 +1,39 @@
 import * as vscode from "vscode";
 import { createHash, randomUUID } from "node:crypto";
-import { execFile } from "node:child_process";
-import { mkdir, realpath } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import { promisify } from "node:util";
 import { GoalInterpreter } from "./goal-interpreter.js";
 import { SqliteProjectRepository } from "./sqlite-project-repository.js";
 import { assertStorageOutsideRepository } from "./storage-boundary.js";
+import { findRepositoryRoot } from "./repository-root.js";
 import { WorkView } from "./work-view.js";
 
-const execute = promisify(execFile);
+
 const isTrusted = (): boolean => vscode.workspace.isTrusted;
 
 export function activate(context: vscode.ExtensionContext): void {
-  const view = new WorkView();
   const interpreter = new GoalInterpreter();
   const output = vscode.window.createOutputChannel("Piarre");
   let repository: SqliteProjectRepository | undefined;
   let opening: Promise<void> | undefined;
   let generation = 0;
+  const view = new WorkView(undefined, {
+    prepare: (goal) => interpreter.propose(goal),
+    deleteProposal: (snapshot, groupId, commandId) => {
+      if (!repository || !isTrusted()) return;
+      const result = repository.dispatch({ commandId, projectId: snapshot.projectId,
+        expectedProjectRevision: snapshot.revision, action: { kind: "delete-proposal", groupId } });
+      return result.kind === "applied" || result.kind === "duplicate" ? result.snapshot : undefined;
+    },
+    save: (snapshot, draft, commandId) => {
+      if (!repository || !isTrusted()) return;
+      const result = repository.dispatch({ commandId, projectId: snapshot.projectId,
+        expectedProjectRevision: snapshot.revision, action: { kind: "propose-tasks", draft } });
+      if (result.kind !== "applied" && result.kind !== "duplicate") return;
+      view.update(result.snapshot);
+      return result.snapshot;
+    },
+  });
   const open = async (interactive: boolean, observedGeneration: number): Promise<void> => {
     const isCurrent = (): boolean => observedGeneration === generation && isTrusted();
     if (!isTrusted()) {
@@ -45,12 +60,7 @@ export function activate(context: vscode.ExtensionContext): void {
             })
           : undefined;
     if (!folder || folder.uri.scheme !== "file" || !isCurrent()) return;
-    const { stdout } = await execute("git", ["rev-parse", "--show-toplevel"], {
-      cwd: folder.uri.fsPath,
-      timeout: 5000,
-      maxBuffer: 1024 * 1024,
-    });
-    const root = await realpath(stdout.trim());
+    const root = await findRepositoryRoot(folder.uri.fsPath);
     if (!isCurrent()) return;
     const repositoryUri = vscode.Uri.file(root).toString();
     const key = createHash("sha256").update(repositoryUri).digest("hex");
