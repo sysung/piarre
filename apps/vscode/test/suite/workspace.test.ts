@@ -281,6 +281,8 @@ window.addEventListener('message', ({data}) => { if (data.kind === 'test-checked
     await waitFor(() => document.querySelector('[data-open-goal]'));
     const card = document.querySelector('[data-open-goal]');
     if (!card || card.querySelector('details')) throw new Error('Goal overview must contain compact cards');
+    const trash = card.parentElement.querySelector('[data-delete-goal]');
+    if (!trash?.querySelector('svg') || !trash.getAttribute('aria-label') || trash.getBoundingClientRect().left < card.getBoundingClientRect().right) throw new Error('Trash icon must be accessible and placed to the right');
     card.click();
     await waitFor(() => document.getElementById('browse-status').textContent.includes('Proposal opened'));
     goal.value = 'A second idea';
