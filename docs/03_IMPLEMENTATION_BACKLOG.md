@@ -9,3 +9,5 @@ Keep requirements in the [PRD](01_PRODUCT_PRD.md) and architecture in the [techn
 The C release replaces the old B delivery sequence. Superseded issues remain traceable in GitHub. Internal work remains incremental and verified; the user reviews one coherent candidate rather than every implementation item.
 
 The selected [Design B session brief](https://www.figma.com/design/I7CeHDqFJEvoEdmslfKrNp?node-id=7-2) enters implementation through [C02’s workspace slice](https://github.com/sysung/piarre/issues/64), under [C02](https://github.com/sysung/piarre/issues/53). C03 owns sourced resumption and memory, C04 owns execution and outcome review, and C08 owns integrated validation. The linked issues retain the changing acceptance details. “Design B” names the chosen UI direction and does not reactivate the retired B delivery sequence.
+
+The [agent-visibility design revision](https://github.com/sysung/piarre/issues/75) makes the agent/work overview the primary experience and defers voice. Typed discussion remains a supporting tool. The current issues and acceptance scenarios follow that priority; historical conversation-first plans are retained as history.

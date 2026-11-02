@@ -1,7 +1,7 @@
 {
   "name": "piarre",
   "displayName": "Piarre",
-  "description": "Voice-first control plane for coding agents.",
+  "description": "Centralized orchestration and visibility for coding agents.",
   "version": "0.0.1",
   "private": true,
   "publisher": "sysung",
@@ -212,7 +212,7 @@
           "type": "string",
           "default": "codex",
           "scope": "machine",
-          "description": "Codex CLI executable used for an explicit conversation connection. Sign in through the CLI first. No shell arguments or credentials."
+          "description": "Codex CLI executable used for an explicit connection. Sign in through the CLI first. No shell arguments or credentials."
         }
       }
     }

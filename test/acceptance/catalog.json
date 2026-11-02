@@ -41,12 +41,12 @@
       "owner": "C02",
       "source": {
         "document": "docs/01_PRODUCT_PRD.md",
-        "heading": "Conversation and project inspection"
+        "heading": "Agent visibility and project inspection"
       },
-      "requirement": "Broad typed conversation, consequential clarification, and direct controls.",
+      "requirement": "Supporting typed instructions and consequential clarification preserve privacy and source meaning; agent visibility and direct controls do not require opening a conversation.",
       "verification": {
         "kind": "pending",
-        "criterion": "Real conversational-provider and Extension Host journey."
+        "criterion": "Typed input privacy/correlation checks and an agent-overview journey operated without a chat exchange."
       }
     },
     {
@@ -56,7 +56,7 @@
         "document": "docs/01_PRODUCT_PRD.md",
         "heading": "Product principles"
       },
-      "requirement": "Observed concise progress during work without interrupting unfinished thought.",
+      "requirement": "Observed agent/task ownership, concise milestones, blockers and pending decisions remain visible without status questions.",
       "verification": {
         "kind": "pending",
         "criterion": "Event-driven checks and recorded active-run observation."
@@ -98,7 +98,7 @@
       "requirement": "Reversible priorities and dependency-aware work without implied approval.",
       "verification": {
         "kind": "pending",
-        "criterion": "Direct-control and conversation integration checks."
+        "criterion": "Direct-control priority and dependency checks with current agent/task ownership."
       }
     },
     {
@@ -228,7 +228,7 @@
       "requirement": "Observe useful, business-grounded explanations and supervision effort without hiding defects.",
       "verification": {
         "kind": "pending",
-        "criterion": "Concentrated user round against a comparable existing workflow, with recorded limitations."
+        "criterion": "Consolidated user evaluation of agent visibility, decision clarity, review accuracy and supervision burden against the existing workflow."
       }
     },
     {
@@ -260,7 +260,7 @@
       "owner": "C02",
       "source": {
         "document": "docs/01_PRODUCT_PRD.md",
-        "heading": "Conversation and project inspection"
+        "heading": "Agent visibility and project inspection"
       },
       "requirement": "Design B planning shell: record-backed brief, visible split inspection, responsive reading order, and private unsent input preserved across refresh. This does not establish connected dialogue or sourced session resumption.",
       "verification": {
@@ -288,6 +288,19 @@
           "interpretations cite only supplied sources and remain inferred",
           "correction candidates retain the host-selected target and cannot confirm it"
         ]
+      }
+    },
+    {
+      "id": "agent-visibility",
+      "owner": "C02",
+      "source": {
+        "document": "docs/01_PRODUCT_PRD.md",
+        "heading": "Agent visibility and project inspection"
+      },
+      "requirement": "Default overview shows known agents, task/scope ownership, parent work, last observed state, progress or blockers, pending decisions, outputs and supported direct controls; disconnected and unattached coverage is explicit.",
+      "verification": {
+        "kind": "pending",
+        "criterion": "Actual managed-agent and bounded parallel-work journeys, stop/restart/unknown states, evidence navigation, and user evaluation without opening chat."
       }
     }
   ]
