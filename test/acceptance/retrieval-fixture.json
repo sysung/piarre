@@ -1,0 +1,158 @@
+{
+  "version": 1,
+  "revision": "549552ecb699a32881adb026374cbd30697f4e4f",
+  "description": "Hand-authored local retrieval probes. Expected evidence is reviewed fixture data, not user-confirmed business knowledge. Overlay scenarios are synthetic transformations of these pinned repository sources.",
+  "paths": [
+    "docs/01_PRODUCT_PRD.md",
+    "docs/02_TECHNICAL_DESIGN.md",
+    "packages/core/src/index.ts",
+    "packages/core/src/contracts.ts",
+    "packages/core/src/costs.ts",
+    "packages/core/src/inspection.ts",
+    "apps/vscode/src/work-view.ts",
+    "apps/vscode/src/sqlite-project-repository.ts",
+    ".github/workflows/ci.yml",
+    "package.json"
+  ],
+  "questions": [
+    {
+      "id": "business-rationale",
+      "question": "Why should Piarre reduce the effort of coordinating coding agents?",
+      "query": "AI fatigue",
+      "expected": [
+        {
+          "path": "docs/01_PRODUCT_PRD.md",
+          "contains": "The business problem is AI fatigue"
+        }
+      ]
+    },
+    {
+      "id": "paraphrased-rationale",
+      "question": "Why do developers have to keep retelling their goals?",
+      "query": "retelling goals",
+      "expected": [
+        {
+          "path": "docs/01_PRODUCT_PRD.md",
+          "contains": "repeating context"
+        }
+      ]
+    },
+    {
+      "id": "authority",
+      "question": "What is authoritative for task approvals?",
+      "query": "SQLite events authoritative",
+      "expected": [
+        {
+          "path": "docs/02_TECHNICAL_DESIGN.md",
+          "contains": "SQLite events are authoritative"
+        }
+      ]
+    },
+    {
+      "id": "memory-policy",
+      "question": "Is automatic capture of confirmed memory settled?",
+      "query": "policy explicit resolution",
+      "expected": [
+        {
+          "path": "docs/01_PRODUCT_PRD.md",
+          "contains": "policy still needs explicit resolution"
+        }
+      ]
+    },
+    {
+      "id": "exact-symbol",
+      "question": "Where is provider configuration parsed?",
+      "query": "parseProviderConfiguration",
+      "symbol": "parseProviderConfiguration",
+      "expected": [
+        {
+          "path": "packages/core/src/inspection.ts",
+          "contains": "export function parseProviderConfiguration"
+        }
+      ]
+    },
+    {
+      "id": "billing-symbol",
+      "question": "Where is the billing plan parser defined?",
+      "query": "parseBillingPlan",
+      "symbol": "parseBillingPlan",
+      "expected": [
+        {
+          "path": "packages/core/src/costs.ts",
+          "contains": "export function parseBillingPlan"
+        }
+      ]
+    },
+    {
+      "id": "stale-reference",
+      "question": "How does a record reference reject an old revision?",
+      "query": "reference revision stale",
+      "expected": [
+        {
+          "path": "packages/core/src/inspection.ts",
+          "contains": "reference.revision !== proposal.recordedAtRevision"
+        }
+      ]
+    },
+    {
+      "id": "cross-dependency",
+      "question": "Which indexed modules directly import the billing parser module?",
+      "query": "parseBillingPlan",
+      "symbol": "parseBillingPlan",
+      "kind": "impact",
+      "expected": [
+        {
+          "path": "packages/core/src/inspection.ts",
+          "contains": "./costs.js"
+        },
+        {
+          "path": "apps/vscode/src/work-view.ts",
+          "contains": "packages/core/src/costs.js"
+        }
+      ]
+    },
+    {
+      "id": "infra-declaration",
+      "question": "Which runner does CI declare?",
+      "query": "runs-on ubuntu-latest",
+      "expected": [
+        {
+          "path": ".github/workflows/ci.yml",
+          "contains": "runs-on: ubuntu-latest"
+        }
+      ]
+    },
+    {
+      "id": "deployment-unknown",
+      "question": "Which AWS region currently hosts the deployed Piarre server?",
+      "query": "AWS region deployed Piarre server",
+      "expected": []
+    },
+    {
+      "id": "runtime-unknown",
+      "question": "Did the CI workflow run successfully for this source revision?",
+      "query": "workflow successful execution evidence",
+      "expected": []
+    },
+    {
+      "id": "dynamic-dependency",
+      "question": "Which plugin dynamically calls the billing parser by a computed name?",
+      "query": "computed dynamic plugin parseBillingPlan",
+      "expected": []
+    }
+  ],
+  "freshness": {
+    "path": "packages/core/src/inspection.ts",
+    "renameTo": "packages/core/src/renamed-inspection.ts",
+    "old": "parseProviderConfiguration",
+    "replacement": "parseProviderSettings",
+    "decisionPath": "docs/02_TECHNICAL_DESIGN.md",
+    "oldDecision": "A dedicated graph database is a candidate, not a committed dependency.",
+    "newDecision": "A dedicated graph database is required."
+  },
+  "dynamicDependency": {
+    "description": "Synthetic computed dispatch. The runtime dependency is supplied explicitly by this fixture. This does not claim a dynamic dependency exists in production Piarre.",
+    "source": "const moduleName = \"billing\"; const symbolName = [\"parse\", \"BillingPlan\"].join(\"\"); dependencies[moduleName][symbolName]();",
+    "target": "packages/core/src/costs.ts#parseBillingPlan"
+  }
+}
