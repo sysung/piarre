@@ -8,6 +8,14 @@ The [product requirements](docs/01_PRODUCT_PRD.md) describe the business problem
 
 The [documentation index](docs/00_README.md) links the four lasting project documents. Requirements describe intended behavior, not implemented capabilities.
 
+## Install a package
+
+Open a successful [CI run](https://github.com/sysung/piarre/actions/workflows/ci.yml), download its **piarre-vsix** artifact, and unzip it. In VS Code, run **Extensions: Install from VSIX...** and select the `.vsix` file. Reload VS Code, open a trusted Git repository, and run **Piarre: Open**. The package requires VS Code 1.144.0 or later.
+
+Every successful pull request and master build produces a package with its source commit and SHA-256 checksums. These are development builds, not Marketplace releases. Downloading Actions artifacts requires signing in to GitHub; artifacts expire after 30 days.
+
+Maintainers can run CI manually on master with **create_release** enabled to attach the tested package to an unpublished GitHub Release. Bump `apps/vscode/package.json` to an unused version first. Review the draft before publishing; the workflow never publishes to the Marketplace.
+
 ## Develop the extension
 
 Use Node.js 22, as recorded in `.nvmrc`. A fresh checkout needs no global build tools:

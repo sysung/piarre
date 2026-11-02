@@ -226,6 +226,7 @@
     "build:watch": "node esbuild.mjs --watch",
     "package": "node scripts/package.mjs",
     "test:compile": "node esbuild.test.mjs",
-    "test:smoke": "npm run build && npm run test:compile && node test/run.mjs"
+    "test:smoke": "npm run build && npm run test:compile && node test/run.mjs",
+    "test:package": "node scripts/test-package.mjs"
   }
 }
