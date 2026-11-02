@@ -1,142 +1,89 @@
-# Technical design for Piarre v0.2
+# Piarre technical design
 
-## System shape
+Status: Target architecture. This document defines lasting contracts; GitHub issues record implementation progress.
 
-```text
-VS Code extension
-  Work, Review, Decisions, Activity, voice controls
-        |
-        v
-ProjectController
-  proposal boundary, policy, state transitions, scheduling,
-  reconciliation, evidence freshness
-        |
-        +--> event store and project projection
-        +--> workspace adapter
-        +--> capability-driven worker adapters
-        +--> voice and interpreter adapters
-```
+## Ownership and data
 
-The persistent project is the product spine. Voice and typed input use one command boundary. Models propose structured actions. Deterministic code owns authorization, revisions, dependency readiness, budgets, and evidence freshness.
+The VS Code extension presents conversation and project inspection. An editor-neutral core owns the project model. Adapters connect storage, workspaces, conversational providers, coding workers, and optional voice.
 
-## Core data shape
+The ProjectController validates proposals and owns authorization, task transitions, dependency readiness, scheduling, budgets, reconciliation, and evidence freshness. Only the runtime appends domain events. Workers report observations or propose actions.
 
-```ts
-type TaskState =
-  | { kind: "proposed"; planVersion: number }
-  | { kind: "ready"; planVersion: number }
-  | { kind: "running"; planVersion: number; runId: string }
-  | { kind: "blocked"; reason: string }
-  | { kind: "needs-approval"; requestId: string }
-  | { kind: "needs-verification"; runId: string }
-  | { kind: "needs-review"; evidenceId: string; workspaceRevision: string }
-  | { kind: "accepted"; evidenceId: string; workspaceRevision: string }
-  | { kind: "cancelled"; reconciliationId: string };
+SQLite events are authoritative for tasks, runs, approvals, and execution evidence. Snapshots are rebuildable projections. Persist events before acknowledging durable changes. Commands carry an identifier and expected project revision. Replay and retries must not duplicate external effects.
 
-interface ProjectCommand {
-  commandId: string;
-  projectId: string;
-  expectedProjectRevision: number;
-  actor: "user" | "runtime" | "worker";
-  action: ProjectAction;
-}
+The domain includes Project, Goal, Requirement, Plan, Task, Worker, Run, Approval, Budget, Decision, Evidence, Workflow, and Session. Knowledge, Basis records, linked threads, council assignments, reflection proposals, checkpoints, provisional drafts, and test bundles extend this model. Define small typed contracts before separate UI and persistence paths diverge.
 
-interface Evidence {
-  id: string;
-  taskId: string;
-  planVersion: number;
-  workspaceRevision: string;
-  kind: "diff" | "command" | "preview" | "artifact";
-  outcome: "passed" | "failed" | "observed";
-  capturedAt: string;
-}
-```
+Human-readable knowledge and decision files are possible, but their authority, import, revision, and conflict rules must be explicit. Do not create competing authoritative copies. Missing or invalid files must remain distinguishable from empty knowledge.
 
-The event log is authoritative. A project snapshot is a projection. Every mutation carries the project revision it observed. Acceptance also binds the plan and workspace revisions.
+## UI and interaction
 
-## Public interfaces
+Conversation and inspection reference the same durable objects. Proposed, applied, running, unknown, failed, stale, and accepted states must be distinguishable without reading logs. Deferred tasks remain discoverable. Priority and agenda disposition are separate from execution state.
 
-```ts
-interface ProjectController {
-  openProject(input: OpenProject): Promise<ProjectSnapshot>;
-  propose(input: CommandInput): Promise<Proposal>;
-  review(input: ProposalDecision): Promise<ProjectSnapshot>;
-  start(input: StartTask): Promise<Run>;
-  dispatch(input: ProjectCommand): Promise<ProjectSnapshot>;
-  prepareReview(input: ReviewTask): Promise<TaskReview>;
-  accept(input: AcceptTask): Promise<ProjectSnapshot>;
-}
+Prototype layout and question formats before choosing them. Preserve keyboard access, visible transcripts, screen-reader state, and non-color status cues. Detailed artifacts open on demand without repeatedly changing focus.
 
-interface WorkerAdapter {
-  capabilities(): Promise<WorkerCapabilities>;
-  start(input: WorkerTask): Promise<ExternalRunRef>;
-  observe(ref: ExternalRunRef): AsyncIterable<WorkerObservation>;
-  steer(ref: ExternalRunRef, instruction: WorkerInstruction): Promise<void>;
-  interrupt(ref: ExternalRunRef): Promise<void>;
-  inspect(ref: ExternalRunRef): Promise<ObservedRunState>;
-}
+Keep conversation and deterministic stop controls responsive while workers run. Emit concise progress from observed state changes, deduplicate unchanged status, and defer nonessential speech while the user is still talking. Explanation depth is a visible, correctable preference.
 
-interface VoiceAdapter {
-  start(mode: "continuous" | "push-to-talk"): Promise<VoiceSession>;
-  events(session: VoiceSession): AsyncIterable<VoiceEvent>;
-  stopSpeaking(session: VoiceSession): Promise<void>;
-  end(session: VoiceSession): Promise<void>;
-}
-```
+Voice input and speech output use separate adapters. Both voice and typed interpretation enter the same untrusted-proposal boundary. Separate mute microphone, stop speaking, stop task, and stop all. Hide unsupported suspension controls rather than labeling interruption as pause.
 
-External wire types are parsed at adapter boundaries. Core code branches on observed capabilities, not provider names. Unsupported controls stay hidden.
+Turn-taking must support hesitation, correction, and explicit completion. Push to talk, adjustable endpoint timing, and transcript correction are candidate controls. Typed tests cannot prove speech quality or intent detection.
 
-## Module map
+## Memory and recommendations
 
-```text
-extension/
-  activate.ts
-  work-view.ts
-  editor-adapter.ts
+Knowledge records need identity, content, sources, confirmation state, revisions, supersession, and affected-work links. Observed, inferred, confirmed, disputed, invalid, and stale states must not collapse into a single remembered fact.
 
-core/
-  project-controller.ts
-  project.ts
-  policy.ts
-  evidence.ts
-  reconciliation.ts
+Retrieve a bounded set of relevant records for each request. Distinguish retrieval failure from no matching record. Basis links exact supporting sources and revisions and exposes unconfirmed premises. Test whether sources support the answer, not merely whether links render.
 
-ports/
-  worker.ts
-  interpreter.ts
-  voice.ts
-  store.ts
+Approved corrections invalidate affected plans and evidence while preserving unrelated work. Contradictory confirmed sources need a visible resolution proposal. Reflection and repeated interactions cannot silently grant authority or confirm requirements.
 
-adapters/
-  sqlite-store.ts
-  codex-worker.ts
-  mock-worker.ts
-  openai-compatible-interpreter.ts
-  local-interpreter.ts
-  webview-voice.ts
-```
+## Execution and approval
 
-Only the runtime appends project events. Workers propose or report observations. They never mutate task state directly.
+Task state differs from run state. A finished run can leave a task needing verification or review. Preserve Proposed, Ready, Running, Blocked, Needs approval, Needs verification, Needs review, Accepted, and Cancelled states with explicit transitions.
 
-## Safety invariants
+Approvals bind concrete scope, relevant plan and workspace revisions, duration, and spending or disclosure authority. Material changes invalidate affected approvals. Repository content, transcripts, tool output, and worker messages cannot change policy.
 
-- An untrusted model cannot grant authority, change task state, or accept evidence.
-- No workspace write occurs without an approved plan, scope, and current revision.
-- A worker claim is not verification evidence.
-- A stop request is not a stopped run until worker and disk state are inspected.
-- Stop speaking, Stop task, and Stop all are separate domain actions.
-- P0 allows one writer. P1 separates write roots before adding concurrency.
-- Evidence becomes stale when its plan or relevant workspace revision changes.
-- Replayed commands and scheduler passes converge without duplicate effects.
+Worker adapters expose observed capabilities for start, status, steering, interruption, and inspection. Parse wire data at adapter boundaries. One writer owns the workspace. Parallel writers require separate write roots and reviewed integration.
 
-## Persistence and recovery
+Separate observed usage, provider estimates, and application estimates. Reject spending without applicable authority. Stop new scheduling at enforceable limits while preserving honest active-run state. Never promise a hard cap unsupported by the provider.
 
-SQLite stores events and rebuildable projections. Persist an event before acknowledging durable state. After restart, mark previously active runs unknown, inspect worker and workspace state, then append reconciliation results. Never repeat an external action solely because its acknowledgement was lost.
+## Preparation, threads, and council
 
-## Voice and local models
+Provisional preparation belongs to a project, thread, input revision, context revision, cancellation state, and resource allowance. It accepts submitted input or explicitly enabled streams. It cannot confirm knowledge, apply plans, start writers, or cause unapproved spending or disclosure.
 
-Voice capture starts only after an explicit user action and keeps microphone state visible. Mock voice verifies lifecycle and routing, not recognition quality. Hosted and local interpreters emit the same untrusted proposal schema. OpenAI-compatible transport is adapter-specific evidence, not a universal voice contract.
+Changed intent cancels or supersedes old preparation. Late results are rejected. Adopting a draft requires validation against final intent. Cancellation cannot undo prior external effects, so prevent those effects rather than promise rollback.
 
-## Delivery architecture
+Linked threads preserve parent relationships, scoped context, and return points. Findings merge through explicit proposals. Conversation concurrency does not grant write concurrency.
 
-The implementation sequence is defined by `docs/03_IMPLEMENTATION_BACKLOG.md`. B15 gates the supervised-writer release. Every P1 story transitively depends on B15. Read-only concurrency precedes isolated coding workers. Integration into the primary workspace always creates a review and fresh verification step.
+Council assignments need bounded purpose, context, permissions, provider, resource limits, and available controls. Synthesis retains disagreements and source quality. Agent failure or cancellation must remain visible. Explanations and available traces must not be presented as hidden model reasoning.
+
+## Recovery and checkpoints
+
+A stop request remains pending until worker and disk state are inspected. Stop all also prevents new scheduling. Cancellation preserves partial changes and does not imply rollback.
+
+After restart or provider failure, mark uncertain activity unknown and reconcile before replacement execution. Lost acknowledgments must not repeat external actions. Detect manual edits and block conflicting acceptance instead of overwriting them.
+
+Checkpoints record included scope, revision, and exclusions. Restore previews differences, reconciles active writers, checks newer edits and untracked files, and obtains approval before destructive replacement. Preserve current work recoverably before a supported restore.
+
+A restore is a new auditable operation. It invalidates affected evidence and reconciles task/run state. Repository restoration does not automatically rewrite confirmed memory, revive approvals, reverse external services, or refund charges. Test partial failure and restart during restoration.
+
+## Providers, resources, and privacy
+
+Keep conversational inference, speech recognition, speech synthesis, retrieval, and coding workers independently configurable. Escalation to a stronger model obeys cost and data-sharing policy. Unsupported integrations stay unavailable.
+
+Measure model weights, context cache, speech processing, retrieval, and runtime overhead separately. Evaluate quality before reducing model size. Record hardware, models, context size, versions, failures, and sample counts. Research results do not substitute for product measurements.
+
+Capture microphone input only in an explicit session. Raw audio and screen capture require opt-in. Keep capture, storage, export, and remote analysis separate. Redact secrets from logs and artifacts. Verify local deletion and explain that provider retention is separate.
+
+Test bundles link timestamps, transcripts, user actions, model and prompt versions, tool activity, approvals, memory/task revisions, repository changes, checks, and optional recordings. They belong with the tested run, not in permanent design documentation.
+
+Stable and development builds need distinct identity, storage, and execution roots. Candidate failure must not corrupt daily state. Versioned packages and CI evidence support explicit promotion and rollback.
+
+## Verification requirements
+
+Use domain tests for policy, revisions, replay, and idempotency; adapter contracts for actual provider behavior; and Extension Host journeys for visible state, persistence, and disk results. Mocks do not prove live speech or worker semantics.
+
+Required failure coverage includes ambiguous targets, denied authority, changed requirements, stale completion, manual edits, build failure, provider disconnect, lost acknowledgment, stop, restart, export/redaction/deletion, contradictory memory, late preparation, thread conflicts, council failure, and checkpoint restoration.
+
+Evidence binds to the relevant plan and workspace revision. Relevant changes make it stale. A completion claim cannot accept its own result. Report scenarios as passed, failed, blocked, unsupported, or not tested.
+
+Measure useful-response latency and control responsiveness during active work, not only acknowledgment speed. Compare task outcomes and review accuracy alongside reading and interruption burden. One session does not establish a performance or fatigue-reduction claim.
+
+Internal changes require appropriate automated checks. Reproduce practical regression defects before fixing them. A release needs current end-to-end evidence and consolidated human review. Detailed test procedures, run results, and release-specific gates belong in issues and artifacts.
