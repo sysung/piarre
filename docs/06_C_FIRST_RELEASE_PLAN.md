@@ -30,11 +30,11 @@ These are explicit proposed scope boundaries. If a boundary conflicts with the p
 
 ## 3. Implementation baseline and retained lessons
 
-Live GitHub shows bootstrap, durable projects, and reviewable proposals as completed. The bounded-execution pull request was subsequently closed as superseded, with its source branch retained for reuse assessment. This checkout is at the earlier durable-project commit. Before coding, inspect the live default branch, merged proposal contracts, and open execution work. Reuse verified code rather than rebuilding from this checkout or treating an open PR as merged.
+Live GitHub shows bootstrap, durable projects, and reviewable proposals as completed. The bounded-execution pull request was subsequently closed as superseded, with its source branch retained for reuse assessment. This planning checkout initially predated reviewable proposals. It has now been rebased onto the current default branch, which includes them. Assess the preserved execution branch before adapting it. Closed unmerged work must not be treated as part of the current baseline.
 
 Retain event-first persistence, optimistic revisions, runtime-owned state, idempotent commands, capability detection, stale evidence rejection, manual-edit protection, and one-writer ownership. Retain failure scenarios and tests from B, not its mandatory story-by-story human walkthroughs.
 
-The B snapshot is historical. C issue status is the current forward execution queue after publication. Historical B work remains linked and discoverable. Any closure or migration of B issues must explicitly identify the C replacement and preserve open PR context.
+The B snapshot is historical. C issue status is the current forward execution queue after publication. Historical B work remains linked and discoverable. Any closure or migration of B issues must explicitly identify the C replacement and preserve its PR context.
 
 ## 4. Work packages
 
@@ -48,7 +48,7 @@ Design coverage: consolidated sections 2, 3, 6, 10, 11, 14, and 15.
 
 Dependencies: none.
 
-- Reconcile the live default branch and open bounded-execution work.
+- Reconcile the live default branch and preserved, unmerged bounded-execution branch.
 - Define canonical objects for knowledge, Basis, threads, council findings, reflection proposals, provisional drafts, and test bundles.
 - Define explicit proposal, approval, execution, verification, and acceptance boundaries.
 - Specify the observation-versus-confirmed-memory approval rule as a visible policy, without silently resolving the remaining preference question.

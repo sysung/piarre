@@ -1,6 +1,6 @@
 # Immediate C implementation and verification
 
-Status: Execution plan prepared, 2026-11-01. Implementation has not started in this checkout.
+Status: C01 baseline work is in progress, 2026-11-01. See the [WIP handoff and review guide](08_C01_WIP_HANDOFF.md) for observed checks and remaining work. No new application behavior is implemented yet.
 
 The next work package establishes a current, verified baseline before building the integrated candidate. The active delivery queue is [the C first-release plan](06_C_FIRST_RELEASE_PLAN.md).
 

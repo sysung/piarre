@@ -500,7 +500,7 @@ This synthesis uses the product conversation on 2026-11-01 and the following rep
 - [Technical design](02_TECHNICAL_DESIGN.md).
 - [Implementation backlog](03_IMPLEMENTATION_BACKLOG.md).
 - [Testing and evaluation plan](04_TEST_EVALUATION.md).
-- [Architecture rationale](architecture/plan-v0.2-rationale.md).
+- [Historical architecture rationale](https://github.com/sysung/piarre/blob/edd1d0bcf97787f1232e38605172304aa3805b1c/docs/architecture/plan-v0.2-rationale.md).
 
 For revised product intent, this document supersedes the earlier conversation-secondary layout, voice-first delivery requirement, website-only first outcome, and deferral of inspectable project knowledge. It preserves their relevant safety and verification constraints.
 

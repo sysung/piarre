@@ -10,6 +10,8 @@
 
 ## Document map
 
+- `08_C01_WIP_HANDOFF.md`: current WIP scope, observed verification, and review instructions.
+
 - `07_C01_IMPLEMENTATION_VERIFICATION.md`: immediate implementation steps and verification contract.
 
 - `06_C_FIRST_RELEASE_PLAN.md`: first C-series implementation plan and validation contract.
