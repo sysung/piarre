@@ -29,7 +29,9 @@ Users should be able to ask where they left off and receive brief accomplishment
 
 Typed conversation is the familiar initial experience. Voice input and spoken output are later optional capabilities with independent controls. Typed and direct controls remain usable throughout.
 
-The proposed layout puts conversation on the left and inspectable project information on the right. Tasks, plans, memory, artifacts, decisions, activity, and council work share canonical records. Exact placement and navigation require prototypes rather than a fixed set of permanent panes.
+The selected UI direction is [Design B, Session brief](https://www.figma.com/design/I7CeHDqFJEvoEdmslfKrNp?node-id=7-2). A compact brief shows accomplishments or saved work, the next decision, and unresolved questions above conversation on the left and contextual project inspection on the right. Supporting details open on demand. Narrow panes stack these regions in reading order. The implementation follows VS Code theme and font settings rather than the prototype’s fixed palette.
+
+Tasks, plans, memory, artifacts, decisions, activity, and council work share canonical records. The brief and inspector reflect the same current state. Preserve unsent input and keyboard focus during external updates. Available controls must reflect implemented capabilities: a planning-only slice shows saved unapproved proposals without simulated conversation, approval, completion, or verification. Further state and question-format prototypes refine this direction without adding a permanent pane for every record type.
 
 Piarre can open supporting artifacts to explain an idea without repeatedly stealing focus. Discussing an action, proposing it, and applying it must look different.
 

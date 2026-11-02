@@ -254,6 +254,23 @@
           "provider edits refresh existing estimates without moving focus or reopening closed views"
         ]
       }
+    },
+    {
+      "id": "workspace-session-brief-shell",
+      "owner": "C02",
+      "source": {
+        "document": "docs/01_PRODUCT_PRD.md",
+        "heading": "Conversation and project inspection"
+      },
+      "requirement": "Design B planning shell: record-backed brief, visible split inspection, responsive reading order, and private unsent input preserved across refresh. This does not establish connected dialogue or sourced session resumption.",
+      "verification": {
+        "kind": "automated",
+        "check": "host-tests",
+        "tests": [
+          "session brief follows saved records through rename, deletion and replay",
+          "real webview preserves unsent input on inspection updates and requires explicit save"
+        ]
+      }
     }
   ]
 }

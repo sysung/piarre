@@ -18,7 +18,9 @@ Human-readable knowledge and decision files are possible, but their authority, i
 
 Conversation and inspection reference the same durable objects. Proposed, applied, running, unknown, failed, stale, and accepted states must be distinguishable without reading logs. Deferred tasks remain discoverable. Priority and agenda disposition are separate from execution state.
 
-Prototype layout and question formats before choosing them. Preserve keyboard access, visible transcripts, screen-reader state, and non-color status cues. Detailed artifacts open on demand without repeatedly changing focus.
+Use the selected [Session brief layout](https://www.figma.com/design/I7CeHDqFJEvoEdmslfKrNp?node-id=7-2): one compact project brief above a conversation/planning region and contextual inspector. Derive displayed summaries from canonical project records, not a second UI store. Refresh inspection and brief without replacing the composer or capturing unsent input. Use VS Code theme tokens and stack the regions in narrow panes. A planning-only shell is not evidence of sourced conversational resumption.
+
+Preserve keyboard access, visible transcripts, screen-reader state, and non-color status cues. Detailed artifacts open on demand without repeatedly changing focus. Active-run and deterministic stop controls belong outside replaceable inspector destinations so inspecting Basis or memory cannot hide them. Distinguish pre-run acceptance criteria from consent controls, and carry the approved criterion identities into current result evidence. Knowledge correction revisions and review acknowledgments must bind the actual record/result rather than a page-global flag. Prototype remaining state and question formats before enabling their actions.
 
 Keep conversation and deterministic stop controls responsive while workers run. Emit concise progress from observed state changes, deduplicate unchanged status, and defer nonessential speech while the user is still talking. Explanation depth is a visible, correctable preference.
 

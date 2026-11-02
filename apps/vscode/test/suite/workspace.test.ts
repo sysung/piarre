@@ -6,7 +6,7 @@ import * as vscode from "vscode";
 import { SqliteProjectRepository } from "../../src/sqlite-project-repository.js";
 import { WorkspaceDraft, parseComposerMessage } from "../../src/workspace-draft.js";
 import { GoalInterpreter } from "../../src/goal-interpreter.js";
-import { WorkView, renderWorkView } from "../../src/work-view.js";
+import { WorkView, renderWorkView, renderSessionBrief } from "../../src/work-view.js";
 import type { ProposalDraft } from "../../../../packages/core/src/index.js";
 
 suite("Typed workspace previews", () => {
@@ -106,6 +106,26 @@ suite("Typed workspace previews", () => {
     assert.equal(failedSave.state.kind, "idle");
     assert.equal(failedSave.state.requestId, "save-failed");
     assert.equal(repository.read().proposals.length, 0);
+  });
+
+  test("session brief follows saved records through rename, deletion and replay", async () => {
+    assert.ok(renderSessionBrief(repository.read()).includes("No saved goals yet."));
+    const session = controller();
+    await session.receive({ kind: "preview", requestId: "brief", goal: "Resume this goal" });
+    assert.ok(renderSessionBrief(repository.read()).includes("No saved goals yet."), "Unpersisted previews are not saved work");
+    await session.receive({ kind: "save", requestId: "brief" });
+    let project = repository.read();
+    assert.ok(renderSessionBrief(project).includes("1 saved goal. Proposals remain unapproved."));
+    repository.dispatch({ commandId: "brief-rename", projectId: project.projectId, expectedProjectRevision: project.revision,
+      action: { kind: "rename-project", name: "<Project & brief>" } });
+    project = repository.read();
+    assert.ok(renderSessionBrief(project).includes("&lt;Project &amp; brief&gt;"));
+    const proposal = project.proposals[0]; assert.ok(proposal);
+    repository.dispatch({ commandId: "brief-delete", projectId: project.projectId, expectedProjectRevision: project.revision,
+      action: { kind: "delete-proposal", groupId: proposal.groupId } });
+    repository.close(); repository = new SqliteProjectRepository(path.join(directory, "project.sqlite"));
+    assert.ok(renderSessionBrief(repository.read()).includes("No saved goals yet."));
+    assert.ok(renderSessionBrief(repository.read()).includes("No recorded approvals or run results."));
   });
 
   test("saved goal cards are newest first without changing project history", async () => {
@@ -249,6 +269,25 @@ window.addEventListener('message', ({data}) => { if (data.kind === 'test-checked
     }
   };
   try {
+    if (!document.getElementById('session-brief').textContent.includes('No saved goals yet.')) throw new Error('Empty brief invents saved work');
+    const columns = document.querySelector('.workspace-columns');
+    const planning = document.querySelector('.planning');
+    const desk = document.querySelector('.inspection-desk');
+    const narrow = document.querySelector('main').getBoundingClientRect().width <= 900;
+    const left = planning.getBoundingClientRect(); const right = desk.getBoundingClientRect();
+    if (narrow ? right.top < left.bottom - 1 : right.left < left.right - 1) throw new Error('Workspace does not follow responsive reading order');
+    if (getComputedStyle(columns).display !== 'grid' || document.documentElement.scrollWidth > document.documentElement.clientWidth) throw new Error('Workspace overflows or loses its grid');
+    if (desk.closest('details:not([open])')) throw new Error('Project inspection is hidden');
+    const main = document.querySelector('main');
+    for (const width of [320, 1280]) {
+      main.style.width = width + 'px';
+      await new Promise(requestAnimationFrame);
+      const a = planning.getBoundingClientRect(); const b = desk.getBoundingClientRect();
+      if (width === 320 ? b.top < a.bottom - 1 : b.left < a.right - 1) throw new Error('Incorrect layout at ' + width + 'px');
+      if (main.scrollWidth > width) throw new Error('Horizontal overflow at ' + width + 'px: ' + main.scrollWidth);
+    }
+    main.style.removeProperty('width');
+    await new Promise(requestAnimationFrame);
     goal.value = '<script>unsent & private</scr' + 'ipt>';
     goal.dispatchEvent(new Event('input'));
     if (bridgeCalls.some(value => JSON.stringify(value).includes('unsent & private'))) throw new Error('Unsent input crossed the renderer state bridge');
@@ -260,6 +299,7 @@ window.addEventListener('message', ({data}) => { if (data.kind === 'test-checked
     document.getElementById('inspection').append(marker);
     api.postMessage({kind: 'test-refresh'});
     await waitFor(() => !document.getElementById('inspection-marker'));
+    if (!document.getElementById('session-brief').textContent.includes('No saved goals yet.')) throw new Error('Refresh corrupted the project brief');
     if (goal.value !== content || document.activeElement !== goal || goal.selectionStart !== 3) throw new Error('Unsent input or focus lost: ' + JSON.stringify({value: goal.value, active: document.activeElement.tagName, start: goal.selectionStart}));
     document.getElementById('composer').requestSubmit();
     await waitFor(() => !save.hidden);
@@ -279,6 +319,7 @@ window.addEventListener('message', ({data}) => { if (data.kind === 'test-checked
     await waitFor(() => status.textContent.includes('Proposal saved'));
     api.postMessage({kind: 'test-refresh'});
     await waitFor(() => document.querySelector('[data-open-goal]'));
+    if (!document.getElementById('session-brief').textContent.includes('1 saved goal.')) throw new Error('Saved brief was not refreshed');
     const card = document.querySelector('[data-open-goal]');
     if (!card || card.querySelector('details')) throw new Error('Goal overview must contain compact cards');
     const trash = card.parentElement.querySelector('[data-delete-goal]');
