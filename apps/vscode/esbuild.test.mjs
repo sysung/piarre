@@ -1,7 +1,8 @@
 import { build } from "esbuild";
-import { readdir } from "node:fs/promises";
+import { readdir, rm } from "node:fs/promises";
 
 const entries = (await readdir("test/suite")).filter((name) => name === "index.ts" || name.endsWith(".test.ts"));
+await rm("dist-test/suite", { recursive: true, force: true });
 
 await build({
   bundle: true,
