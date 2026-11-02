@@ -1,3 +1,6 @@
+import { applyKnowledgeEvent, knowledgeEvent, type KnowledgeAction, type KnowledgeEvent, type RecordedKnowledge, type KnowledgeImpact } from "./knowledge.js";
+export { currentKnowledge, knowledgeConflicts } from "./knowledge.js";
+export type { RecordedKnowledge, KnowledgeImpact, KnowledgeAction, KnowledgeEvent } from "./knowledge.js";
 export { parseProposalOutput, parseProjectEvent, validateProjectCommand } from "./contracts.js";
 export { parseSubmittedStatement, parseInterpretationOutput, parseKnowledgeCorrection } from "./context.js";
 export type { SubmittedStatement, KnowledgeSource, SourcedText, Interpretation, KnowledgeVersion, KnowledgeEntry, KnowledgeCorrection } from "./context.js";
@@ -12,6 +15,8 @@ export interface ProjectSnapshot {
   readonly proposals: readonly RecordedProposalGroup[];
   readonly tasks: readonly ProposedTask[];
   readonly conversation: readonly ConversationTurn[];
+  readonly knowledge: readonly RecordedKnowledge[];
+  readonly knowledgeImpacts: readonly KnowledgeImpact[];
 }
 
 export interface ProposalRequirement {
@@ -75,13 +80,13 @@ export interface ProjectCommand {
   readonly commandId: string;
   readonly projectId: string;
   readonly expectedProjectRevision: number;
-  readonly action: ConversationAction
+  readonly action: ConversationAction | KnowledgeAction
     | { readonly kind: "rename-project"; readonly name: string }
     | { readonly kind: "delete-proposal"; readonly groupId: string }
     | { readonly kind: "propose-tasks"; readonly draft: ProposalDraft };
 }
 
-export type ProjectEvent = ConversationEvent
+export type ProjectEvent = ConversationEvent | KnowledgeEvent
   | {
       readonly kind: "project-created";
       readonly projectId: string;
@@ -118,11 +123,18 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
         proposals: [],
         tasks: [],
         conversation: [],
+        knowledge: [],
+        knowledgeImpacts: [],
       };
       continue;
     }
     if (!snapshot) throw new Error("Invalid project history: missing creation");
     switch (event.kind) {
+      case "knowledge-observed":
+      case "knowledge-confirmed":
+      case "knowledge-corrected":
+        snapshot = applyKnowledgeEvent(snapshot, event);
+        break;
       case "conversation-started":
       case "conversation-replied":
       case "conversation-ended":
@@ -183,6 +195,10 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
 
 export function decideProjectEvent(command: ProjectCommand): ProjectEvent {
   switch (command.action.kind) {
+    case "observe-knowledge":
+    case "confirm-knowledge":
+    case "correct-knowledge":
+      return knowledgeEvent(command.action, command.commandId);
     case "begin-conversation":
     case "record-conversation-reply":
     case "end-conversation":

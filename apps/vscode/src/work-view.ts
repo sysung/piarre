@@ -1,3 +1,4 @@
+import type { RetrievalResult } from "./project-retrieval.js";
 import type { ConversationState } from "./conversation-controller.js";
 import { randomUUID } from "node:crypto";
 import * as vscode from "vscode";
@@ -6,6 +7,7 @@ import { WorkspaceDraft, type DraftOperations } from "./workspace-draft.js";
 import { renderWorkspaceShell } from "./workspace-shell.js";
 import { estimateBudget, type BudgetEstimate } from "../../../packages/core/src/costs.js";
 import { inspectProject, parseProviderConfiguration, type ProjectInspection, type ProviderConfiguration } from "../../../packages/core/src/inspection.js";
+import { currentKnowledge, knowledgeConflicts } from "../../../packages/core/src/knowledge.js";
 import type { ProjectSnapshot } from "../../../packages/core/src/index.js";
 
 const escape = (value: string): string =>
@@ -69,19 +71,37 @@ export function renderInspection(
   const work = proposals || "<p>Save a proposal to keep a goal with this project.</p>";
   const recommendation = inspection.recommendation.length === 0
     ? "<p>No proposal sources recorded yet.</p>"
-    : `<ul>${inspection.recommendation.map((entry) => `<li><strong>${entry.kind === "submitted-goal" ? "Submitted goal" : "Proposed task"}</strong>: ${escape(entry.text)}<br>Record ${escape(entry.reference.recordId)}, recorded at project revision ${String(entry.reference.revision)}. Source: deterministic draft. Unapproved, not independently verified.</li>`).join("")}</ul>`;
+    : `<ul>${inspection.recommendation.map((entry) => `<li><strong>${entry.kind === "submitted-goal" ? "Submitted goal" : entry.kind === "knowledge" ? "User knowledge" : "Proposed task"}</strong>: ${escape(entry.text)}<br>Record ${escape(entry.reference.recordId)}, recorded at project revision ${String(entry.reference.revision)}. Source: ${escape(entry.source)}. Source content is not independently verified.</li>`).join("")}</ul>`;
   const providers = `<ul>${inspection.providers.map((item) => `<li>${escape(item.role)}: ${item.status === "invalid-configuration" ? "Invalid settings. No provider connected." : "selection" in item ? `${escape(item.selection.provider)} / ${escape(item.selection.model)} selected. Connection unavailable.` : "Not configured."}</li>`).join("")}</ul>`;
   const policyLabels: Readonly<Record<ProjectInspection["policy"][keyof ProjectInspection["policy"]], string>> = {
-    "automatic-capture-disabled-policy-unresolved": "Automatic memory capture is off until its approval policy is agreed.",
-    "explicit-approval-required-not-implemented": "Confirmed memory changes need approval and are not available yet.",
+    "manual-observations-only": "Automatic memory capture is off. Explicit observations stay unconfirmed until reviewed.",
+    "explicit-memory-review-required": "Confirming or replacing knowledge requires an explicit review of the exact record and revision.",
     "per-operation-approval-required-not-implemented": "Paid work needs approval for each operation. No paid coding provider is connected.",
-    "local-only-no-external-adapter": "Local planning stays local. Explicit Send to Codex shares the displayed conversation context with your configured account.",
+    "explicit-conversation-disclosure": "Local planning stays local. Explicit Send to Codex shares the displayed conversation context with your configured account.",
     "unsupported": "Running, verifying, and accepting coding work are not available yet.",
   };
   const policy = Object.values(inspection.policy).map((state) => `<li>${escape(policyLabels[state])}</li>`).join("");
   const permissions = `<details><summary>Recommendation and permissions</summary><h3>Recorded recommendation</h3>${recommendation}<h3>What works now</h3><p>You can rename this project and save task proposals. A proposed budget is not permission to spend.</p><ul>${policy}</ul><h3>Providers</h3>${providers}<p>Local task drafting uses the built-in deterministic generator. Connect Codex and Send are separate explicit conversation actions. Provider selections do not approve coding work.</p></details>`;
 
-  return `${work}${permissions}<details><summary>Project information</summary><dl><dt>Repository</dt><dd>${escape(project.repositoryUri)}</dd><dt>Project ID</dt><dd>${escape(project.projectId)}</dd><dt>Revision</dt><dd>${String(project.revision)}</dd></dl></details>`;
+  return `${work}${renderKnowledge(project)}${permissions}<details><summary>Project information</summary><dl><dt>Repository</dt><dd>${escape(project.repositoryUri)}</dd><dt>Project ID</dt><dd>${escape(project.projectId)}</dd><dt>Revision</dt><dd>${String(project.revision)}</dd></dl></details>`;
+}
+
+export function renderLookup(result: RetrievalResult): string {
+  const reason = result.kind === "error" || result.kind === "stale" ? result.reason : result.kind === "no-match" ? "No matching source in the bounded index. This does not establish that the answer is absent." : "Source excerpts at lookup time. Content hashes identify the inspected version; recheck after editing before consequential claims.";
+  return `<section aria-label="Project lookup"><h2>Project lookup · ${escape(result.kind)}</h2><p>${escape(reason)}</p><p>${escape(result.coverage.limitation)}</p><p>Coverage: ${String(result.coverage.files)} files and ${String(result.coverage.records)} knowledge records.</p>${result.coverage.issues.length ? `<details open><summary>Incomplete coverage and excluded sources</summary><ul>${result.coverage.issues.map(issue => `<li>${escape(issue)}</li>`).join("")}</ul></details>` : ""}${result.hits.map(hit => `<article><h3>${hit.source.kind === "file" ? `${escape(hit.source.path)} · lines ${String(hit.source.startLine)}–${String(hit.source.endLine)}` : `${escape(hit.source.recordId)} · revision ${String(hit.source.revision)} · ${escape(hit.source.standing)}`}</h3><p>${escape(hit.method)} · SHA-256 ${escape(hit.contentHash)}</p><pre>${escape(hit.text)}</pre><p>${hit.source.kind === "file" ? "Static source only. Code does not establish business rationale, runtime behavior or deployed state." : "Explicit recorded statement. Review disputes in Knowledge and decisions; confirmation is not independent verification."}</p></article>`).join("")}</section>`;
+}
+
+export function renderKnowledge(project: ProjectSnapshot): string {
+  const entries = currentKnowledge(project);
+  const records = entries.map(entry => {
+    const conflicts = knowledgeConflicts(project, entry);
+    const state = conflicts.length ? "Disputed · different confirmed text for this topic" : entry.standing.kind;
+    const action = entry.standing.kind === "confirmed" ? "correct-knowledge" : "confirm-knowledge";
+    const history = project.knowledge.filter(item => item.knowledgeId === entry.knowledgeId);
+    return `<article><h3>${escape(entry.topic)}</h3><p>${escape(entry.category)} · ${escape(state)} · revision ${String(entry.recordedAtRevision)}</p><pre>${escape(entry.content.text)}</pre><p>Source: explicit user statement. Confirmation records your approval of this knowledge; it is not independent verification.</p><button type="button" data-knowledge-action="${action}" data-knowledge-id="${escape(entry.knowledgeId)}">${entry.standing.kind === "confirmed" ? "Review correction" : "Review confirmation"}</button><details><summary>Sources, linked work and version history</summary><p>Linked tasks: ${escape(entry.affectedTaskIds.join(", ") || "None recorded")}. Missing links cannot establish complete impact.</p>${history.map(item => `<p>Revision ${String(item.recordedAtRevision)} · ${escape(item.standing.kind)}${item.supersedes === null ? "" : ` · supersedes ${String(item.supersedes)}`}</p><pre>${escape(item.content.text)}</pre><p>${item.content.sources.map(source => source.kind === "submitted-statement" ? `Original statement ${escape(source.submitted.requestId)} at context revision ${String(source.submitted.contextRevision)}` : `Record ${escape(source.reference.recordId)} at revision ${String(source.reference.revision)}`).join("<br>")}</p>`).join("")}</details></article>`;
+  }).join("");
+  const impacts = project.knowledgeImpacts.filter(impact => project.tasks.some(task => task.taskId === impact.taskId));
+  return `<section id="project-knowledge" aria-label="Project knowledge"><h2>Knowledge and decisions</h2><button type="button" data-knowledge-action="lookup-project">Look up project sources</button><p>Automatic capture is off. Add observations explicitly; confirmation and replacement require review. Different confirmed text under the same topic is flagged; this is not general semantic contradiction detection.</p><button type="button" data-knowledge-action="observe-business">Record business knowledge</button><button type="button" data-knowledge-action="observe-decision">Record technical decision</button>${records || "<p>No knowledge recorded. Absence is not a retrieval failure.</p>"}${impacts.length ? `<h3>Changed knowledge needs plan review</h3><ul>${impacts.map(impact => `<li>${escape(project.tasks.find(task => task.taskId === impact.taskId)?.title ?? impact.taskId)}: stale after knowledge ${escape(impact.knowledgeId)} changed from revision ${String(impact.fromRevision)} to ${String(impact.toRevision)}. Earlier evidence cannot demonstrate the corrected rule.</li>`).join("")}</ul>` : ""}</section>`;
 }
 
 export function renderConversation(project: ProjectSnapshot): string {
@@ -94,11 +114,16 @@ export function renderConversation(project: ProjectSnapshot): string {
 
 export function renderSessionBrief(project: ProjectSnapshot): string {
   const count = project.proposals.length;
+  const knowledge = currentKnowledge(project);
+  const changed = knowledge.filter(entry => entry.supersedes !== null && entry.standing.kind === "confirmed").at(-1);
+  const staleCount = new Set(project.knowledgeImpacts.filter(impact => project.tasks.some(task => task.taskId === impact.taskId)).map(impact => impact.taskId)).size;
+  const disputedCount = knowledge.filter(entry => knowledgeConflicts(project, entry).length > 0).length;
+  const unconfirmedCount = knowledge.filter(entry => entry.standing.kind !== "confirmed").length;
   const saved = count === 0 ? "No saved goals yet." : `${String(count)} saved ${count === 1 ? "goal" : "goals"}. Proposals remain unapproved.`;
   const latest = project.conversation.at(-1);
   const discussion = latest ? ` Latest discussion: ${latest.kind === "answered" ? "reply saved as inference" : latest.kind}.` : "";
-  const next = count === 0 ? "Describe the outcome you want to plan." : "Review a saved proposal, or plan a new goal.";
-  return `<div class="workspace-identity"><strong>Piarre</strong><span class="project-name">${escape(project.name)}</span><span class="capability">Planning and conversation</span></div><p class="eyebrow">Project brief</p><h1>Pick up your work</h1><dl class="session-summary"><div><dt>Where you left off</dt><dd>${saved}${escape(discussion)}</dd></div><div><dt>Next step</dt><dd>${next}</dd></div><div><dt>Still open</dt><dd>No recorded approvals or run results. Saving does not start work.</dd></div></dl>`;
+  const next = staleCount > 0 ? `Review ${String(staleCount)} task plan(s) affected by corrected knowledge before approving work.` : disputedCount > 0 ? "Resolve the different confirmed values in project knowledge." : count === 0 ? "Describe the outcome you want to plan." : "Review a saved proposal, or plan a new goal.";
+  return `<div class="workspace-identity"><strong>Piarre</strong><span class="project-name">${escape(project.name)}</span><span class="capability">Planning and conversation</span></div><p class="eyebrow">Project brief</p><h1>Pick up your work</h1><dl class="session-summary"><div><dt>Where you left off</dt><dd>${saved}${escape(discussion)}${changed ? ` <a href="#project-knowledge">${escape(changed.topic)} · recorded revision ${String(changed.recordedAtRevision)}</a>` : ""}</dd></div><div><dt>Next step</dt><dd>${next}</dd></div><div><dt>Still open</dt><dd>${String(unconfirmedCount)} unconfirmed knowledge record(s); ${String(disputedCount)} disputed record(s). No recorded approvals or run results. Saving does not start work.</dd></div></dl>`;
 }
 
 export function renderWorkView(project: ProjectSnapshot, configuration?: ProviderConfiguration): string {
@@ -108,6 +133,7 @@ export function renderWorkView(project: ProjectSnapshot, configuration?: Provide
 export class WorkView {
   private current: { readonly panel: vscode.WebviewPanel; readonly project: ProjectSnapshot; readonly draft: WorkspaceDraft } | undefined;
   private deleting = false;
+  private lookup: { readonly projectId: string; readonly result: RetrievalResult } | undefined;
   private conversationState: ConversationState = { kind: "disconnected", message: "Connect your configured Codex account to discuss this project." };
   private detail: { readonly panel: vscode.WebviewPanel; readonly groupId: string; readonly html?: string } | undefined;
   private readonly settingsChanged: vscode.Disposable;
@@ -119,7 +145,7 @@ export class WorkView {
     }, private readonly confirmDelete: (goal: string) => Promise<boolean> = async (goal) =>
       await vscode.window.showWarningMessage(`Delete “${goal}” and its proposal?`,
         { modal: true, detail: "Removes this saved goal and its proposed tasks. Repository files are unchanged. Prior project history is retained." }, "Delete goal") === "Delete goal",
-    private readonly conversation?: { connect(): Promise<void>; disconnect(): void; send(text: string): Promise<void>; interrupt(): Promise<void> }) {
+    private readonly conversation?: { connect(): Promise<void>; disconnect(): void; send(text: string): Promise<void>; interrupt(): Promise<void>; knowledge?(kind: "observe-business" | "observe-decision" | "confirm-knowledge" | "correct-knowledge" | "lookup-project", id?: string): Promise<void> }) {
     this.settingsChanged = vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration("piarre.providers")) this.refresh();
     });
@@ -163,6 +189,14 @@ export class WorkView {
             return;
           }
         }
+        if (typeof message === "object" && message !== null && "kind" in message) {
+          if ((message.kind === "observe-business" || message.kind === "observe-decision" || message.kind === "lookup-project") && Object.keys(message).length === 1) {
+            void this.conversation?.knowledge?.(message.kind); return;
+          }
+          if ((message.kind === "confirm-knowledge" || message.kind === "correct-knowledge") && Object.keys(message).length === 2 && "knowledgeId" in message && typeof message.knowledgeId === "string") {
+            void this.conversation?.knowledge?.(message.kind, message.knowledgeId); return;
+          }
+        }
         void draft.receive(message);
       });
       panel.webview.html = renderWorkView(project, this.configuration());
@@ -170,6 +204,11 @@ export class WorkView {
       this.update(project);
     }
     this.current.panel.reveal();
+  }
+
+  updateLookup(projectId: string, result: RetrievalResult): void {
+    if (this.current?.project.projectId !== projectId) return;
+    this.lookup = { projectId, result }; this.refresh();
   }
 
   updateConversation(project: ProjectSnapshot, state: ConversationState): void {
@@ -260,7 +299,7 @@ document.addEventListener('focusin', remember);
     if (!this.current) return;
     this.refreshDetail();
     void this.current.panel.webview.postMessage({ kind: "conversation", state: this.conversationState, html: renderConversation(this.current.project) });
-    void this.current.panel.webview.postMessage({ kind: "inspection", selectedGroupId: this.detail?.groupId, html: renderInspection(this.current.project, this.configuration()), brief: renderSessionBrief(this.current.project) });
+    void this.current.panel.webview.postMessage({ kind: "inspection", selectedGroupId: this.detail?.groupId, html: renderInspection(this.current.project, this.configuration()) + (this.lookup?.projectId === this.current.project.projectId ? renderLookup(this.lookup.result) : ""), brief: renderSessionBrief(this.current.project) });
   }
 
   private publishDraft(): void {
