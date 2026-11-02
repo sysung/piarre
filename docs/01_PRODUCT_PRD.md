@@ -29,7 +29,9 @@ Users should be able to ask where they left off and receive brief accomplishment
 
 Typed conversation is the familiar initial experience. Voice input and spoken output are later optional capabilities with independent controls. Typed and direct controls remain usable throughout.
 
-The proposed layout puts conversation on the left and inspectable project information on the right. Tasks, plans, memory, artifacts, decisions, activity, and council work share canonical records. Exact placement and navigation require prototypes rather than a fixed set of permanent panes.
+The selected UI direction is [Design B, Session brief](https://www.figma.com/design/I7CeHDqFJEvoEdmslfKrNp?node-id=7-2). A compact brief shows accomplishments or saved work, the next decision, and unresolved questions above conversation on the left and contextual project inspection on the right. Supporting details open on demand. Narrow panes stack these regions in reading order. The implementation follows VS Code theme and font settings rather than the prototype’s fixed palette.
+
+Tasks, plans, memory, artifacts, decisions, activity, and council work share canonical records. The brief and inspector reflect the same current state. Preserve unsent input and keyboard focus during external updates. Available controls must reflect implemented capabilities: a planning-only slice shows saved unapproved proposals without simulated conversation, approval, completion, or verification. Further state and question-format prototypes refine this direction without adding a permanent pane for every record type.
 
 Piarre can open supporting artifacts to explain an idea without repeatedly stealing focus. Discussing an action, proposing it, and applying it must look different.
 
@@ -39,11 +41,11 @@ Question formats need testing: one question at a time, suggested options with a 
 
 Direct task, memory, approval, and stop controls bypass model interpretation. Whether an additional typed command interface is useful remains open.
 
-## Memory and the Basis view
+## Memory and the Recommendation view
 
 Project memory contains business knowledge, technical decisions, requirements, preferences, observations, and unresolved assumptions. Users can inspect sources, confirmation state, changes, and affected work.
 
-Important recommendations offer a Basis view showing supporting records, assumptions, alternatives, contradictions, and proposed versus completed actions. This is an explanation backed by evidence, not access to hidden model reasoning.
+Important recommendations offer a Recommendation view showing supporting records, assumptions, alternatives, contradictions, and proposed versus completed actions. This is an explanation backed by evidence, not access to hidden model reasoning.
 
 The user wants automatic observation capture and approval of memory changes. The proposed boundary is automatic capture as unconfirmed observations, with approval before replacing confirmed knowledge, promoting inferences to requirements, or resolving contradictions. This policy still needs explicit resolution before dependent behavior ships.
 
@@ -93,6 +95,6 @@ Daily work uses a stable release. Candidate testing uses a separate environment 
 
 User tests can link optional voice and screen recordings with logs, transcripts, relevant revisions, checks, and annotations. Capture, retention, export, and remote analysis are separate choices. Recordings show the experience; synchronized diagnostics help explain failures.
 
-The first integrated candidate should demonstrate resumption, broad discussion, Basis, corrected memory, triage, approved execution, linked ideas, bounded council, checkpoint recovery, result review, and optional reflection. Voice and local-model tuning may follow. Multiwriter execution, an IDE fork, shared cloud collaboration, autonomous deployment, and background listening are outside the initial scope.
+The first integrated candidate should demonstrate resumption, broad discussion, Recommendation, corrected memory, triage, approved execution, linked ideas, bounded council, checkpoint recovery, result review, and optional reflection. Voice and local-model tuning may follow. Multiwriter execution, an IDE fork, shared cloud collaboration, autonomous deployment, and background listening are outside the initial scope.
 
 Compare supervision time, reading burden, repeated context, interruptions, corrections, missed defects, and accepted results with the user's existing workflow. A first feedback round establishes improvement targets rather than proof of productivity. Rough edges may become follow-up work; unauthorized actions, silent data loss, and false verification block release.

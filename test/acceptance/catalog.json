@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "scenarios": [
     {
-      "id": "foundation-authority-and-basis",
+      "id": "foundation-authority-and-recommendation",
       "owner": "C01",
       "source": {
         "document": "docs/02_TECHNICAL_DESIGN.md",
@@ -13,12 +13,12 @@
         "kind": "automated",
         "check": "host-tests",
         "tests": [
-          "Basis keeps original proposal revisions through rename and restart",
+          "Recommendation keeps original proposal revisions through rename and restart",
           "a rename before a proposal does not invent an earlier source revision",
           "invalid direct dispatch cannot bypass the interpreter or append receipts",
           "corrupt stored provenance, authority, and graph envelopes are rejected",
           "pre-C01 receipts with alternate draft property order survive replay and retry",
-          "Work exposes unapproved Basis and unavailable capabilities without running providers",
+          "Work exposes unapproved Recommendation and unavailable capabilities without running providers",
           "invalid provider configuration fails closed and does not expose credentials"
         ]
       }
@@ -28,7 +28,7 @@
       "owner": "C03",
       "source": {
         "document": "docs/01_PRODUCT_PRD.md",
-        "heading": "Memory and the Basis view"
+        "heading": "Memory and the Recommendation view"
       },
       "requirement": "Brief accomplishments, upcoming tasks, unresolved decisions, and correct project sources.",
       "verification": {
@@ -80,7 +80,7 @@
       "owner": "C03",
       "source": {
         "document": "docs/01_PRODUCT_PRD.md",
-        "heading": "Memory and the Basis view"
+        "heading": "Memory and the Recommendation view"
       },
       "requirement": "Inspect and approve corrections with provenance and affected-work invalidation.",
       "verification": {
@@ -252,6 +252,23 @@
           "subscription calibration is not reused after a plan or provider change",
           "legacy samples without billing context stay unknown instead of inheriting the selected plan",
           "provider edits refresh existing estimates without moving focus or reopening closed views"
+        ]
+      }
+    },
+    {
+      "id": "workspace-session-brief-shell",
+      "owner": "C02",
+      "source": {
+        "document": "docs/01_PRODUCT_PRD.md",
+        "heading": "Conversation and project inspection"
+      },
+      "requirement": "Design B planning shell: record-backed brief, visible split inspection, responsive reading order, and private unsent input preserved across refresh. This does not establish connected dialogue or sourced session resumption.",
+      "verification": {
+        "kind": "automated",
+        "check": "host-tests",
+        "tests": [
+          "session brief follows saved records through rename, deletion and replay",
+          "real webview preserves unsent input on inspection updates and requires explicit save"
         ]
       }
     }

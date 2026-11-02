@@ -7,6 +7,22 @@ import { estimateBudget, type BudgetEstimate } from "../../../packages/core/src/
 import { inspectProject, parseProviderConfiguration, type ProjectInspection, type ProviderConfiguration } from "../../../packages/core/src/inspection.js";
 import type { ProjectSnapshot } from "../../../packages/core/src/index.js";
 
+const escape = (value: string): string =>
+  value.replace(/[&<>"']/g, (character) => {
+    switch (character) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case '"':
+        return "&quot;";
+      default:
+        return "&#39;";
+    }
+  });
+
 export function renderInspection(
   project: ProjectSnapshot,
   configuration?: ProviderConfiguration,
@@ -15,21 +31,6 @@ export function renderInspection(
   const inspection = inspectProject(project, configuration);
   const coding = inspection.providers.find((provider) => provider.role === "coding");
   const selection = coding && "selection" in coding ? coding.selection : undefined;
-  const escape = (value: string): string =>
-    value.replace(/[&<>"']/g, (character) => {
-      switch (character) {
-        case "&":
-          return "&amp;";
-        case "<":
-          return "&lt;";
-        case ">":
-          return "&gt;";
-        case '"':
-          return "&quot;";
-        default:
-          return "&#39;";
-      }
-    });
   const list = (values: readonly string[], empty: string): string =>
     values.length === 0
       ? `<p>${escape(empty)}</p>`
@@ -42,9 +43,9 @@ export function renderInspection(
   const cost = (estimate: BudgetEstimate): string => {
     const assumptions = "Uses the full token budget for every attempt, including retries. Actual usage and charges may differ. No provider is connected, and its billing method has not been checked.";
     if (estimate.kind === "unknown") return `<p>Estimated coding cost: Unknown. ${escape(estimate.reason)}</p>`;
-    if (estimate.kind === "api") return `<p>API plan ${escape(estimate.plan)}: ${escape(range(estimate.minimumUsd, estimate.maximumUsd, usd))} at the full token budget.</p><details><summary>Estimate basis</summary><p>Uses configured input/output prices that have not been verified. The token split is unknown. Discounts, tools, other agents, audio, taxes, and other fees are excluded.</p><p>${escape(assumptions)}</p></details>`;
+    if (estimate.kind === "api") return `<p>API plan ${escape(estimate.plan)}: ${escape(range(estimate.minimumUsd, estimate.maximumUsd, usd))} at the full token budget.</p><details><summary>Estimate details</summary><p>Uses configured input/output prices that have not been verified. The token split is unknown. Discounts, tools, other agents, audio, taxes, and other fees are excluded.</p><p>${escape(assumptions)}</p></details>`;
     const windows = estimate.windows.map((window) => `<li>${window.window === "five-hour" ? "Five-hour allowance" : "Weekly allowance"}: ${window.kind === "unknown" ? "Unknown. No matching usage samples." : `${escape(range(window.minimumPercent, window.maximumPercent, percent))} estimated consumption.`}</li>`).join("");
-    return `<p>Subscription estimate: ${escape(estimate.plan)}. Extra usage can incur charges.</p><ul>${windows}</ul><details><summary>Estimate basis</summary><p>Uses supplied samples for the same provider, plan, and model. Account usage has not been checked. Context and effort can change the estimate. Percentages describe task usage, not your remaining allowance.</p><p>${escape(assumptions)}</p></details>`;
+    return `<p>Subscription estimate: ${escape(estimate.plan)}. Extra usage can incur charges.</p><ul>${windows}</ul><details><summary>Estimate details</summary><p>Uses supplied samples for the same provider, plan, and model. Account usage has not been checked. Context and effort can change the estimate. Percentages describe task usage, not your remaining allowance.</p><p>${escape(assumptions)}</p></details>`;
   };
   const proposals = [...project.proposals].sort((a, b) => b.recordedAtRevision - a.recordedAtRevision)
     .filter(proposal => selectedGroupId === undefined || proposal.groupId === selectedGroupId)
@@ -64,10 +65,10 @@ export function renderInspection(
     })
     .join("");
   if (selectedGroupId !== undefined) return `${proposals}<p>A proposed budget is not permission to spend. Connection unavailable: no provider is connected.</p>`;
-  const work = proposals || "<p>No task proposals yet.</p>";
-  const basis = inspection.basis.length === 0
+  const work = proposals || "<p>Save a proposal to keep a goal with this project.</p>";
+  const recommendation = inspection.recommendation.length === 0
     ? "<p>No proposal sources recorded yet.</p>"
-    : `<ul>${inspection.basis.map((entry) => `<li><strong>${entry.kind === "submitted-goal" ? "Submitted goal" : "Proposed task"}</strong>: ${escape(entry.text)}<br>Record ${escape(entry.reference.recordId)}, recorded at project revision ${String(entry.reference.revision)}. Source: deterministic draft. Unapproved, not independently verified.</li>`).join("")}</ul>`;
+    : `<ul>${inspection.recommendation.map((entry) => `<li><strong>${entry.kind === "submitted-goal" ? "Submitted goal" : "Proposed task"}</strong>: ${escape(entry.text)}<br>Record ${escape(entry.reference.recordId)}, recorded at project revision ${String(entry.reference.revision)}. Source: deterministic draft. Unapproved, not independently verified.</li>`).join("")}</ul>`;
   const providers = `<ul>${inspection.providers.map((item) => `<li>${escape(item.role)}: ${item.status === "invalid-configuration" ? "Invalid settings. No provider connected." : "selection" in item ? `${escape(item.selection.provider)} / ${escape(item.selection.model)} selected. Connection unavailable.` : "Not configured."}</li>`).join("")}</ul>`;
   const policyLabels: Readonly<Record<ProjectInspection["policy"][keyof ProjectInspection["policy"]], string>> = {
     "automatic-capture-disabled-policy-unresolved": "Automatic memory capture is off until its approval policy is agreed.",
@@ -77,13 +78,20 @@ export function renderInspection(
     "unsupported": "Running, verifying, and accepting coding work are not available yet.",
   };
   const policy = Object.values(inspection.policy).map((state) => `<li>${escape(policyLabels[state])}</li>`).join("");
-  const permissions = `<details><summary>Basis and permissions</summary><h3>Recorded basis</h3>${basis}<h3>What works now</h3><p>You can rename this project and save task proposals. A proposed budget is not permission to spend.</p><ul>${policy}</ul><h3>Providers</h3>${providers}<p>Drafting uses the built-in deterministic generator, not a conversational model. Selecting a provider does not connect it or approve spending.</p></details>`;
+  const permissions = `<details><summary>Recommendation and permissions</summary><h3>Recorded recommendation</h3>${recommendation}<h3>What works now</h3><p>You can rename this project and save task proposals. A proposed budget is not permission to spend.</p><ul>${policy}</ul><h3>Providers</h3>${providers}<p>Drafting uses the built-in deterministic generator, not a conversational model. Selecting a provider does not connect it or approve spending.</p></details>`;
 
-  return `<h2>${escape(project.name)}</h2>${work}${permissions}<details><summary>Project information</summary><dl><dt>Repository</dt><dd>${escape(project.repositoryUri)}</dd><dt>Project ID</dt><dd>${escape(project.projectId)}</dd><dt>Revision</dt><dd>${String(project.revision)}</dd></dl></details>`;
+  return `${work}${permissions}<details><summary>Project information</summary><dl><dt>Repository</dt><dd>${escape(project.repositoryUri)}</dd><dt>Project ID</dt><dd>${escape(project.projectId)}</dd><dt>Revision</dt><dd>${String(project.revision)}</dd></dl></details>`;
+}
+
+export function renderSessionBrief(project: ProjectSnapshot): string {
+  const count = project.proposals.length;
+  const saved = count === 0 ? "No saved goals yet." : `${String(count)} saved ${count === 1 ? "goal" : "goals"}. Proposals remain unapproved.`;
+  const next = count === 0 ? "Describe the outcome you want to plan." : "Review a saved proposal, or plan a new goal.";
+  return `<div class="workspace-identity"><strong>Piarre</strong><span class="project-name">${escape(project.name)}</span><span class="capability">Local planning</span></div><p class="eyebrow">Project brief</p><h1>Pick up your work</h1><dl class="session-summary"><div><dt>Where you left off</dt><dd>${saved}</dd></div><div><dt>Next step</dt><dd>${next}</dd></div><div><dt>Still open</dt><dd>No recorded approvals or run results. Saving does not start work.</dd></div></dl>`;
 }
 
 export function renderWorkView(project: ProjectSnapshot, configuration?: ProviderConfiguration): string {
-  return renderWorkspaceShell(renderInspection(project, configuration));
+  return renderWorkspaceShell({ inspection: renderInspection(project, configuration), brief: renderSessionBrief(project) });
 }
 
 export class WorkView {
@@ -222,7 +230,7 @@ document.addEventListener('focusin', remember);
   private refresh(): void {
     if (!this.current) return;
     this.refreshDetail();
-    void this.current.panel.webview.postMessage({ kind: "inspection", selectedGroupId: this.detail?.groupId, html: renderInspection(this.current.project, this.configuration()) });
+    void this.current.panel.webview.postMessage({ kind: "inspection", selectedGroupId: this.detail?.groupId, html: renderInspection(this.current.project, this.configuration()), brief: renderSessionBrief(this.current.project) });
   }
 
   private publishDraft(): void {
