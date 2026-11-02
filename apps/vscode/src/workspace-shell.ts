@@ -3,8 +3,8 @@ import { randomBytes } from "node:crypto";
 export function renderWorkspaceShell(inspection: string): string {
   const nonce = randomBytes(24).toString("base64");
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'"><meta name="viewport" content="width=device-width, initial-scale=1"><style>
-body{font-family:var(--vscode-font-family);color:var(--vscode-foreground);padding:20px;margin:0}main{display:grid;grid-template-columns:minmax(280px,1fr) minmax(300px,1fr);gap:28px}textarea{box-sizing:border-box;width:100%;min-height:140px;resize:vertical;background:var(--vscode-input-background);color:var(--vscode-input-foreground);border:1px solid var(--vscode-input-border,gray);padding:12px;font:inherit}button{margin:8px 8px 8px 0;padding:8px 12px;background:var(--vscode-button-background);color:var(--vscode-button-foreground);border:0;cursor:pointer}button:disabled{opacity:.5;cursor:default}:focus-visible{outline:2px solid var(--vscode-focusBorder)}.hint,dt{color:var(--vscode-descriptionForeground)}section{margin-top:20px}article{padding:12px;background:var(--vscode-editor-background);margin:12px 0}dd{margin:4px 0;overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit}#preview:empty{display:none}#inspection{border-left:1px solid var(--vscode-panel-border);padding-left:24px}#status{min-height:3em}@media(max-width:720px){main{grid-template-columns:1fr}#inspection{border-left:0;border-top:1px solid var(--vscode-panel-border);padding:16px 0}}[hidden]{display:none!important}
-</style></head><body><main><section aria-label="Goal workspace"><h1>Work with Piarre</h1><p>What would you like to work on?</p><p class="hint">Local draft mode. No conversational model or coding worker is connected.</p><form id="composer"><label for="goal">Your goal</label><textarea id="goal" maxlength="10000" placeholder="Describe what you want to accomplish…"></textarea><p class="hint">Unsent text stays in this panel. Previewing does not save or start work.</p><button id="prepare" type="submit">Preview locally</button><button id="discard" type="button" disabled>Discard preview</button></form><section aria-label="Activity"><h2>Activity</h2><p id="status" role="status" aria-live="polite">Ready for a goal.</p></section><section id="preview" aria-label="Provisional draft"></section><button id="save" type="button" hidden>Save unapproved proposal</button></section><aside id="inspection" aria-label="Project inspection">${inspection}</aside></main><script nonce="${nonce}">${composerScript}</script></body></html>`;
+body{--space:16px;--gap:24px;font-family:var(--vscode-font-family);font-size:var(--vscode-font-size,13px);line-height:1.6;color:var(--vscode-foreground);background:var(--vscode-editor-background);padding:var(--gap);margin:0}main{max-width:760px;margin:auto;min-width:0}h1{font-size:1.8em;line-height:1.25;margin:0 0 var(--space)}h2{font-size:1.25em}textarea{box-sizing:border-box;width:100%;min-height:160px;resize:vertical;background:var(--vscode-input-background);color:var(--vscode-input-foreground);border:1px solid var(--vscode-input-border,var(--vscode-panel-border));padding:var(--space);font:inherit}button{min-height:36px;margin:var(--space) 8px 0 0;padding:8px 16px;background:var(--vscode-button-background);color:var(--vscode-button-foreground);border:1px solid transparent;cursor:pointer;font:inherit}button:hover{background:var(--vscode-button-hoverBackground)}button.secondary{background:var(--vscode-button-secondaryBackground);color:var(--vscode-button-secondaryForeground)}button.secondary:hover{background:var(--vscode-button-secondaryHoverBackground)}button:disabled{opacity:.5;cursor:default}:focus-visible{outline:2px solid var(--vscode-focusBorder);outline-offset:3px}.hint,dt{color:var(--vscode-descriptionForeground)}section{margin-top:var(--gap)}article{padding:var(--space);border:1px solid var(--vscode-panel-border);margin:var(--space) 0;overflow-wrap:anywhere}dd{margin:4px 0;overflow-wrap:anywhere}summary{cursor:pointer;min-height:32px;padding:8px 0;font-weight:600}details{border-top:1px solid var(--vscode-panel-border);margin-top:var(--space)}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit}#status{min-height:1.6em}#step{font-size:.9em;color:var(--vscode-descriptionForeground)}[hidden]{display:none!important}@media(max-width:400px){body{padding:12px}button{width:100%;margin-right:0}}
+</style></head><body><main><p id="step">Step 1 of 2 · Goal</p><h1 id="page-title" tabindex="-1">What would you like to work on?</h1><p class="hint">Local planning only. Piarre will not run code or spend money.</p><form id="composer"><label for="goal">Your goal</label><textarea id="goal" maxlength="10000" placeholder="Describe the outcome you want…"></textarea><p class="hint">Nothing is saved until you choose Save proposal.</p><button id="prepare" type="submit">Review goal</button></form><p id="status" role="status" aria-live="polite"></p><section id="preview" aria-label="Proposal review" hidden></section><div id="review-actions" hidden><button id="save" type="button" hidden>Save proposal</button><button id="discard" class="secondary" type="button">Back to goal</button></div><button id="new-goal" type="button" hidden>Plan another goal</button><details id="project-details"><summary>Project and saved tasks</summary><aside id="inspection" aria-label="Project inspection">${inspection}</aside></details></main><script nonce="${nonce}">${composerScript}</script></body></html>`;
 }
 
 const composerScript = String.raw`
@@ -15,6 +15,15 @@ const discard = document.getElementById('discard');
 const save = document.getElementById('save');
 const preview = document.getElementById('preview');
 const status = document.getElementById('status');
+const composer = document.getElementById('composer');
+const actions = document.getElementById('review-actions');
+const title = document.getElementById('page-title');
+const step = document.getElementById('step');
+const next = document.getElementById('new-goal');
+function showGoal() {
+  composer.hidden = false; preview.hidden = true; actions.hidden = true; next.hidden = true;
+  title.textContent = 'What would you like to work on?'; step.textContent = 'Step 1 of 2 · Goal';
+}
 let requestId;
 function invalidate() {
   const previous = requestId;
@@ -28,7 +37,8 @@ function invalidate() {
 }
 goal.addEventListener('input', () => {
   invalidate();
-  status.textContent = 'Unsent changes. Preview when ready.';
+  showGoal();
+  status.textContent = '';
 });
 document.getElementById('composer').addEventListener('submit', (event) => {
   event.preventDefault();
@@ -48,7 +58,12 @@ goal.addEventListener('keydown', (event) => {
 });
 discard.addEventListener('click', () => {
   invalidate();
-  status.textContent = 'Preview discarded. Nothing was saved.';
+  showGoal();
+  status.textContent = '';
+  goal.focus();
+});
+next.addEventListener('click', () => {
+  goal.value = ''; invalidate(); showGoal(); status.textContent = ''; goal.focus();
 });
 save.addEventListener('click', () => {
   if (!requestId || save.disabled) return;
@@ -69,20 +84,39 @@ window.addEventListener('message', ({data}) => {
   discard.disabled = state.kind === 'idle';
   prepare.disabled = state.kind === 'preparing' || !goal.value.trim();
   preview.replaceChildren();
-  if (state.kind === 'idle') requestId = undefined;
+  if (state.kind === 'idle') {
+    requestId = undefined;
+    showGoal();
+    if (state.message.startsWith('Proposal saved')) {
+      composer.hidden = true; next.hidden = false; title.textContent = 'Proposal saved'; step.textContent = 'Saved · Not approved to run';
+      document.getElementById('project-details').open = true; title.focus();
+    }
+  }
   if (state.kind === 'ready') {
-    const heading = document.createElement('h2');
-    heading.textContent = 'Provisional draft';
-    const content = document.createElement('pre');
-    content.textContent = state.draft.goal + '\n\n' + state.draft.tasks.map(task =>
-      task.title + '\n' + task.requirements.map(item => item.text).join('\n') +
-      '\nIncluded paths: ' + (task.proposedScope.included.join(', ') || 'Not specified') +
-      '\nExcluded paths: ' + (task.proposedScope.excluded.join(', ') || 'None specified') +
-      '\nDependencies: ' + (task.dependsOn.join(', ') || 'None') +
-      '\nChecks: ' + task.checks.map(item => item.description).join('; ') +
-      '\nBudget: ' + task.proposedBudget.maxTokens + ' tokens; ' + task.proposedBudget.maxAttempts + ' attempt(s); ' + task.proposedBudget.maxElapsedMinutes + ' minutes'
-    ).join('\n\n');
-    preview.append(heading, content);
+    composer.hidden = true; preview.hidden = false; actions.hidden = false;
+    title.textContent = 'Review your proposal'; step.textContent = 'Step 2 of 2 · Review';
+    status.textContent = 'Check the proposal before saving. Nothing will run.';
+    const goalSummary = document.createElement('p');
+    goalSummary.textContent = state.draft.goal;
+    preview.append(goalSummary);
+    for (const task of state.draft.tasks) {
+      const article = document.createElement('article');
+      const heading = document.createElement('h2'); heading.textContent = task.title;
+      const requirements = document.createElement('ul');
+      for (const requirement of task.requirements) {
+        const item = document.createElement('li'); item.textContent = requirement.text; requirements.append(item);
+      }
+      const details = document.createElement('details');
+      const summary = document.createElement('summary'); summary.textContent = 'Scope, checks and budget';
+      const content = document.createElement('pre');
+      content.textContent = 'Included paths: ' + (task.proposedScope.included.join(', ') || 'Not specified') +
+        '\nExcluded paths: ' + (task.proposedScope.excluded.join(', ') || 'None specified') +
+        '\nDependencies: ' + (task.dependsOn.join(', ') || 'None') +
+        '\nChecks: ' + task.checks.map(item => item.description).join('; ') +
+        '\nBudget: ' + task.proposedBudget.maxTokens + ' tokens; ' + task.proposedBudget.maxAttempts + ' attempt(s); ' + task.proposedBudget.maxElapsedMinutes + ' minutes';
+      details.append(summary, content); article.append(heading, requirements, details); preview.append(article);
+    }
+    title.focus();
   }
 });
 prepare.disabled = !goal.value.trim();

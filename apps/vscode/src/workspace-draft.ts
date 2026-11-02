@@ -32,7 +32,7 @@ export interface DraftOperations {
 }
 
 export class WorkspaceDraft {
-  state: DraftState = { kind: "idle", requestId: undefined, message: "Preview a goal locally, then choose whether to save it as an unapproved proposal." };
+  state: DraftState = { kind: "idle", requestId: undefined, message: "" };
   private ticket: { readonly requestId: string; readonly project: ProjectSnapshot; readonly commandId: string } | undefined;
   private active = true;
 
@@ -62,7 +62,7 @@ export class WorkspaceDraft {
         const saved = this.operations.save(ticket.project, state.draft, ticket.commandId);
         if (saved) {
           this.project = saved;
-          this.clear("Proposal saved. It remains unapproved; no work has started.");
+          this.clear("Proposal saved. Nothing has started.");
         } else this.clear("The project changed or is unavailable. Preview again before saving.");
       } catch {
         this.clear("The proposal could not be saved. Check the project and preview again.");
@@ -71,7 +71,7 @@ export class WorkspaceDraft {
     }
     const ticket = { requestId: message.requestId, project: this.project, commandId: randomUUID() };
     this.ticket = ticket;
-    this.state = { kind: "preparing", requestId: message.requestId, message: "Preparing a local preview…" };
+    this.state = { kind: "preparing", requestId: message.requestId, message: "Preparing your proposal…" };
     this.changed();
     try {
       const draft = await this.operations.prepare(message.goal);

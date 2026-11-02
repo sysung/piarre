@@ -168,9 +168,15 @@ window.addEventListener('message', ({data}) => { if (data.kind === 'test-checked
     if (goal.value !== content || document.activeElement !== goal || goal.selectionStart !== 3) throw new Error('Unsent input or focus lost: ' + JSON.stringify({value: goal.value, active: document.activeElement.tagName, start: goal.selectionStart}));
     document.getElementById('composer').requestSubmit();
     await waitFor(() => !save.hidden);
+    if (!composer.hidden || preview.hidden) throw new Error('Review did not replace goal entry');
     if (preview.querySelector('script') || !preview.textContent.includes(content)) throw new Error('Unsafe preview rendering');
     if (!preview.textContent.includes(String.fromCharCode(10))) throw new Error('Preview has no line breaks');
     if (!preview.textContent.includes('Excluded paths:') || !preview.textContent.includes('Dependencies:') || !preview.textContent.includes('15 minutes')) throw new Error('Incomplete preview');
+    if (preview.querySelector('details').open) throw new Error('Technical details should start collapsed');
+    discard.click();
+    if (composer.hidden || !preview.hidden || goal.value !== content) throw new Error('Back lost goal or stayed on review');
+    document.getElementById('composer').requestSubmit();
+    await waitFor(() => !save.hidden);
     api.postMessage({kind: 'test-before-save'});
     await waitFor(() => document.body.dataset.checked === 'yes');
     const savedRequest = requestId;

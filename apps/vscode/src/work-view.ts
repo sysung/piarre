@@ -52,7 +52,7 @@ function renderInspection(
         .map(
           (task) => {
             const estimate = estimateBudget({ budget: task.proposedBudget, model: selection?.model ?? "", provider: selection?.provider ?? "", billing: selection?.billing ?? { kind: "unknown" } });
-            return `<article><h4>${escape(task.title)}</h4><p><strong>Unapproved</strong> · Plan version ${String(task.planVersion)}</p><h5>Requirements</h5>${list(task.requirements.map(({ text }) => text), "No requirements")}<h5>Proposed scope</h5><p>Included</p>${list(task.proposedScope.included, "No paths proposed")}<p>Excluded</p>${list(task.proposedScope.excluded, "No exclusions proposed")}<h5>Dependencies</h5>${list(task.dependsOn, "No dependencies")}<h5>Manual checks</h5>${list(task.checks.map(({ description }) => description), "No checks")}<h5>Proposed budget</h5><p>${task.proposedBudget.maxTokens.toLocaleString("en-US")} tokens · ${String(task.proposedBudget.maxElapsedMinutes)} minutes · ${String(task.proposedBudget.maxAttempts)} attempt</p><h5>Plan-based estimate</h5>${cost(estimate)}</article>`;
+            return `<details><summary>${escape(task.title)} · Unapproved</summary><article><p><strong>Unapproved</strong> · Plan version ${String(task.planVersion)}</p><h4>Requirements</h4>${list(task.requirements.map(({ text }) => text), "No requirements")}<h4>Proposed scope</h4><p>Included</p>${list(task.proposedScope.included, "No paths proposed")}<p>Excluded</p>${list(task.proposedScope.excluded, "No exclusions proposed")}<h4>Dependencies</h4>${list(task.dependsOn, "No dependencies")}<h4>Manual checks</h4>${list(task.checks.map(({ description }) => description), "No checks")}<h4>Proposed budget</h4><p>${task.proposedBudget.maxTokens.toLocaleString("en-US")} tokens · ${String(task.proposedBudget.maxElapsedMinutes)} minutes · ${String(task.proposedBudget.maxAttempts)} attempt</p><h4>Plan-based estimate</h4>${cost(estimate)}</article></details>`;
           },
         )
         .join("");
@@ -74,7 +74,7 @@ function renderInspection(
   const policy = Object.values(inspection.policy).map((state) => `<li>${escape(policyLabels[state])}</li>`).join("");
   const permissions = `<details><summary>Basis and permissions</summary><h3>Recorded basis</h3>${basis}<h3>What works now</h3><p>You can rename this project and save task proposals. A proposed budget is not permission to spend.</p><ul>${policy}</ul><h3>Providers</h3>${providers}<p>Drafting uses the built-in deterministic generator, not a conversational model. Selecting a provider does not connect it or approve spending.</p></details>`;
 
-  return `<h1>Work</h1><h2>${escape(project.name)}</h2>${work}${permissions}<dl><dt>Repository</dt><dd>${escape(project.repositoryUri)}</dd><dt>Project ID</dt><dd>${escape(project.projectId)}</dd><dt>Revision</dt><dd>${String(project.revision)}</dd></dl><p>Use Piarre commands in the Command Palette to manage this project.</p>`;
+  return `<h2>${escape(project.name)}</h2>${work}${permissions}<details><summary>Project information</summary><dl><dt>Repository</dt><dd>${escape(project.repositoryUri)}</dd><dt>Project ID</dt><dd>${escape(project.projectId)}</dd><dt>Revision</dt><dd>${String(project.revision)}</dd></dl></details>`;
 }
 
 export function renderWorkView(project: ProjectSnapshot, configuration?: ProviderConfiguration): string {
