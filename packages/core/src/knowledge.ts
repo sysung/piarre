@@ -115,7 +115,7 @@ export function applyKnowledgeEvent(project: ProjectSnapshot, event: KnowledgeEv
       entry = { ...previous, recordedAtRevision: revision, supersedes: previous.recordedAtRevision,
         standing: { kind: "confirmed", confirmationCommandId: event.confirmationCommandId } };
     } else {
-      validateSubmitted(event.submitted); validateTasks(event.affectedTaskIds);
+      validateSubmitted(event.submitted); validateTasks(event.affectedTaskIds.filter(id => !previous.affectedTaskIds.includes(id)));
       if (previous.standing.kind !== "confirmed") invalid();
       const affectedTaskIds = [...new Set([...previous.affectedTaskIds, ...event.affectedTaskIds])];
       entry = { ...previous, recordedAtRevision: revision, supersedes: previous.recordedAtRevision,

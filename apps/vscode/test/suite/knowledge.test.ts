@@ -74,6 +74,24 @@ suite("Sourced knowledge and corrections", () => {
     assert.match(renderKnowledge(after), /Earlier evidence cannot demonstrate the corrected rule/);
   });
 
+  test("historical task links survive deletion without blocking a reviewed correction", async () => {
+    const project = repository.read();
+    const draft = await new GoalInterpreter().propose("Refund history");
+    repository.dispatch({ commandId: "historical-tasks", projectId: project.projectId, expectedProjectRevision: project.revision, action: { kind: "propose-tasks", draft } });
+    const task = repository.read().tasks[0]; assert.ok(task);
+    dispatch({ kind: "observe-knowledge", topic: "Refund policy", category: "business", submitted: statement("30 days"), affectedTaskIds: [task.taskId] });
+    dispatch({ kind: "confirm-knowledge", target: target() });
+    const beforeDeletion = repository.read();
+    repository.dispatch({ commandId: "delete-historical-task", projectId: project.projectId, expectedProjectRevision: beforeDeletion.revision, action: { kind: "delete-proposal", groupId: task.groupId } });
+    dispatch({ kind: "correct-knowledge", target: target(), submitted: statement("45 days"), affectedTaskIds: [task.taskId] });
+    assert.equal(latest().content.text, "45 days");
+    assert.deepEqual(latest().affectedTaskIds, [task.taskId]);
+    assert.equal(repository.read().tasks.length, 0);
+    const beforeInvalid = repository.read();
+    assert.throws(() => dispatch({ kind: "correct-knowledge", target: target(), submitted: statement("60 days"), affectedTaskIds: ["never-existed"] }));
+    assert.deepEqual(repository.read(), beforeInvalid);
+  });
+
   test("stale target, wrong project, invented task and correction without confirmation cannot append effects", () => {
     dispatch({ kind: "observe-knowledge", topic: "Policy", category: "business", submitted: statement("Original"), affectedTaskIds: [] });
     const observedTarget = target();
