@@ -41,6 +41,16 @@ Question formats need testing: one question at a time, suggested options with a 
 
 Direct task, memory, approval, and stop controls bypass model interpretation. Whether an additional typed command interface is useful remains open.
 
+## Translation and shared understanding
+
+Piarre bridges differences in terminology, expertise, assumptions, and background knowledge between people and coding agents. Translation preserves meaning and connects technical findings to the user's goal. It does not assume that every model needs terse input or every person needs a longer answer.
+
+An AI-facing layer provides explicit goals, constraints, relevant knowledge, sources, uncertainty, and action state. A human-facing translation layer explains what those records mean, why they matter, and what decision is needed. Both refer to the same records. Users can inspect the original evidence and correct an interpretation. Neither representation is hidden model reasoning.
+
+Human explanations start with the useful answer and offer additional context, definitions, examples, and technical detail as needed. Adapt depth to the user's knowledge and feedback. Preserve material caveats, quantities, negation, and distinctions between proposed, observed, verified, and accepted work. A simpler explanation must not imply stronger evidence or broader approval.
+
+Translation also works from human intent toward agent instructions. Preserve the original statement alongside its proposed interpretation. Investigate observable facts and ask focused questions when materially different interpretations would change scope or acceptance. A paraphrase or fluent reply does not establish user agreement, confirm knowledge, or authorize work.
+
 ## Memory and the Recommendation view
 
 Project memory contains business knowledge, technical decisions, requirements, preferences, observations, and unresolved assumptions. Users can inspect sources, confirmation state, changes, and affected work.
@@ -50,6 +60,12 @@ Important recommendations offer a Recommendation view showing supporting records
 The user wants automatic observation capture and approval of memory changes. The proposed boundary is automatic capture as unconfirmed observations, with approval before replacing confirmed knowledge, promoting inferences to requirements, or resolving contradictions. This policy still needs explicit resolution before dependent behavior ships.
 
 Corrections must update durable records and identify affected plans or evidence. Missing, invalid, disputed, and stale knowledge remain distinct. Repeated behavior alone does not establish a permanent preference. Fast lookup is required; a particular index structure is not a product requirement.
+
+Project lookup must connect business knowledge and technical decisions to code symbols, modules, infrastructure declarations, requirements, and verification evidence. It should answer both where behavior is implemented and why a decision was made. Code alone does not establish business rationale, and an infrastructure declaration does not prove the deployed state.
+
+Evaluate a knowledge graph alongside exact search, semantic retrieval, and compiler-derived code indexes. Relationships must retain sources, revisions, extraction method, and confirmation state. Model-inferred links remain distinguishable from source-derived or confirmed links. Retrieval must expose stale indexes, incomplete coverage, contradictions, and unsupported answers rather than presenting plausible matches as facts.
+
+Choose storage and retrieval methods through representative lookup and change-impact evaluations. A dedicated graph database is a candidate, not a committed dependency. Retrieval indexes must not become competing authorities for project knowledge, approvals, or evidence.
 
 ## Work and user authority
 
@@ -98,3 +114,5 @@ User tests can link optional voice and screen recordings with logs, transcripts,
 The first integrated candidate should demonstrate resumption, broad discussion, Recommendation, corrected memory, triage, approved execution, linked ideas, bounded council, checkpoint recovery, result review, and optional reflection. Voice and local-model tuning may follow. Multiwriter execution, an IDE fork, shared cloud collaboration, autonomous deployment, and background listening are outside the initial scope.
 
 Compare supervision time, reading burden, repeated context, interruptions, corrections, missed defects, and accepted results with the user's existing workflow. A first feedback round establishes improvement targets rather than proof of productivity. Rough edges may become follow-up work; unauthorized actions, silent data loss, and false verification block release.
+
+Evaluate translation by whether users understand consequences and choose appropriately, with source meaning and uncertainty preserved. Evaluate retrieval with known answers and unanswerable questions, including renamed code, changed decisions, conflicting sources, and stale infrastructure information. Measure evidence support, missed dependencies, freshness, latency, and indexing cost. Fluent explanations and a connected graph do not establish correctness.
