@@ -1,12 +1,12 @@
 # Piarre
 
-Piarre is a proposed voice-first IDE for directing, observing, and verifying coding agents.
+Piarre is a conversational project partner for organizing, directing, and verifying agent work. The initial product is typing-first, with optional voice planned.
 
-The implementation plan lives in [GitHub Project 8](https://github.com/users/sysung/projects/8/views/1) and the [backlog document](docs/03_IMPLEMENTATION_BACKLOG.md).
+The implementation backlog lives in [GitHub Project 8](https://github.com/users/sysung/projects/8/views/1).
 
-The [product design](docs/01_PRODUCT_PRD.md) describes the audience, product model, proposed features, voice interaction, primary UI, trust boundaries, and staged path from one supervised worker to an isolated agent team.
+The [product requirements](docs/01_PRODUCT_PRD.md) describe the business problem, design principles, and intended experience.
 
-The [design package](docs/00_README.md) links the current product and delivery documents. Planning material describes proposals, not implemented capabilities.
+The [documentation index](docs/00_README.md) links the four lasting project documents. Requirements describe intended behavior, not implemented capabilities.
 
 ## Develop the extension
 

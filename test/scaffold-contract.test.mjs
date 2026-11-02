@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 import { vscodeVersion } from "../config/vscode-version.mjs";
 
@@ -54,4 +54,14 @@ test("the editor toolchain stays aligned to the pinned VS Code version", async (
   assert.match(vscodeVersion, /^\d+\.\d+\.\d+$/);
   assert.equal(extensionManifest.engines?.vscode, `^${vscodeVersion}`);
   assert.equal(rootManifest.devDependencies?.["@types/vscode"], vscodeVersion);
+});
+
+test("docs contains only the four lasting project documents", async () => {
+  const entries = await readdir(new URL("../docs/", import.meta.url));
+  assert.deepEqual(entries.sort(), [
+    "00_README.md",
+    "01_PRODUCT_PRD.md",
+    "02_TECHNICAL_DESIGN.md",
+    "03_IMPLEMENTATION_BACKLOG.md",
+  ], "Keep lasting content in the four docs files. Put temporary plans, evidence, and history in .artifacts; track work in GitHub issues.");
 });
