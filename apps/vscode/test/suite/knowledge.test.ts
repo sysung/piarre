@@ -6,7 +6,7 @@ import { currentKnowledge, knowledgeConflicts, type KnowledgeAction } from "../.
 import { resolveRecordReference } from "../../../../packages/core/src/inspection.js";
 import { SqliteProjectRepository } from "../../src/sqlite-project-repository.js";
 import { GoalInterpreter } from "../../src/goal-interpreter.js";
-import { renderKnowledge, renderSessionBrief } from "../../src/work-view.js";
+import { renderKnowledge, renderSessionBrief, renderConversation } from "../../src/work-view.js";
 
 suite("Sourced knowledge and corrections", () => {
   let directory: string;
@@ -102,6 +102,24 @@ suite("Sourced knowledge and corrections", () => {
     const brief = renderSessionBrief(repository.read());
     assert.match(brief, new RegExp(`First topic · recorded revision ${String(latest().recordedAtRevision)}`));
     assert.doesNotMatch(brief, /Second topic · recorded revision/);
+  });
+
+  test("a delayed reply retains its frozen source but visibly becomes historical after correction", () => {
+    dispatch({ kind: "observe-knowledge", topic: "Refund policy", category: "business", submitted: statement("30 days"), affectedTaskIds: [] });
+    dispatch({ kind: "confirm-knowledge", target: target() });
+    const entry = latest();
+    const reference = { projectId: entry.projectId, kind: "knowledge", recordId: entry.knowledgeId, revision: entry.recordedAtRevision } satisfies Parameters<typeof resolveRecordReference>[1];
+    const submitted = statement("What is the refund window?");
+    repository.dispatch({ commandId: "old-context-request", projectId: entry.projectId, expectedProjectRevision: repository.read().revision,
+      action: { kind: "begin-conversation", submitted, sources: [{ reference, text: entry.content.text }] } });
+    dispatch({ kind: "correct-knowledge", target: target(), submitted: statement("45 days"), affectedTaskIds: [] });
+    repository.dispatch({ commandId: "late-old-context-reply", projectId: entry.projectId, expectedProjectRevision: repository.read().revision,
+      action: { kind: "record-conversation-reply", requestId: submitted.requestId, text: "The old rule was 30 days", citations: [reference], providerThreadId: "thread", providerTurnId: "turn" } });
+    const rendered = renderConversation(repository.read());
+    assert.match(rendered, /Historical context/);
+    assert.match(rendered, /does not demonstrate the corrected or current rule/);
+    assert.match(rendered, /The old rule was 30 days/);
+    assert.equal(latest().content.text, "45 days");
   });
 
   test("stale target, wrong project, invented task and correction without confirmation cannot append effects", () => {

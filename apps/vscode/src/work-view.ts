@@ -6,7 +6,7 @@ import { GoalInterpreter } from "./goal-interpreter.js";
 import { WorkspaceDraft, type DraftOperations } from "./workspace-draft.js";
 import { renderWorkspaceShell } from "./workspace-shell.js";
 import { estimateBudget, type BudgetEstimate } from "../../../packages/core/src/costs.js";
-import { inspectProject, parseProviderConfiguration, type ProjectInspection, type ProviderConfiguration } from "../../../packages/core/src/inspection.js";
+import { inspectProject, resolveRecordReference, parseProviderConfiguration, type ProjectInspection, type ProviderConfiguration } from "../../../packages/core/src/inspection.js";
 import { currentKnowledge, knowledgeConflicts } from "../../../packages/core/src/knowledge.js";
 import type { ProjectSnapshot } from "../../../packages/core/src/index.js";
 
@@ -106,7 +106,10 @@ export function renderKnowledge(project: ProjectSnapshot): string {
 
 export function renderConversation(project: ProjectSnapshot): string {
   return project.conversation.map(turn => {
-    const reply = turn.kind === "answered" ? `<p><strong>Codex · Inferred</strong></p><pre>${escape(turn.text)}</pre><details><summary>Recommendation context and citations</summary><p>Your original statement is preserved above. A source reference does not independently verify the reply.</p>${turn.sources.map(source => `<p>${turn.citations.some(reference => reference.kind === source.reference.kind && reference.recordId === source.reference.recordId && reference.revision === source.reference.revision) ? "Cited" : "Available context"}: ${escape(source.reference.kind)} ${escape(source.reference.recordId)} · revision ${String(source.reference.revision)}</p><pre>${escape(source.text)}</pre>`).join("")}</details>`
+    const unavailable = turn.sources.filter(source => resolveRecordReference(project, source.reference).kind !== "resolved");
+    const disputed = turn.sources.some(source => source.reference.kind === "knowledge" && currentKnowledge(project).some(entry => entry.knowledgeId === source.reference.recordId && knowledgeConflicts(project, entry).length > 0));
+    const freshness = unavailable.length ? "<p><strong>Historical context:</strong> a captured source has changed or is unavailable. This reply does not demonstrate the corrected or current rule. Review current knowledge before acting.</p>" : disputed ? "<p><strong>Disputed context:</strong> captured knowledge has different confirmed values. Resolve the dispute before relying on this reply.</p>" : "";
+    const reply = turn.kind === "answered" ? `<p><strong>Codex · Inferred</strong></p>${freshness}<pre>${escape(turn.text)}</pre><details><summary>Recommendation context and citations</summary><p>Your original statement is preserved above. A source reference does not independently verify the reply.</p>${turn.sources.map(source => `<p>${turn.citations.some(reference => reference.kind === source.reference.kind && reference.recordId === source.reference.recordId && reference.revision === source.reference.revision) ? "Cited" : "Available context"}: ${escape(source.reference.kind)} ${escape(source.reference.recordId)} · revision ${String(source.reference.revision)}</p><pre>${escape(source.text)}</pre>`).join("")}</details>`
       : `<p>${turn.kind === "pending" ? "Waiting for a terminal reply…" : escape(turn.kind + ": " + turn.reason)}</p>`;
     return `<article><p><strong>You</strong> · context revision ${String(turn.submitted.contextRevision)}</p><pre>${escape(turn.submitted.originalStatement)}</pre>${reply}</article>`;
   }).join("");
