@@ -212,7 +212,7 @@
           "type": "string",
           "default": "codex",
           "scope": "machine",
-          "description": "Codex CLI executable for explicitly connected agent operations and supporting discussion. Sign in through the CLI first. No shell arguments or credentials."
+          "description": "Codex CLI executable used for an explicit connection. Sign in through the CLI first. No shell arguments or credentials."
         }
       }
     }
