@@ -10,11 +10,11 @@ The [documentation index](docs/00_README.md) links the four lasting project docu
 
 ## Install a package
 
-Open a successful [CI run](https://github.com/sysung/piarre/actions/workflows/ci.yml), download its **piarre-vsix** artifact, and unzip it. In VS Code, run **Extensions: Install from VSIX...** and select the `.vsix` file. Reload VS Code, open a trusted Git repository, and run **Piarre: Open**. The package requires VS Code 1.144.0 or later.
+Open [GitHub Releases](https://github.com/sysung/piarre/releases), choose the build for the source commit you want, and download its `.vsix` asset. In VS Code, run **Extensions: Install from VSIX...** and select the file. Reload VS Code, open a trusted Git repository, and run **Piarre: Open**. The package requires VS Code 1.144.0 or later.
 
-Every successful pull request and master build produces a package with its source commit and SHA-256 checksums. These are development builds, not Marketplace releases. Downloading Actions artifacts requires signing in to GitHub; artifacts expire after 30 days.
+Every successful master push publishes the exact tested VSIX, `build-info.json`, and `SHA256SUMS` as a regular GitHub Release. Tags use `build-<full-source-sha>`; no separate release branch or daily schedule is maintained. The VSIX keeps the extension manifest version, so compare source commits and checksums when choosing between builds with the same version. Concurrent builds do not automatically replace GitHub's Latest designation.
 
-Maintainers can run CI manually on master with **create_release** enabled to attach the tested package to an unpublished GitHub Release. Bump `apps/vscode/package.json` to an unused version first. Review the draft before publishing; the workflow never publishes to the Marketplace.
+PR and master builds also retain the existing **piarre-vsix** Actions artifacts for 30 days. Downloading those artifacts requires signing in and unzipping them. Maintainers can run CI manually on master with **create_release** enabled, which is the default. Disable it for a checks-only manual run. Failed quality or installed-package tests block release. A retry can recover an incomplete upload; an already published build is left unchanged. Releases are staged as drafts only while assets upload, then published automatically. This workflow never publishes to the VS Code Marketplace or installs into daily use, and a package does not establish integrated-product readiness.
 
 ## Develop the extension
 
