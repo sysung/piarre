@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "scenarios": [
     {
-      "id": "foundation-authority-and-basis",
+      "id": "foundation-authority-and-recommendation",
       "owner": "C01",
       "source": {
         "document": "docs/02_TECHNICAL_DESIGN.md",
@@ -13,12 +13,12 @@
         "kind": "automated",
         "check": "host-tests",
         "tests": [
-          "Basis keeps original proposal revisions through rename and restart",
+          "Recommendation keeps original proposal revisions through rename and restart",
           "a rename before a proposal does not invent an earlier source revision",
           "invalid direct dispatch cannot bypass the interpreter or append receipts",
           "corrupt stored provenance, authority, and graph envelopes are rejected",
           "pre-C01 receipts with alternate draft property order survive replay and retry",
-          "Work exposes unapproved Basis and unavailable capabilities without running providers",
+          "Work exposes unapproved Recommendation and unavailable capabilities without running providers",
           "invalid provider configuration fails closed and does not expose credentials"
         ]
       }
@@ -28,7 +28,7 @@
       "owner": "C03",
       "source": {
         "document": "docs/01_PRODUCT_PRD.md",
-        "heading": "Memory and the Basis view"
+        "heading": "Memory and the Recommendation view"
       },
       "requirement": "Brief accomplishments, upcoming tasks, unresolved decisions, and correct project sources.",
       "verification": {
@@ -80,7 +80,7 @@
       "owner": "C03",
       "source": {
         "document": "docs/01_PRODUCT_PRD.md",
-        "heading": "Memory and the Basis view"
+        "heading": "Memory and the Recommendation view"
       },
       "requirement": "Inspect and approve corrections with provenance and affected-work invalidation.",
       "verification": {

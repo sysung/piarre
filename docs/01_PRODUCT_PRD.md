@@ -41,11 +41,11 @@ Question formats need testing: one question at a time, suggested options with a 
 
 Direct task, memory, approval, and stop controls bypass model interpretation. Whether an additional typed command interface is useful remains open.
 
-## Memory and the Basis view
+## Memory and the Recommendation view
 
 Project memory contains business knowledge, technical decisions, requirements, preferences, observations, and unresolved assumptions. Users can inspect sources, confirmation state, changes, and affected work.
 
-Important recommendations offer a Basis view showing supporting records, assumptions, alternatives, contradictions, and proposed versus completed actions. This is an explanation backed by evidence, not access to hidden model reasoning.
+Important recommendations offer a Recommendation view showing supporting records, assumptions, alternatives, contradictions, and proposed versus completed actions. This is an explanation backed by evidence, not access to hidden model reasoning.
 
 The user wants automatic observation capture and approval of memory changes. The proposed boundary is automatic capture as unconfirmed observations, with approval before replacing confirmed knowledge, promoting inferences to requirements, or resolving contradictions. This policy still needs explicit resolution before dependent behavior ships.
 
@@ -95,6 +95,6 @@ Daily work uses a stable release. Candidate testing uses a separate environment 
 
 User tests can link optional voice and screen recordings with logs, transcripts, relevant revisions, checks, and annotations. Capture, retention, export, and remote analysis are separate choices. Recordings show the experience; synchronized diagnostics help explain failures.
 
-The first integrated candidate should demonstrate resumption, broad discussion, Basis, corrected memory, triage, approved execution, linked ideas, bounded council, checkpoint recovery, result review, and optional reflection. Voice and local-model tuning may follow. Multiwriter execution, an IDE fork, shared cloud collaboration, autonomous deployment, and background listening are outside the initial scope.
+The first integrated candidate should demonstrate resumption, broad discussion, Recommendation, corrected memory, triage, approved execution, linked ideas, bounded council, checkpoint recovery, result review, and optional reflection. Voice and local-model tuning may follow. Multiwriter execution, an IDE fork, shared cloud collaboration, autonomous deployment, and background listening are outside the initial scope.
 
 Compare supervision time, reading burden, repeated context, interruptions, corrections, missed defects, and accepted results with the user's existing workflow. A first feedback round establishes improvement targets rather than proof of productivity. Rough edges may become follow-up work; unauthorized actions, silent data loss, and false verification block release.

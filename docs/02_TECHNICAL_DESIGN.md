@@ -10,7 +10,7 @@ The ProjectController validates proposals and owns authorization, task transitio
 
 SQLite events are authoritative for tasks, runs, approvals, and execution evidence. Snapshots are rebuildable projections. Persist events before acknowledging durable changes. Commands carry an identifier and expected project revision. Replay and retries must not duplicate external effects.
 
-The domain includes Project, Goal, Requirement, Plan, Task, Worker, Run, Approval, Budget, Decision, Evidence, Workflow, and Session. Knowledge, Basis records, linked threads, council assignments, reflection proposals, checkpoints, provisional drafts, and test bundles extend this model. Define small typed contracts before separate UI and persistence paths diverge.
+The domain includes Project, Goal, Requirement, Plan, Task, Worker, Run, Approval, Budget, Decision, Evidence, Workflow, and Session. Knowledge, Recommendation records, linked threads, council assignments, reflection proposals, checkpoints, provisional drafts, and test bundles extend this model. Define small typed contracts before separate UI and persistence paths diverge.
 
 Human-readable knowledge and decision files are possible, but their authority, import, revision, and conflict rules must be explicit. Do not create competing authoritative copies. Missing or invalid files must remain distinguishable from empty knowledge.
 
@@ -20,7 +20,7 @@ Conversation and inspection reference the same durable objects. Proposed, applie
 
 Use the selected [Session brief layout](https://www.figma.com/design/I7CeHDqFJEvoEdmslfKrNp?node-id=7-2): one compact project brief above a conversation/planning region and contextual inspector. Derive displayed summaries from canonical project records, not a second UI store. Refresh inspection and brief without replacing the composer or capturing unsent input. Use VS Code theme tokens and stack the regions in narrow panes. A planning-only shell is not evidence of sourced conversational resumption.
 
-Preserve keyboard access, visible transcripts, screen-reader state, and non-color status cues. Detailed artifacts open on demand without repeatedly changing focus. Active-run and deterministic stop controls belong outside replaceable inspector destinations so inspecting Basis or memory cannot hide them. Distinguish pre-run acceptance criteria from consent controls, and carry the approved criterion identities into current result evidence. Knowledge correction revisions and review acknowledgments must bind the actual record/result rather than a page-global flag. Prototype remaining state and question formats before enabling their actions.
+Preserve keyboard access, visible transcripts, screen-reader state, and non-color status cues. Detailed artifacts open on demand without repeatedly changing focus. Active-run and deterministic stop controls belong outside replaceable inspector destinations so inspecting Recommendation or memory cannot hide them. Distinguish pre-run acceptance criteria from consent controls, and carry the approved criterion identities into current result evidence. Knowledge correction revisions and review acknowledgments must bind the actual record/result rather than a page-global flag. Prototype remaining state and question formats before enabling their actions.
 
 Keep conversation and deterministic stop controls responsive while workers run. Emit concise progress from observed state changes, deduplicate unchanged status, and defer nonessential speech while the user is still talking. Explanation depth is a visible, correctable preference.
 
@@ -32,7 +32,7 @@ Turn-taking must support hesitation, correction, and explicit completion. Push t
 
 Knowledge records need identity, content, sources, confirmation state, revisions, supersession, and affected-work links. Observed, inferred, confirmed, disputed, invalid, and stale states must not collapse into a single remembered fact.
 
-Retrieve a bounded set of relevant records for each request. Distinguish retrieval failure from no matching record. Basis links exact supporting sources and revisions and exposes unconfirmed premises. Test whether sources support the answer, not merely whether links render.
+Retrieve a bounded set of relevant records for each request. Distinguish retrieval failure from no matching record. Recommendation links exact supporting sources and revisions and exposes unconfirmed premises. Test whether sources support the answer, not merely whether links render.
 
 Approved corrections invalidate affected plans and evidence while preserving unrelated work. Contradictory confirmed sources need a visible resolution proposal. Reflection and repeated interactions cannot silently grant authority or confirm requirements.
 

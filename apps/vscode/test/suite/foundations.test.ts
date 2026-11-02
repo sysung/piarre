@@ -45,16 +45,16 @@ suite("C01 proposal authority and provenance", () => {
       projectId: before.projectId, expectedProjectRevision: before.revision,
       action: { kind: "rename-project", name: "Renamed" } });
   }
-  test("Basis keeps original proposal revisions through rename and restart", () => {
+  test("Recommendation keeps original proposal revisions through rename and restart", () => {
     const proposal = propose();
-    const before = inspectProject(proposal).basis;
+    const before = inspectProject(proposal).recommendation;
     assert.equal(before.length, 2);
     assert.ok(before.every((entry) => entry.reference.revision === 2));
     rename();
-    assert.deepEqual(inspectProject(repository.read()).basis, before);
+    assert.deepEqual(inspectProject(repository.read()).recommendation, before);
     repository.close();
     repository = new SqliteProjectRepository(databasePath);
-    assert.deepEqual(inspectProject(repository.read()).basis, before);
+    assert.deepEqual(inspectProject(repository.read()).recommendation, before);
     assert.equal(repository.read().revision, 3);
     for (const entry of before) {
       assert.equal(resolveRecordReference(repository.read(), entry.reference).kind, "resolved");
@@ -67,8 +67,8 @@ suite("C01 proposal authority and provenance", () => {
     rename();
     const project = propose();
     assert.equal(project.revision, 3);
-    assert.ok(inspectProject(project).basis.every((entry) => entry.reference.revision === 3));
-    assert.equal(inspectProject(repository.read(2)).basis.length, 0);
+    assert.ok(inspectProject(project).recommendation.every((entry) => entry.reference.revision === 3));
+    assert.equal(inspectProject(repository.read(2)).recommendation.length, 0);
   });
   test("invalid direct dispatch cannot bypass the interpreter or append receipts", () => {
     const before = repository.read();
@@ -166,14 +166,14 @@ suite("C01 proposal authority and provenance", () => {
       assert.equal(database.prepare("SELECT input FROM commands WHERE command_id = 'legacy'").get()?.input, oldInput);
     } finally { database.close(); }
   });
-  test("Work exposes unapproved Basis and unavailable capabilities without running providers", async () => {
+  test("Work exposes unapproved Recommendation and unavailable capabilities without running providers", async () => {
     const draft = await new GoalInterpreter().propose('<script>alert("x")</script>');
     const before = repository.read();
     repository.dispatch({ commandId: "escaped", projectId: before.projectId,
       expectedProjectRevision: before.revision, action: { kind: "propose-tasks", draft } });
     const project = repository.read();
     const html = renderWorkView(project);
-    assert.ok(html.includes("Basis and permissions"));
+    assert.ok(html.includes("Recommendation and permissions"));
     assert.ok(html.includes("recorded at project revision 2"));
     assert.ok(html.includes("A proposed budget is not permission to spend"));
     assert.ok(html.includes("Automatic memory capture is off"));

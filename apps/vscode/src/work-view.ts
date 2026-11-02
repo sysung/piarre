@@ -43,9 +43,9 @@ export function renderInspection(
   const cost = (estimate: BudgetEstimate): string => {
     const assumptions = "Uses the full token budget for every attempt, including retries. Actual usage and charges may differ. No provider is connected, and its billing method has not been checked.";
     if (estimate.kind === "unknown") return `<p>Estimated coding cost: Unknown. ${escape(estimate.reason)}</p>`;
-    if (estimate.kind === "api") return `<p>API plan ${escape(estimate.plan)}: ${escape(range(estimate.minimumUsd, estimate.maximumUsd, usd))} at the full token budget.</p><details><summary>Estimate basis</summary><p>Uses configured input/output prices that have not been verified. The token split is unknown. Discounts, tools, other agents, audio, taxes, and other fees are excluded.</p><p>${escape(assumptions)}</p></details>`;
+    if (estimate.kind === "api") return `<p>API plan ${escape(estimate.plan)}: ${escape(range(estimate.minimumUsd, estimate.maximumUsd, usd))} at the full token budget.</p><details><summary>Estimate details</summary><p>Uses configured input/output prices that have not been verified. The token split is unknown. Discounts, tools, other agents, audio, taxes, and other fees are excluded.</p><p>${escape(assumptions)}</p></details>`;
     const windows = estimate.windows.map((window) => `<li>${window.window === "five-hour" ? "Five-hour allowance" : "Weekly allowance"}: ${window.kind === "unknown" ? "Unknown. No matching usage samples." : `${escape(range(window.minimumPercent, window.maximumPercent, percent))} estimated consumption.`}</li>`).join("");
-    return `<p>Subscription estimate: ${escape(estimate.plan)}. Extra usage can incur charges.</p><ul>${windows}</ul><details><summary>Estimate basis</summary><p>Uses supplied samples for the same provider, plan, and model. Account usage has not been checked. Context and effort can change the estimate. Percentages describe task usage, not your remaining allowance.</p><p>${escape(assumptions)}</p></details>`;
+    return `<p>Subscription estimate: ${escape(estimate.plan)}. Extra usage can incur charges.</p><ul>${windows}</ul><details><summary>Estimate details</summary><p>Uses supplied samples for the same provider, plan, and model. Account usage has not been checked. Context and effort can change the estimate. Percentages describe task usage, not your remaining allowance.</p><p>${escape(assumptions)}</p></details>`;
   };
   const proposals = [...project.proposals].sort((a, b) => b.recordedAtRevision - a.recordedAtRevision)
     .filter(proposal => selectedGroupId === undefined || proposal.groupId === selectedGroupId)
@@ -66,9 +66,9 @@ export function renderInspection(
     .join("");
   if (selectedGroupId !== undefined) return `${proposals}<p>A proposed budget is not permission to spend. Connection unavailable: no provider is connected.</p>`;
   const work = proposals || "<p>Save a proposal to keep a goal with this project.</p>";
-  const basis = inspection.basis.length === 0
+  const recommendation = inspection.recommendation.length === 0
     ? "<p>No proposal sources recorded yet.</p>"
-    : `<ul>${inspection.basis.map((entry) => `<li><strong>${entry.kind === "submitted-goal" ? "Submitted goal" : "Proposed task"}</strong>: ${escape(entry.text)}<br>Record ${escape(entry.reference.recordId)}, recorded at project revision ${String(entry.reference.revision)}. Source: deterministic draft. Unapproved, not independently verified.</li>`).join("")}</ul>`;
+    : `<ul>${inspection.recommendation.map((entry) => `<li><strong>${entry.kind === "submitted-goal" ? "Submitted goal" : "Proposed task"}</strong>: ${escape(entry.text)}<br>Record ${escape(entry.reference.recordId)}, recorded at project revision ${String(entry.reference.revision)}. Source: deterministic draft. Unapproved, not independently verified.</li>`).join("")}</ul>`;
   const providers = `<ul>${inspection.providers.map((item) => `<li>${escape(item.role)}: ${item.status === "invalid-configuration" ? "Invalid settings. No provider connected." : "selection" in item ? `${escape(item.selection.provider)} / ${escape(item.selection.model)} selected. Connection unavailable.` : "Not configured."}</li>`).join("")}</ul>`;
   const policyLabels: Readonly<Record<ProjectInspection["policy"][keyof ProjectInspection["policy"]], string>> = {
     "automatic-capture-disabled-policy-unresolved": "Automatic memory capture is off until its approval policy is agreed.",
@@ -78,7 +78,7 @@ export function renderInspection(
     "unsupported": "Running, verifying, and accepting coding work are not available yet.",
   };
   const policy = Object.values(inspection.policy).map((state) => `<li>${escape(policyLabels[state])}</li>`).join("");
-  const permissions = `<details><summary>Basis and permissions</summary><h3>Recorded basis</h3>${basis}<h3>What works now</h3><p>You can rename this project and save task proposals. A proposed budget is not permission to spend.</p><ul>${policy}</ul><h3>Providers</h3>${providers}<p>Drafting uses the built-in deterministic generator, not a conversational model. Selecting a provider does not connect it or approve spending.</p></details>`;
+  const permissions = `<details><summary>Recommendation and permissions</summary><h3>Recorded recommendation</h3>${recommendation}<h3>What works now</h3><p>You can rename this project and save task proposals. A proposed budget is not permission to spend.</p><ul>${policy}</ul><h3>Providers</h3>${providers}<p>Drafting uses the built-in deterministic generator, not a conversational model. Selecting a provider does not connect it or approve spending.</p></details>`;
 
   return `${work}${permissions}<details><summary>Project information</summary><dl><dt>Repository</dt><dd>${escape(project.repositoryUri)}</dd><dt>Project ID</dt><dd>${escape(project.projectId)}</dd><dt>Revision</dt><dd>${String(project.revision)}</dd></dl></details>`;
 }

@@ -73,14 +73,14 @@ export function parseProviderConfiguration(value: unknown): ProviderConfiguratio
   return { kind: "valid", selections };
 }
 
-export interface BasisEntry {
+export interface RecommendationEntry {
   readonly kind: "submitted-goal" | "proposed-task";
   readonly reference: RecordReference;
   readonly text: string;
   readonly source: "deterministic-draft";
 }
 export interface ProjectInspection {
-  readonly basis: readonly BasisEntry[];
+  readonly recommendation: readonly RecommendationEntry[];
   readonly policy: {
     readonly memory: "automatic-capture-disabled-policy-unresolved";
     readonly confirmedMemory: "explicit-approval-required-not-implemented";
@@ -98,9 +98,9 @@ export function inspectProject(
   project: ProjectSnapshot,
   configuration: ProviderConfiguration = { kind: "valid", selections: [] },
 ): ProjectInspection {
-  const basis: BasisEntry[] = [];
+  const recommendation: RecommendationEntry[] = [];
   for (const proposal of project.proposals) {
-    basis.push({ kind: "submitted-goal", text: proposal.goal, source: proposal.source,
+    recommendation.push({ kind: "submitted-goal", text: proposal.goal, source: proposal.source,
       reference: { projectId: project.projectId, kind: "proposal",
         recordId: proposal.groupId, revision: proposal.recordedAtRevision } });
     for (const taskId of proposal.taskIds) {
@@ -108,11 +108,11 @@ export function inspectProject(
         kind: "task", recordId: taskId, revision: proposal.recordedAtRevision };
       const resolved = resolveRecordReference(project, reference);
       if (resolved.kind !== "resolved") throw new Error("Invalid project inspection: unresolved task");
-      basis.push({ kind: "proposed-task", reference, text: resolved.text, source: resolved.source });
+      recommendation.push({ kind: "proposed-task", reference, text: resolved.text, source: resolved.source });
     }
   }
   return {
-    basis,
+    recommendation,
     policy: {
       memory: "automatic-capture-disabled-policy-unresolved",
       confirmedMemory: "explicit-approval-required-not-implemented",
