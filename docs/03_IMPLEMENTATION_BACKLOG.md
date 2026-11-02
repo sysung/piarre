@@ -1,6 +1,6 @@
 # Implementation backlog
 
-This document is the source of truth for the v0.2 implementation sequence.
+This document preserves the historical v0.2 implementation sequence. The [C first integrated release plan](06_C_FIRST_RELEASE_PLAN.md) is the current forward backlog. B-series estimates and ordering are not estimates or instructions for the C release. The [captured B baseline](history/b-series-baseline-2026-11-01.md) records state before retirement.
 
 ## Estimate basis
 

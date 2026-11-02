@@ -2,7 +2,18 @@
 
 **Status:** Product and delivery design v0.2 | **First workflow:** Build and verify a local website | **Target:** VS Code extension, editor-neutral core
 
+## Current design synthesis
+
+[Consolidated product design](05_CONSOLIDATED_PRODUCT_DESIGN.md) records the 2026-11-01 direction, design principles, desired features, unresolved decisions, and relationship to the v0.2 backlog. It takes precedence for revised product intent, including conversation as the primary interaction, typing first, inspectable memory, and integrated product review. The v0.2 overview below remains the earlier baseline. No implementation or release capability is implied.
+
+[C first integrated release plan](06_C_FIRST_RELEASE_PLAN.md) defines the proposed replacement delivery queue, internal work packages, retained B safeguards, and one concentrated human test gate. The live B-series snapshot remains historical evidence.
+
 ## Document map
+
+- `07_C01_IMPLEMENTATION_VERIFICATION.md`: immediate implementation steps and verification contract.
+
+- `06_C_FIRST_RELEASE_PLAN.md`: first C-series implementation plan and validation contract.
+- `05_CONSOLIDATED_PRODUCT_DESIGN.md`: consolidated product direction, features, trust rules, testing, delivery, and open decisions.
 - `01_PRODUCT_PRD.md`: voice-first agent IDE thesis, audience, product model, features, UX, wireframe, trust boundaries, metrics, and staged scope.
 - `02_TECHNICAL_DESIGN.md`: architecture, contracts, state machines, privacy, security, failure handling.
 - `03_IMPLEMENTATION_BACKLOG.md`: dependency-ordered engineering tasks with definitions of done.
