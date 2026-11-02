@@ -102,7 +102,6 @@ suite("C01 proposal authority and provenance", () => {
       const row = database.prepare("SELECT payload FROM events WHERE revision = 2").get();
       assert.ok(row && typeof row.payload === "string");
       const original: unknown = JSON.parse(row.payload);
-      // Deliberately mutate JSON via plain data to exercise the storage boundary.
       assert.ok(typeof original === "object" && original !== null && "group" in original && "tasks" in original);
       const mutations = [
         (event: object) => { Object.assign(event, { approved: true }); },
@@ -177,7 +176,7 @@ suite("C01 proposal authority and provenance", () => {
     assert.ok(html.includes("Basis and permissions"));
     assert.ok(html.includes("recorded at project revision 2"));
     assert.ok(html.includes("A proposed budget is not permission to spend"));
-    assert.ok(html.includes("Automatic memory capture is disabled"));
+    assert.ok(html.includes("Automatic memory capture is off"));
     assert.ok(html.includes("not independently verified"));
     assert.ok(!html.includes("<script>"));
     assert.ok(html.includes("&lt;script&gt;"));
@@ -185,7 +184,7 @@ suite("C01 proposal authority and provenance", () => {
     const selected = parseProviderConfiguration([{ role: "conversation", provider: "local-engine", model: "small-model" }]);
     const inspection = inspectProject(project, selected);
     assert.equal(inspection.providers.find(({ role }) => role === "conversation")?.status, "unsupported");
-    assert.ok(renderWorkView(project, selected).includes("unsupported and not connected"));
+    assert.ok(renderWorkView(project, selected).includes("Connection unavailable"));
   });
   test("invalid provider configuration fails closed and does not expose credentials", () => {
     const cases = [
@@ -199,7 +198,7 @@ suite("C01 proposal authority and provenance", () => {
       const parsed = parseProviderConfiguration(value);
       assert.equal(parsed.kind, "invalid");
       const html = renderWorkView(repository.read(), parsed);
-      assert.ok(html.includes("Invalid configuration"));
+      assert.ok(html.includes("Invalid settings"));
       assert.ok(!html.includes("secret-value"));
     }
   });

@@ -210,7 +210,6 @@ export function validateProjectCommand(value: unknown): ProjectCommand {
   }
   if (action.kind === "propose-tasks" && hasOnlyKeys(action, ["kind", "draft"]) && "draft" in action) {
     assertProposalDraft(action.draft);
-    // Existing receipts fingerprint the valid draft's original property order.
     return { commandId, projectId, expectedProjectRevision, action: { kind: action.kind, draft: action.draft } };
   }
   throw new Error("Unsupported or invalid project action");

@@ -5,7 +5,6 @@ import { decideProjectEvent, parseProposalOutput, replay } from "../../../../pac
 import { renderWorkView } from "../../src/work-view.js";
 
 const budget = { maxTokens: 20_000, maxAttempts: 2 };
-// Synthetic rates and calibration exercise arithmetic, not current provider prices or quotas.
 const api = { kind: "api", name: "Example API", inputUsdPerMillion: 2, outputUsdPerMillion: 8 };
 const subscription = {
   kind: "subscription", name: "Example subscription",
@@ -43,8 +42,8 @@ suite("Plan-aware cost estimates", () => {
     const html = render(api);
     assert.ok(html.includes("$0.08 to $0.32"));
     assert.ok(html.includes("full token budget"));
-    assert.ok(html.includes("unverified input/output rates"));
-    assert.ok(html.includes("no spending permission"));
+    assert.ok(html.includes("input/output prices that have not been verified"));
+    assert.ok(html.includes("A proposed budget is not permission to spend"));
   });
   test("subscription windows use same-model calibration rather than invented token quotas", () => {
     const result = estimate(subscription);
@@ -56,7 +55,7 @@ suite("Plan-aware cost estimates", () => {
     const html = render(subscription);
     assert.ok(html.includes("Five-hour allowance: 3% estimated consumption"));
     assert.ok(html.includes("Weekly allowance: 1% estimated consumption"));
-    assert.ok(html.includes("not verified account telemetry"));
+    assert.ok(html.includes("Account usage has not been checked"));
     assert.ok(html.includes("Extra usage can incur charges"));
     assert.ok(!html.includes("$0.00"));
   });
@@ -67,7 +66,7 @@ suite("Plan-aware cost estimates", () => {
     assert.ok(result.windows.every((window) => window.kind === "unknown"));
     assert.ok(render().includes("Estimated coding cost: Unknown"));
     assert.ok(!render().includes("$0.00"));
-    assert.ok(render({ kind: "subscription", name: "Selected subscription" }).includes("Unknown; no matching calibration"));
+    assert.ok(render({ kind: "subscription", name: "Selected subscription" }).includes("Unknown. No matching usage samples"));
   });
   test("calibration from another model or window is not reused", () => {
     const result = estimate({ ...subscription, samples: [subscription.samples[0]] }, "another-model");
@@ -113,7 +112,7 @@ suite("Plan-aware cost estimates", () => {
     const html = render(raw);
     assert.ok(!html.includes("<script>"));
     assert.ok(html.includes("&lt;script&gt;"));
-    assert.ok(html.includes("unsupported and not connected"));
+    assert.ok(html.includes("Connection unavailable"));
     assert.ok(html.includes("A proposed budget is not permission to spend"));
   });
 });
