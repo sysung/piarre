@@ -4,19 +4,32 @@ on:
   pull_request:
   push:
     branches: [master]
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: Create a draft release (master only; bump extension version first)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
 
 jobs:
   quality:
     runs-on: ubuntu-latest
+    outputs:
+      artifact-id: ${{ steps.package.outputs.artifact-id }}
     steps:
       - uses: actions/checkout@v5
+      - name: Check release branch
+        if: inputs.create_release && github.ref != 'refs/heads/master'
+        run: |
+          echo 'Draft releases must be built from master.' >&2
+          exit 1
       - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
@@ -27,12 +40,54 @@ jobs:
       - run: npm run build
       - run: npm run package
       - run: xvfb-run -a npm test
+      - run: xvfb-run -a npm run test:package --workspace apps/vscode
+      - name: Upload installable extension
+        id: package
+        uses: actions/upload-artifact@v5
+        with:
+          name: piarre-vsix-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            apps/vscode/dist-package/*.vsix
+            apps/vscode/dist-package/build-info.json
+            apps/vscode/dist-package/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 30
+      - name: Installation instructions
+        env:
+          ARTIFACT_URL: ${{ steps.package.outputs.artifact-url }}
+        run: |
+          echo "Download the [Piarre extension package]($ARTIFACT_URL), unzip it, then run **Extensions: Install from VSIX...** in VS Code and select the .vsix file." >> "$GITHUB_STEP_SUMMARY"
       - if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: b00-evidence
+          name: test-evidence-${{ github.run_attempt }}
           path: |
-            apps/vscode/dist-package/*.vsix
             apps/vscode/dist-package/contents.txt
             apps/vscode/dist-test/smoke.log
           retention-days: 7
+
+  draft-release:
+    if: github.event_name == 'workflow_dispatch' && inputs.create_release && github.ref == 'refs/heads/master'
+    needs: quality
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          artifact-ids: ${{ needs.quality.outputs.artifact-id }}
+          path: package
+      - name: Create unpublished release
+        working-directory: package
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          sha256sum --check SHA256SUMS
+          VERSION=$(node -p 'JSON.parse(require("fs").readFileSync("build-info.json", "utf8")).version')
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo 'Invalid release version' >&2
+            exit 1
+          fi
+          gh release create "v$VERSION" ./*.vsix build-info.json SHA256SUMS --draft --target "$SOURCE_SHA" --title "Piarre $VERSION" --notes 'Install the attached VSIX using Extensions: Install from VSIX... in VS Code. This draft has not been published to the Marketplace.'
