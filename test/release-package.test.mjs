@@ -26,13 +26,18 @@ function fixture(t, overrides = {}) {
   return directory;
 }
 
-function forge({ existing, failUpload = false } = {}) {
+function forge({ existing, failUpload = false, tagSha = existing ? sourceSha : undefined } = {}) {
   const calls = [];
   let release = existing;
   return {
     calls,
     gh(args) {
       calls.push(args);
+      if (args[0] === "api") {
+        if (args.includes("POST")) tagSha = args.find((arg) => arg.startsWith("sha=")).slice(4);
+        if (!tagSha) throw Object.assign(new Error("tag not found"), { status: 1 });
+        return JSON.stringify({ object: { type: "commit", sha: tagSha } });
+      }
       if (args[1] === "view") {
         if (!release) throw Object.assign(new Error("release not found"), { status: 1 });
         return JSON.stringify(release);
@@ -52,10 +57,12 @@ test("publish the verified package through a draft without changing the source v
   const directory = fixture(t);
   const remote = forge();
   assert.equal(releasePackage({ directory, sourceSha, runUrl, gh: remote.gh }).status, "published");
-  assert.deepEqual(remote.calls.map((args) => args[1]), ["view", "create", "upload", "edit"]);
-  assert.ok(remote.calls[1].includes(sourceSha));
-  assert.ok(remote.calls[2].includes(path.join(directory, "piarre-0.0.1.vsix")));
-  assert.ok(remote.calls[3].includes("--latest=false"));
+  const releaseCalls = remote.calls.filter((args) => args[0] === "release");
+  assert.deepEqual(releaseCalls.map((args) => args[1]), ["view", "create", "upload", "edit"]);
+  assert.ok(releaseCalls[1].includes(sourceSha));
+  assert.ok(releaseCalls[1].includes("--verify-tag"));
+  assert.ok(releaseCalls[2].includes(path.join(directory, "piarre-0.0.1.vsix")));
+  assert.ok(releaseCalls[3].includes("--latest=false"));
 });
 
 test("retry an interrupted upload, then leave a published release untouched", (t) => {
@@ -65,13 +72,20 @@ test("retry an interrupted upload, then leave a published release untouched", (t
   assert.throws(release, /interrupted upload/);
   assert.equal(release().status, "published");
   assert.equal(release().status, "already-published");
-  assert.deepEqual(remote.calls.map((args) => args[1]), ["view", "create", "upload", "view", "upload", "edit", "view"]);
+  assert.deepEqual(remote.calls.filter((args) => args[0] === "release").map((args) => args[1]), ["view", "create", "upload", "view", "upload", "edit", "view"]);
 });
 
 test("do not mutate a release belonging to another source commit", (t) => {
   const remote = forge({ existing: { isDraft: true, targetCommitish: "b".repeat(40) } });
   assert.throws(() => releasePackage({ directory: fixture(t), sourceSha, runUrl, gh: remote.gh }), /another commit/);
+  assert.deepEqual(remote.calls.filter((args) => args[0] === "release").map((args) => args[1]), ["view"]);
+});
+
+test("reject a pre-existing build tag pointing elsewhere even if release metadata claims the right commit", (t) => {
+  const remote = forge({ existing: { isDraft: true, targetCommitish: sourceSha }, tagSha: "b".repeat(40) });
+  assert.throws(() => releasePackage({ directory: fixture(t), sourceSha, runUrl, gh: remote.gh }), /Build tag points to another commit/);
   assert.equal(remote.calls.length, 1);
+  assert.equal(remote.calls[0][0], "api");
 });
 
 test("reject dirty or mismatched build metadata before contacting GitHub", (t) => {

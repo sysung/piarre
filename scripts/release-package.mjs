@@ -26,6 +26,15 @@ export function releasePackage({ directory, sourceSha, runUrl, gh = (args) => ex
   assert.equal(remaining.size, 0);
 
   const tag = `build-${sourceSha}`;
+  let reference;
+  try {
+    reference = JSON.parse(gh(["api", `repos/{owner}/{repo}/git/ref/tags/${tag}`]));
+  } catch (error) {
+    if (error.status !== 1) throw error;
+    reference = JSON.parse(gh(["api", "repos/{owner}/{repo}/git/refs", "--method", "POST", "-f", `ref=refs/tags/${tag}`, "-f", `sha=${sourceSha}`]));
+  }
+  assert.equal(reference.object?.type, "commit", "Build tag must directly identify a source commit");
+  assert.equal(reference.object.sha, sourceSha, "Build tag points to another commit");
   let existing;
   try {
     existing = JSON.parse(gh(["release", "view", tag, "--json", "isDraft,targetCommitish"]));
@@ -37,7 +46,7 @@ export function releasePackage({ directory, sourceSha, runUrl, gh = (args) => ex
     assert.equal(typeof existing.isDraft, "boolean");
     if (!existing.isDraft) return { tag, status: "already-published" };
   } else {
-    gh(["release", "create", tag, "--draft", "--target", sourceSha,
+    gh(["release", "create", tag, "--draft", "--verify-tag", "--target", sourceSha,
       "--title", `Piarre ${info.version} · ${sourceSha.slice(0, 7)}`,
       "--notes", `Install the attached VSIX with Extensions: Install from VSIX... in VS Code.\n\nSource: ${sourceSha}\nValidated workflow: ${runUrl}\n\nThe VSIX keeps manifest version ${info.version}; the build tag identifies this exact source. This is not a Marketplace publication or proof of integrated product readiness.`]);
   }
