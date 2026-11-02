@@ -16,7 +16,7 @@ Status: Partial C01 baseline work, 2026-11-01. No new conversational UI or C pro
 
 `npm run check` passed lint, type checks, build, and extension packaging. `npm run test:contract` passed all four checks.
 
-The Extension Host smoke suite was started outside the restricted GUI environment and required downloading its pinned VS Code runtime. Its final result is recorded below when available. A started test is not a pass.
+The Extension Host smoke suite completed successfully outside the restricted GUI environment using the pinned VS Code runtime. Both trusted and restricted workspace launches exited successfully; the restricted-workspace check confirmed no project opened in an untrusted repository.
 
 The dependency installation reported 16 audit findings, including two high-severity findings. These are unresolved baseline findings. No dependency upgrade or audit remediation is part of this documentation change.
 
