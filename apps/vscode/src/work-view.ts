@@ -115,7 +115,7 @@ export function renderConversation(project: ProjectSnapshot): string {
 export function renderSessionBrief(project: ProjectSnapshot): string {
   const count = project.proposals.length;
   const knowledge = currentKnowledge(project);
-  const changed = knowledge.filter(entry => entry.supersedes !== null && entry.standing.kind === "confirmed").at(-1);
+  const changed = knowledge.filter(entry => entry.supersedes !== null && entry.standing.kind === "confirmed").sort((left, right) => left.recordedAtRevision - right.recordedAtRevision).at(-1);
   const staleCount = new Set(project.knowledgeImpacts.filter(impact => project.tasks.some(task => task.taskId === impact.taskId)).map(impact => impact.taskId)).size;
   const disputedCount = knowledge.filter(entry => knowledgeConflicts(project, entry).length > 0).length;
   const unconfirmedCount = knowledge.filter(entry => entry.standing.kind !== "confirmed").length;

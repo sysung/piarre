@@ -6,7 +6,7 @@ import { currentKnowledge, knowledgeConflicts, type KnowledgeAction } from "../.
 import { resolveRecordReference } from "../../../../packages/core/src/inspection.js";
 import { SqliteProjectRepository } from "../../src/sqlite-project-repository.js";
 import { GoalInterpreter } from "../../src/goal-interpreter.js";
-import { renderKnowledge } from "../../src/work-view.js";
+import { renderKnowledge, renderSessionBrief } from "../../src/work-view.js";
 
 suite("Sourced knowledge and corrections", () => {
   let directory: string;
@@ -90,6 +90,18 @@ suite("Sourced knowledge and corrections", () => {
     const beforeInvalid = repository.read();
     assert.throws(() => dispatch({ kind: "correct-knowledge", target: target(), submitted: statement("60 days"), affectedTaskIds: ["never-existed"] }));
     assert.deepEqual(repository.read(), beforeInvalid);
+  });
+
+  test("the brief follows the most recent revision rather than knowledge creation order", () => {
+    dispatch({ kind: "observe-knowledge", topic: "First topic", category: "business", submitted: statement("Original A"), affectedTaskIds: [] });
+    dispatch({ kind: "confirm-knowledge", target: target() });
+    dispatch({ kind: "observe-knowledge", topic: "Second topic", category: "decision", submitted: statement("Original B"), affectedTaskIds: [] });
+    const second = currentKnowledge(repository.read())[1]; assert.ok(second);
+    dispatch({ kind: "confirm-knowledge", target: { projectId: second.projectId, knowledgeId: second.knowledgeId, recordedAtRevision: second.recordedAtRevision } });
+    dispatch({ kind: "correct-knowledge", target: target(), submitted: statement("Corrected A"), affectedTaskIds: [] });
+    const brief = renderSessionBrief(repository.read());
+    assert.match(brief, new RegExp(`First topic · recorded revision ${String(latest().recordedAtRevision)}`));
+    assert.doesNotMatch(brief, /Second topic · recorded revision/);
   });
 
   test("stale target, wrong project, invented task and correction without confirmation cannot append effects", () => {
