@@ -2,6 +2,8 @@ import * as vscode from "vscode";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
+import { ConversationController } from "./conversation-controller.js";
+import { CodexConversationClient } from "./codex-conversation-client.js";
 import { GoalInterpreter } from "./goal-interpreter.js";
 import { SqliteProjectRepository } from "./sqlite-project-repository.js";
 import { assertStorageOutsideRepository } from "./storage-boundary.js";
@@ -15,6 +17,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const interpreter = new GoalInterpreter();
   const output = vscode.window.createOutputChannel("Piarre");
   let repository: SqliteProjectRepository | undefined;
+  let conversation: ConversationController | undefined;
   let opening: Promise<void> | undefined;
   let generation = 0;
   const view = new WorkView(undefined, {
@@ -33,6 +36,11 @@ export function activate(context: vscode.ExtensionContext): void {
       view.update(result.snapshot);
       return result.snapshot;
     },
+  }, undefined, {
+    connect: async () => { if (isTrusted()) await conversation?.connect(); },
+    disconnect: () => conversation?.disconnect(),
+    send: async text => { if (isTrusted()) await conversation?.send(text); },
+    interrupt: async () => { await conversation?.interrupt(); },
   });
   const open = async (interactive: boolean, observedGeneration: number): Promise<void> => {
     const isCurrent = (): boolean => observedGeneration === generation && isTrusted();
@@ -76,9 +84,12 @@ export function activate(context: vscode.ExtensionContext): void {
     );
     try {
       const project = next.open({ repositoryUri, name: path.basename(root) });
+      conversation?.dispose();
       repository?.close();
       repository = next;
       view.show(project);
+      conversation = new ConversationController(next, (snapshot, state) => { view.updateConversation(snapshot, state); },
+        () => new CodexConversationClient({ command: vscode.workspace.getConfiguration("piarre").inspect<string>("codexExecutable")?.globalValue ?? "codex" }));
     } catch (error) {
       next.close();
       throw error;
@@ -107,6 +118,7 @@ export function activate(context: vscode.ExtensionContext): void {
     output,
     {
       dispose: () => {
+        conversation?.dispose();
         repository?.close();
       },
     },
@@ -206,6 +218,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.workspace.onDidChangeWorkspaceFolders(() => {
       generation += 1;
       opening = undefined;
+      conversation?.dispose(); conversation = undefined;
       repository?.close();
       repository = undefined;
       view.close();

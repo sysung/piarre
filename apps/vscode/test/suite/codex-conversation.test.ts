@@ -3,7 +3,7 @@ import path from "node:path";
 import { CodexConversationClient } from "../../src/codex-conversation-client";
 
 function client(mode = "success"): CodexConversationClient {
-  return new CodexConversationClient({ command: process.execPath, args: [path.resolve(__dirname, "../../test/fixtures/fake-codex-conversation.mjs"), mode] });
+  return new CodexConversationClient({ command: process.env.PIARRE_TEST_NODE ?? process.execPath, args: [path.resolve(__dirname, "../../test/fixtures/fake-codex-conversation.mjs"), mode] });
 }
 
 suite("Codex conversation process adapter", () => {

@@ -9,6 +9,9 @@ import type {
   ProposedScope,
   ProposedTask,
 } from "./index.js";
+import { parseSubmittedStatement } from "./context.js";
+import type { ConversationSource, ConversationEvent } from "./conversation.js";
+import type { RecordReference } from "./inspection.js";
 
 function invalid(): never {
   throw new Error("Invalid interpreter output");
@@ -38,6 +41,33 @@ function positiveInteger(value: unknown): number {
   if (!Number.isSafeInteger(value) || typeof value !== "number" || value < 1)
     invalid();
   return value;
+}
+
+function sourceReference(value: unknown): RecordReference {
+  if (!isObject(value) || !hasOnlyKeys(value, ["projectId", "kind", "recordId", "revision"]) ||
+      !("projectId" in value) || !("kind" in value) || !("recordId" in value) || !("revision" in value) ||
+      (value.kind !== "proposal" && value.kind !== "task")) invalid();
+  return { projectId: nonblank(value.projectId), kind: value.kind, recordId: nonblank(value.recordId), revision: positiveInteger(value.revision) };
+}
+
+function conversationSources(value: unknown): readonly ConversationSource[] {
+  if (!Array.isArray(value)) invalid();
+  return value.map((source: unknown) => {
+    if (!isObject(source) || !hasOnlyKeys(source, ["reference", "text"]) || !("reference" in source) || !("text" in source)) invalid();
+    return { reference: sourceReference(source.reference), text: nonblank(source.text) };
+  });
+}
+
+function replyFields(value: object) {
+  if (!("requestId" in value) || !("text" in value) || !("citations" in value) || !("providerThreadId" in value) || !("providerTurnId" in value) || !Array.isArray(value.citations)) invalid();
+  return { requestId: nonblank(value.requestId), text: nonblank(value.text), citations: value.citations.map(sourceReference),
+    providerThreadId: nonblank(value.providerThreadId), providerTurnId: nonblank(value.providerTurnId) };
+}
+
+function endFields(value: object): Omit<Extract<ConversationEvent, { kind: "conversation-ended" }>, "kind"> {
+  if (!("requestId" in value) || !("outcome" in value) || !("reason" in value) ||
+      (value.outcome !== "interrupted" && value.outcome !== "failed" && value.outcome !== "unknown")) invalid();
+  return { requestId: nonblank(value.requestId), outcome: value.outcome, reason: nonblank(value.reason) };
 }
 
 function parseRequirement(value: unknown): ProposalRequirement {
@@ -203,6 +233,15 @@ export function validateProjectCommand(value: unknown): ProjectCommand {
   const projectId = nonblank(value.projectId);
   const expectedProjectRevision = positiveInteger(value.expectedProjectRevision);
   const action = value.action;
+  if (action.kind === "begin-conversation" && hasOnlyKeys(action, ["kind", "submitted", "sources"]) && "submitted" in action && "sources" in action) {
+    return { commandId, projectId, expectedProjectRevision, action: { kind: action.kind, submitted: parseSubmittedStatement(action.submitted), sources: conversationSources(action.sources) } };
+  }
+  if (action.kind === "record-conversation-reply" && hasOnlyKeys(action, ["kind", "requestId", "text", "citations", "providerThreadId", "providerTurnId"])) {
+    return { commandId, projectId, expectedProjectRevision, action: { kind: action.kind, ...replyFields(action) } };
+  }
+  if (action.kind === "end-conversation" && hasOnlyKeys(action, ["kind", "requestId", "outcome", "reason"])) {
+    return { commandId, projectId, expectedProjectRevision, action: { kind: action.kind, ...endFields(action) } };
+  }
   if (action.kind === "rename-project" && hasOnlyKeys(action, ["kind", "name"]) && "name" in action) {
     const name = nonblank(action.name);
     if (name.length > 200) throw new Error("Invalid project command");
@@ -238,6 +277,15 @@ function storedTask(value: unknown): ProposedTask {
 
 export function parseProjectEvent(value: unknown): ProjectEvent {
   if (!isObject(value) || !("kind" in value)) invalid();
+  if (value.kind === "conversation-started" && hasOnlyKeys(value, ["kind", "submitted", "sources"]) && "submitted" in value && "sources" in value) {
+    return { kind: value.kind, submitted: parseSubmittedStatement(value.submitted), sources: conversationSources(value.sources) };
+  }
+  if (value.kind === "conversation-replied" && hasOnlyKeys(value, ["kind", "requestId", "text", "citations", "providerThreadId", "providerTurnId"])) {
+    return { kind: value.kind, ...replyFields(value) };
+  }
+  if (value.kind === "conversation-ended" && hasOnlyKeys(value, ["kind", "requestId", "outcome", "reason"])) {
+    return { kind: value.kind, ...endFields(value) };
+  }
   if (value.kind === "project-created" && hasOnlyKeys(value, ["kind", "projectId", "repositoryUri", "name"]) &&
       "projectId" in value && "repositoryUri" in value && "name" in value)
     return { kind: value.kind, projectId: nonblank(value.projectId),

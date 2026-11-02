@@ -7,7 +7,7 @@ body{--space:16px;--gap:24px;font-family:var(--vscode-font-family);font-size:var
 
 .goal-card{display:flex;flex-direction:column;gap:8px;text-align:left;width:100%;box-sizing:border-box;margin:12px 0;padding:20px;border:1px solid var(--vscode-panel-border);border-radius:8px;background:var(--vscode-editorWidget-background,var(--vscode-editor-background));color:var(--vscode-foreground);transition:transform 140ms ease-out,background-color 140ms ease-out}.goal-card:hover{background:var(--vscode-list-hoverBackground);transform:translateY(-2px)}.goal-card[aria-current="true"]{border-color:var(--vscode-focusBorder)}.goal-card:active{transform:translateY(0)}.goal-title{font-weight:600;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.goal-meta{font-size:.9em;color:var(--vscode-descriptionForeground)}.goal-action{font-size:.9em;color:var(--vscode-textLink-foreground)}#preview:not([hidden]){animation:reveal 140ms ease-out}@keyframes reveal{from{opacity:.7;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}@media(prefers-reduced-motion:reduce){.goal-card{transition:none}.goal-card:hover{transform:none}#preview:not([hidden]){animation:none}}
 .goal-container{background:var(--vscode-editorWidget-background,var(--vscode-editor-background));display:grid;grid-template-columns:minmax(0,1fr) 36px;gap:8px;align-items:center;border:1px solid var(--vscode-panel-border);border-radius:8px;padding:8px;margin:12px 0}.goal-container .goal-card{border:0;margin:0;background:transparent}.goal-container:hover{background:var(--vscode-list-hoverBackground)}.goal-container .goal-card:hover{background:transparent;transform:none}.goal-container .delete-goal{display:flex;align-items:center;justify-content:center;width:36px;height:36px;min-height:36px;padding:8px;margin:0;background:transparent;color:var(--vscode-descriptionForeground);border:1px solid transparent;transition:color 120ms ease-out}.goal-container .delete-goal:hover,.goal-container .delete-goal:focus-visible{color:var(--vscode-errorForeground,#f48771);background:transparent}.delete-goal svg{pointer-events:none}@media(prefers-reduced-motion:reduce){.goal-container .delete-goal{transition:none}}.proposal-metadata{display:grid;gap:16px}.proposal-metadata section{margin-top:0}.proposal-metadata h4{font-size:1em;margin:12px 0 4px}.proposal-metadata ul{margin:0;padding-left:20px}.budget-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:12px;border-top:1px solid var(--vscode-panel-border);padding-top:16px}.budget-grid dd{font-size:1.2em;font-weight:600;margin:4px 0}
-</style></head><body><a class="skip" href="#page-title">Skip to goal planning</a><main><header id="session-brief" class="session-brief" aria-label="Project brief">${brief}</header><div class="workspace-columns"><section class="planning" aria-label="Goal planning"><p id="step">Step 1 of 2 · Goal</p><h2 id="page-title" tabindex="-1">What would you like to work on?</h2><p class="hint">Local planning only. Piarre will not run code or spend money.</p><form id="composer"><label for="goal">Your goal</label><textarea id="goal" maxlength="10000" placeholder="Describe the outcome you want…"></textarea><p class="hint">Nothing is saved until you choose Save proposal.</p><button id="prepare" type="submit">Review goal</button></form><p id="status" role="status" aria-live="polite"></p><section id="preview" aria-label="Proposal review" hidden></section><div id="review-actions" hidden><button id="save" type="button" hidden>Save proposal</button><button id="discard" class="secondary" type="button">Back to goal</button></div><button id="new-goal" type="button" hidden>Plan another goal</button></section><aside class="inspection-desk" aria-label="Project inspection"><h2>Saved goals</h2><p class="hint">Select a saved goal to inspect its proposal. All proposals are unapproved.</p><p id="browse-status" class="hint" role="status" aria-live="polite"></p><div id="inspection">${inspection}</div></aside></div></main><script nonce="${nonce}">${composerScript}</script></body></html>`;
+</style></head><body><a class="skip" href="#page-title">Skip to goal planning</a><main><header id="session-brief" class="session-brief" aria-label="Project brief">${brief}</header><div class="workspace-columns"><section class="planning" aria-label="Goal planning"><p id="step">Step 1 of 2 · Goal</p><h2 id="page-title" tabindex="-1">What would you like to work on?</h2><p class="hint">Review goals locally, or connect Codex for a read-only discussion. Sending can consume account usage.</p><div aria-label="Codex connection"><button id="connect-codex" type="button">Connect Codex</button><button id="disconnect-codex" class="secondary" type="button" hidden>Disconnect</button><button id="stop-conversation" class="secondary" type="button" hidden>Stop reply</button><p id="connection-status" role="status" aria-live="polite">Codex disconnected.</p><details><summary>What sending shares</summary><p>Your statement, recent conversation and listed project sources go to your configured Codex account. Quota and cost are unknown. Conversation cannot approve or run coding work.</p></details></div><section id="conversation" aria-label="Project conversation"></section><form id="composer"><label for="goal">Your goal</label><textarea id="goal" maxlength="10000" placeholder="Describe the outcome you want…"></textarea><p class="hint">Review goal creates a local preview. Send to Codex saves your statement and reply with this project.</p><button id="send-codex" type="submit" disabled>Send to Codex</button><button id="prepare" class="secondary" type="submit">Review goal</button></form><p id="status" role="status" aria-live="polite"></p><section id="preview" aria-label="Proposal review" hidden></section><div id="review-actions" hidden><button id="save" type="button" hidden>Save proposal</button><button id="discard" class="secondary" type="button">Back to goal</button></div><button id="new-goal" type="button" hidden>Plan another goal</button></section><aside class="inspection-desk" aria-label="Project inspection"><h2>Saved goals</h2><p class="hint">Select a saved goal to inspect its proposal. All proposals are unapproved.</p><p id="browse-status" class="hint" role="status" aria-live="polite"></p><div id="inspection">${inspection}</div></aside></div></main><script nonce="${nonce}">${composerScript}</script></body></html>`;
 }
 
 const composerScript = String.raw`
@@ -23,6 +23,12 @@ const actions = document.getElementById('review-actions');
 const title = document.getElementById('page-title');
 const step = document.getElementById('step');
 const next = document.getElementById('new-goal');
+const send = document.getElementById('send-codex');
+let connectionKind = 'disconnected';
+function syncSend() { send.disabled = connectionKind !== 'ready' || !goal.value.trim(); }
+document.getElementById('connect-codex').addEventListener('click', () => api.postMessage({kind:'connect-codex'}));
+document.getElementById('disconnect-codex').addEventListener('click', () => api.postMessage({kind:'disconnect-codex'}));
+document.getElementById('stop-conversation').addEventListener('click', () => api.postMessage({kind:'stop-conversation'}));
 function showGoal() {
   composer.hidden = false; preview.hidden = true; actions.hidden = true; next.hidden = true;
   title.textContent = 'What would you like to work on?'; step.textContent = 'Step 1 of 2 · Goal';
@@ -45,6 +51,7 @@ function invalidate() {
   if (previous) api.postMessage({kind: 'discard', requestId: previous});
 }
 goal.addEventListener('input', () => {
+  syncSend();
   invalidate();
   showGoal();
   status.textContent = '';
@@ -52,6 +59,11 @@ goal.addEventListener('input', () => {
 document.getElementById('composer').addEventListener('submit', (event) => {
   event.preventDefault();
   if (!goal.value.trim()) return;
+  if (event.submitter === send) {
+    if (send.disabled) return;
+    api.postMessage({kind:'send-conversation', text:goal.value});
+    goal.value = ''; invalidate(); syncSend(); goal.focus(); return;
+  }
   invalidate();
   requestId = crypto.randomUUID();
   discard.disabled = false;
@@ -62,7 +74,7 @@ document.getElementById('composer').addEventListener('submit', (event) => {
 goal.addEventListener('keydown', (event) => {
   if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && !event.isComposing) {
     event.preventDefault();
-    document.getElementById('composer').requestSubmit();
+    document.getElementById('composer').requestSubmit(connectionKind === 'ready' ? send : prepare);
   }
 });
 discard.addEventListener('click', () => {
@@ -80,6 +92,15 @@ save.addEventListener('click', () => {
   api.postMessage({kind: 'save', requestId});
 });
 window.addEventListener('message', ({data}) => {
+  if (data.kind === 'conversation') {
+    connectionKind = data.state.kind;
+    document.getElementById('connection-status').textContent = data.state.message;
+    document.getElementById('connect-codex').hidden = connectionKind !== 'disconnected';
+    document.getElementById('disconnect-codex').hidden = connectionKind === 'disconnected';
+    const stop = document.getElementById('stop-conversation'); stop.hidden = !['busy','stopping'].includes(connectionKind); stop.disabled = connectionKind === 'stopping';
+    document.getElementById('conversation').innerHTML = data.html;
+    syncSend(); return;
+  }
   if (data.kind === 'inspection') {
     const focused = document.activeElement?.closest('[data-open-goal]')?.dataset.openGoal;
     document.getElementById('inspection').innerHTML = data.html;

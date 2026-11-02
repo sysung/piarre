@@ -301,6 +301,15 @@ window.addEventListener('message', ({data}) => { if (data.kind === 'test-checked
     await waitFor(() => !document.getElementById('inspection-marker'));
     if (!document.getElementById('session-brief').textContent.includes('No saved goals yet.')) throw new Error('Refresh corrupted the project brief');
     if (goal.value !== content || document.activeElement !== goal || goal.selectionStart !== 3) throw new Error('Unsent input or focus lost: ' + JSON.stringify({value: goal.value, active: document.activeElement.tagName, start: goal.selectionStart}));
+    window.dispatchEvent(new MessageEvent('message', {data: {kind:'conversation', state:{kind:'ready',message:'Connected for test'},html:'<article>Inferred reply</article>'}}));
+    if (goal.value !== content || document.activeElement !== goal || goal.selectionStart !== 3) throw new Error('Conversation update disturbed unsent input');
+    if (send.disabled || document.getElementById('connect-codex').hidden !== true) throw new Error('Ready conversation controls unavailable');
+    window.dispatchEvent(new MessageEvent('message', {data: {kind:'conversation', state:{kind:'busy',message:'Waiting'},html:'<article>Pending reply</article>'}}));
+    if (!send.disabled || document.getElementById('stop-conversation').hidden) throw new Error('Busy controls do not expose stop');
+    document.getElementById('stop-conversation').click();
+    if (!bridgeCalls.some(value => value.kind === 'stop-conversation')) throw new Error('Stop did not reach host');
+    if (bridgeCalls.some(value => value.kind === 'send-conversation')) throw new Error('Refresh sent private text');
+    window.dispatchEvent(new MessageEvent('message', {data: {kind:'conversation', state:{kind:'disconnected',message:'Disconnected'},html:''}}));
     document.getElementById('composer').requestSubmit();
     await waitFor(() => !save.hidden);
     if (!composer.hidden || preview.hidden) throw new Error('Review did not replace goal entry');

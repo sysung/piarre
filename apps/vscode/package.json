@@ -207,6 +207,12 @@
               }
             }
           }
+        },
+        "piarre.codexExecutable": {
+          "type": "string",
+          "default": "codex",
+          "scope": "machine",
+          "description": "Codex CLI executable used for an explicit conversation connection. Sign in through the CLI first. No shell arguments or credentials."
         }
       }
     }

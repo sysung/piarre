@@ -97,13 +97,15 @@ export class SqliteProjectRepository {
       ]);
     } else if (command.action.kind === "delete-proposal") {
       input = JSON.stringify([command.projectId, command.expectedProjectRevision, command.action.kind, command.action.groupId]);
-    } else {
+    } else if (command.action.kind === "propose-tasks") {
       input = JSON.stringify([
         command.projectId,
         command.expectedProjectRevision,
         command.action.kind,
         command.action.draft,
       ]);
+    } else {
+      input = JSON.stringify([command.projectId, command.expectedProjectRevision, command.action]);
     }
     return this.transaction(() => {
       const receipt = this.database

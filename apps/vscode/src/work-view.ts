@@ -1,3 +1,4 @@
+import type { ConversationState } from "./conversation-controller.js";
 import { randomUUID } from "node:crypto";
 import * as vscode from "vscode";
 import { GoalInterpreter } from "./goal-interpreter.js";
@@ -73,21 +74,31 @@ export function renderInspection(
   const policyLabels: Readonly<Record<ProjectInspection["policy"][keyof ProjectInspection["policy"]], string>> = {
     "automatic-capture-disabled-policy-unresolved": "Automatic memory capture is off until its approval policy is agreed.",
     "explicit-approval-required-not-implemented": "Confirmed memory changes need approval and are not available yet.",
-    "per-operation-approval-required-not-implemented": "Paid work needs approval for each operation. No paid provider is connected.",
-    "local-only-no-external-adapter": "Piarre keeps project content local. External sharing is off.",
+    "per-operation-approval-required-not-implemented": "Paid work needs approval for each operation. No paid coding provider is connected.",
+    "local-only-no-external-adapter": "Local planning stays local. Explicit Send to Codex shares the displayed conversation context with your configured account.",
     "unsupported": "Running, verifying, and accepting coding work are not available yet.",
   };
   const policy = Object.values(inspection.policy).map((state) => `<li>${escape(policyLabels[state])}</li>`).join("");
-  const permissions = `<details><summary>Recommendation and permissions</summary><h3>Recorded recommendation</h3>${recommendation}<h3>What works now</h3><p>You can rename this project and save task proposals. A proposed budget is not permission to spend.</p><ul>${policy}</ul><h3>Providers</h3>${providers}<p>Drafting uses the built-in deterministic generator, not a conversational model. Selecting a provider does not connect it or approve spending.</p></details>`;
+  const permissions = `<details><summary>Recommendation and permissions</summary><h3>Recorded recommendation</h3>${recommendation}<h3>What works now</h3><p>You can rename this project and save task proposals. A proposed budget is not permission to spend.</p><ul>${policy}</ul><h3>Providers</h3>${providers}<p>Local task drafting uses the built-in deterministic generator. Connect Codex and Send are separate explicit conversation actions. Provider selections do not approve coding work.</p></details>`;
 
   return `${work}${permissions}<details><summary>Project information</summary><dl><dt>Repository</dt><dd>${escape(project.repositoryUri)}</dd><dt>Project ID</dt><dd>${escape(project.projectId)}</dd><dt>Revision</dt><dd>${String(project.revision)}</dd></dl></details>`;
+}
+
+export function renderConversation(project: ProjectSnapshot): string {
+  return project.conversation.map(turn => {
+    const reply = turn.kind === "answered" ? `<p><strong>Codex · Inferred</strong></p><pre>${escape(turn.text)}</pre><details><summary>Recommendation context and citations</summary><p>Your original statement is preserved above. A source reference does not independently verify the reply.</p>${turn.sources.map(source => `<p>${turn.citations.some(reference => reference.kind === source.reference.kind && reference.recordId === source.reference.recordId && reference.revision === source.reference.revision) ? "Cited" : "Available context"}: ${escape(source.reference.kind)} ${escape(source.reference.recordId)} · revision ${String(source.reference.revision)}</p><pre>${escape(source.text)}</pre>`).join("")}</details>`
+      : `<p>${turn.kind === "pending" ? "Waiting for a terminal reply…" : escape(turn.kind + ": " + turn.reason)}</p>`;
+    return `<article><p><strong>You</strong> · context revision ${String(turn.submitted.contextRevision)}</p><pre>${escape(turn.submitted.originalStatement)}</pre>${reply}</article>`;
+  }).join("");
 }
 
 export function renderSessionBrief(project: ProjectSnapshot): string {
   const count = project.proposals.length;
   const saved = count === 0 ? "No saved goals yet." : `${String(count)} saved ${count === 1 ? "goal" : "goals"}. Proposals remain unapproved.`;
+  const latest = project.conversation.at(-1);
+  const discussion = latest ? ` Latest discussion: ${latest.kind === "answered" ? "reply saved as inference" : latest.kind}.` : "";
   const next = count === 0 ? "Describe the outcome you want to plan." : "Review a saved proposal, or plan a new goal.";
-  return `<div class="workspace-identity"><strong>Piarre</strong><span class="project-name">${escape(project.name)}</span><span class="capability">Local planning</span></div><p class="eyebrow">Project brief</p><h1>Pick up your work</h1><dl class="session-summary"><div><dt>Where you left off</dt><dd>${saved}</dd></div><div><dt>Next step</dt><dd>${next}</dd></div><div><dt>Still open</dt><dd>No recorded approvals or run results. Saving does not start work.</dd></div></dl>`;
+  return `<div class="workspace-identity"><strong>Piarre</strong><span class="project-name">${escape(project.name)}</span><span class="capability">Planning and conversation</span></div><p class="eyebrow">Project brief</p><h1>Pick up your work</h1><dl class="session-summary"><div><dt>Where you left off</dt><dd>${saved}${escape(discussion)}</dd></div><div><dt>Next step</dt><dd>${next}</dd></div><div><dt>Still open</dt><dd>No recorded approvals or run results. Saving does not start work.</dd></div></dl>`;
 }
 
 export function renderWorkView(project: ProjectSnapshot, configuration?: ProviderConfiguration): string {
@@ -97,6 +108,7 @@ export function renderWorkView(project: ProjectSnapshot, configuration?: Provide
 export class WorkView {
   private current: { readonly panel: vscode.WebviewPanel; readonly project: ProjectSnapshot; readonly draft: WorkspaceDraft } | undefined;
   private deleting = false;
+  private conversationState: ConversationState = { kind: "disconnected", message: "Connect your configured Codex account to discuss this project." };
   private detail: { readonly panel: vscode.WebviewPanel; readonly groupId: string; readonly html?: string } | undefined;
   private readonly settingsChanged: vscode.Disposable;
 
@@ -106,7 +118,8 @@ export class WorkView {
       save: () => undefined,
     }, private readonly confirmDelete: (goal: string) => Promise<boolean> = async (goal) =>
       await vscode.window.showWarningMessage(`Delete “${goal}” and its proposal?`,
-        { modal: true, detail: "Removes this saved goal and its proposed tasks. Repository files are unchanged. Prior project history is retained." }, "Delete goal") === "Delete goal") {
+        { modal: true, detail: "Removes this saved goal and its proposed tasks. Repository files are unchanged. Prior project history is retained." }, "Delete goal") === "Delete goal",
+    private readonly conversation?: { connect(): Promise<void>; disconnect(): void; send(text: string): Promise<void>; interrupt(): Promise<void> }) {
     this.settingsChanged = vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration("piarre.providers")) this.refresh();
     });
@@ -139,6 +152,17 @@ export class WorkView {
           if (Object.keys(message).length === 2 && "groupId" in message && typeof message.groupId === "string") void this.deleteProposal(message.groupId);
           return;
         }
+        if (typeof message === "object" && message !== null && "kind" in message) {
+          if (Object.keys(message).length === 1) {
+            if (message.kind === "connect-codex") { void this.conversation?.connect(); return; }
+            if (message.kind === "disconnect-codex") { this.conversation?.disconnect(); return; }
+            if (message.kind === "stop-conversation") { void this.conversation?.interrupt(); return; }
+          }
+          if (message.kind === "send-conversation") {
+            if (Object.keys(message).length === 2 && "text" in message && typeof message.text === "string") void this.conversation?.send(message.text);
+            return;
+          }
+        }
         void draft.receive(message);
       });
       panel.webview.html = renderWorkView(project, this.configuration());
@@ -146,6 +170,11 @@ export class WorkView {
       this.update(project);
     }
     this.current.panel.reveal();
+  }
+
+  updateConversation(project: ProjectSnapshot, state: ConversationState): void {
+    this.conversationState = state;
+    this.update(project);
   }
 
   update(project: ProjectSnapshot): void {
@@ -230,6 +259,7 @@ document.addEventListener('focusin', remember);
   private refresh(): void {
     if (!this.current) return;
     this.refreshDetail();
+    void this.current.panel.webview.postMessage({ kind: "conversation", state: this.conversationState, html: renderConversation(this.current.project) });
     void this.current.panel.webview.postMessage({ kind: "inspection", selectedGroupId: this.detail?.groupId, html: renderInspection(this.current.project, this.configuration()), brief: renderSessionBrief(this.current.project) });
   }
 
