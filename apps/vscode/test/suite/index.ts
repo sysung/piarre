@@ -12,6 +12,7 @@ export function run(): Promise<void> {
     mocha.addFile(path.resolve(__dirname, "project.test.js"));
     mocha.addFile(path.resolve(__dirname, "proposal.test.js"));
     mocha.addFile(path.resolve(__dirname, "foundations.test.js"));
+    mocha.addFile(path.resolve(__dirname, "context.test.js"));
     mocha.addFile(path.resolve(__dirname, "costs.test.js"));
     mocha.addFile(path.resolve(__dirname, "provider-settings.test.js"));
     mocha.addFile(path.resolve(__dirname, "workspace.test.js"));

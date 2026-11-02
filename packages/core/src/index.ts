@@ -1,4 +1,6 @@
 export { parseProposalOutput, parseProjectEvent, validateProjectCommand } from "./contracts.js";
+export { parseSubmittedStatement, parseInterpretationOutput, parseKnowledgeCorrection } from "./context.js";
+export type { SubmittedStatement, KnowledgeSource, SourcedText, Interpretation, KnowledgeVersion, KnowledgeEntry, KnowledgeCorrection } from "./context.js";
 
 export interface ProjectSnapshot {
   readonly projectId: string;

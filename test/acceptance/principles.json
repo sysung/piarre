@@ -1,0 +1,215 @@
+{
+  "schemaVersion": 1,
+  "adoptedAtRevision": "549552ecb699a32881adb026374cbd30697f4e4f",
+  "principles": [
+    {
+      "id": "business-intent",
+      "behavior": "Understand business intent before recommending work",
+      "source": {
+        "kind": "product",
+        "path": "docs/01_PRODUCT_PRD.md",
+        "revision": "549552ecb699a32881adb026374cbd30697f4e4f",
+        "sha256": "62c38c0159745962de175aed431fbd62d2094f8ac4361491b142b99fecf330b9"
+      },
+      "scenarios": [
+        "conversation",
+        "resume",
+        "memory-correction"
+      ]
+    },
+    {
+      "id": "answer-first",
+      "behavior": "Give a useful answer first and adapt explanation depth",
+      "source": {
+        "kind": "product",
+        "path": "docs/01_PRODUCT_PRD.md",
+        "revision": "549552ecb699a32881adb026374cbd30697f4e4f",
+        "sha256": "62c38c0159745962de175aed431fbd62d2094f8ac4361491b142b99fecf330b9"
+      },
+      "scenarios": [
+        "conversation",
+        "reflection",
+        "user-value"
+      ]
+    },
+    {
+      "id": "simplicity",
+      "behavior": "Keep one coherent workspace and justify additional controls",
+      "source": {
+        "kind": "product",
+        "path": "docs/01_PRODUCT_PRD.md",
+        "revision": "549552ecb699a32881adb026374cbd30697f4e4f",
+        "sha256": "62c38c0159745962de175aed431fbd62d2094f8ac4361491b142b99fecf330b9"
+      },
+      "scenarios": [
+        "workspace-session-brief-shell",
+        "user-value"
+      ]
+    },
+    {
+      "id": "correctable-sources",
+      "behavior": "Expose source identity and permit explicit correction",
+      "source": {
+        "kind": "product",
+        "path": "docs/01_PRODUCT_PRD.md",
+        "revision": "549552ecb699a32881adb026374cbd30697f4e4f",
+        "sha256": "62c38c0159745962de175aed431fbd62d2094f8ac4361491b142b99fecf330b9"
+      },
+      "scenarios": [
+        "foundation-authority-and-recommendation",
+        "memory-correction",
+        "resume"
+      ]
+    },
+    {
+      "id": "runtime-authority",
+      "behavior": "Models propose; runtime code enforces state and approval",
+      "source": {
+        "kind": "product",
+        "path": "docs/01_PRODUCT_PRD.md",
+        "revision": "549552ecb699a32881adb026374cbd30697f4e4f",
+        "sha256": "62c38c0159745962de175aed431fbd62d2094f8ac4361491b142b99fecf330b9"
+      },
+      "scenarios": [
+        "foundation-authority-and-recommendation",
+        "execution",
+        "verification"
+      ]
+    },
+    {
+      "id": "preserve-work",
+      "behavior": "Preserve manual edits and expose recovery limits",
+      "source": {
+        "kind": "product",
+        "path": "docs/01_PRODUCT_PRD.md",
+        "revision": "549552ecb699a32881adb026374cbd30697f4e4f",
+        "sha256": "62c38c0159745962de175aed431fbd62d2094f8ac4361491b142b99fecf330b9"
+      },
+      "scenarios": [
+        "recovery",
+        "checkpoints"
+      ]
+    },
+    {
+      "id": "meaningful-progress",
+      "behavior": "Report actual milestones without routine interruption",
+      "source": {
+        "kind": "product",
+        "path": "docs/01_PRODUCT_PRD.md",
+        "revision": "549552ecb699a32881adb026374cbd30697f4e4f",
+        "sha256": "62c38c0159745962de175aed431fbd62d2094f8ac4361491b142b99fecf330b9"
+      },
+      "scenarios": [
+        "progress"
+      ]
+    },
+    {
+      "id": "proportional-practices",
+      "behavior": "Apply relevant practices without automatic fan-out",
+      "source": {
+        "kind": "product",
+        "path": "docs/01_PRODUCT_PRD.md",
+        "revision": "549552ecb699a32881adb026374cbd30697f4e4f",
+        "sha256": "62c38c0159745962de175aed431fbd62d2094f8ac4361491b142b99fecf330b9"
+      },
+      "scenarios": [
+        "council",
+        "user-value"
+      ]
+    },
+    {
+      "id": "coherent-review",
+      "behavior": "Keep internal checks incremental and one consolidated user review",
+      "source": {
+        "kind": "product",
+        "path": "docs/01_PRODUCT_PRD.md",
+        "revision": "549552ecb699a32881adb026374cbd30697f4e4f",
+        "sha256": "62c38c0159745962de175aed431fbd62d2094f8ac4361491b142b99fecf330b9"
+      },
+      "scenarios": [
+        "verification",
+        "user-value"
+      ]
+    },
+    {
+      "id": "translation-fidelity",
+      "behavior": "Preserve meaning, conditions, uncertainty and authority in explanations",
+      "source": {
+        "kind": "product",
+        "path": "docs/01_PRODUCT_PRD.md",
+        "revision": "549552ecb699a32881adb026374cbd30697f4e4f",
+        "sha256": "62c38c0159745962de175aed431fbd62d2094f8ac4361491b142b99fecf330b9"
+      },
+      "scenarios": [
+        "conversation",
+        "memory-correction",
+        "user-value"
+      ]
+    },
+    {
+      "id": "principle-type-system-discipline",
+      "behavior": "Parse external data at boundaries and retain discriminated outcomes",
+      "source": {
+        "kind": "adopted-principle",
+        "name": "principle-type-system-discipline",
+        "sha256": "5cdaf79785e3c12b2592b9469ee8c272143eb86ab7a18d8382197cea5fd30106"
+      },
+      "scenarios": [
+        "foundation-authority-and-recommendation",
+        "execution"
+      ]
+    },
+    {
+      "id": "principle-foundational-thinking",
+      "behavior": "Choose canonical records before dependent features",
+      "source": {
+        "kind": "adopted-principle",
+        "name": "principle-foundational-thinking",
+        "sha256": "864b827e8199d946ce58beca0f89c4ed4099ed6e426fb698a3aaa45de2a9eea2"
+      },
+      "scenarios": [
+        "foundation-authority-and-recommendation",
+        "memory-correction"
+      ]
+    },
+    {
+      "id": "principle-prove-it-works",
+      "behavior": "Bind claims to current observed evidence",
+      "source": {
+        "kind": "adopted-principle",
+        "name": "principle-prove-it-works",
+        "sha256": "ec79a15025bac8d33d62011c54f3b612733fd2a024e623b531b3637aa75070e2"
+      },
+      "scenarios": [
+        "verification",
+        "user-value"
+      ]
+    },
+    {
+      "id": "principle-separate-before-serializing-shared-state",
+      "behavior": "Keep one runtime event writer and isolate other writers",
+      "source": {
+        "kind": "adopted-principle",
+        "name": "principle-separate-before-serializing-shared-state",
+        "sha256": "05294b40448e927c5da1c7b6f5c6b9fed3744637e3833d2d948b9154a9dd00bb"
+      },
+      "scenarios": [
+        "execution",
+        "recovery"
+      ]
+    },
+    {
+      "id": "principle-sequence-verifiable-units",
+      "behavior": "Verify each delivery unit before integrating the next",
+      "source": {
+        "kind": "adopted-principle",
+        "name": "principle-sequence-verifiable-units",
+        "sha256": "2ccbbacc56ace5afdfb8670cef19d7bd009fb2a0033b9a741cbdf2b6baf72187"
+      },
+      "scenarios": [
+        "verification",
+        "candidate-isolation"
+      ]
+    }
+  ]
+}

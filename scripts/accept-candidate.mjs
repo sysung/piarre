@@ -19,6 +19,8 @@ function git(...args) {
 const revision = git("rev-parse", "HEAD");
 const catalogText = readFileSync(path.join(root, "test/acceptance/catalog.json"), "utf8");
 const catalog = JSON.parse(catalogText);
+const principleText = readFileSync(path.join(root, "test/acceptance/principles.json"), "utf8");
+const principleInventory = JSON.parse(principleText);
 assert.equal(catalog.schemaVersion, 1);
 const ids = new Set();
 for (const scenario of catalog.scenarios) {
@@ -34,10 +36,20 @@ for (const scenario of catalog.scenarios) {
     assert.ok(scenario.verification.tests.length > 0);
   }
 }
+assert.equal(principleInventory.schemaVersion, 1);
+const principleIds = new Set();
+for (const principle of principleInventory.principles) {
+  assert.ok(typeof principle.id === "string" && !principleIds.has(principle.id), "Duplicate or missing principle identity");
+  principleIds.add(principle.id);
+  assert.ok(typeof principle.behavior === "string" && principle.behavior.trim());
+  assert.ok(/^[a-f0-9]{64}$/.test(principle.source.sha256), "Principle source must have an exact content version");
+  assert.ok(principle.scenarios.length > 0 && principle.scenarios.every((id) => ids.has(id)), "Principle must link existing acceptance scenarios");
+}
 const directory = path.join(root, ".artifacts", "acceptance", randomUUID());
 mkdirSync(directory, { recursive: true });
 const report = {
   scope, revision, catalogHash: createHash("sha256").update(catalogText).digest("hex"),
+  principleInventoryHash: createHash("sha256").update(principleText).digest("hex"),
   node: process.version, platform: process.platform, arch: process.arch, vscode: vscodeVersion,
   recordedAt: new Date().toISOString(), checks: [], scenarios: [], productReady: false,
 };
@@ -71,6 +83,13 @@ for (const scenario of catalog.scenarios) {
   }
   report.scenarios.push({ ...scenario, status });
 }
+report.principles = principleInventory.principles.map((principle) => ({
+  ...principle,
+  coverage: principle.scenarios.map((id) => {
+    const scenario = report.scenarios.find((item) => item.id === id);
+    return { id, owner: scenario.owner, status: scenario.status };
+  }),
+}));
 if (blocked) report.blocker = blocked;
 if (!stable) report.blocker = "Source changed during verification; evidence cannot establish acceptance.";
 const selected = report.scenarios.filter(({ owner }) => scope === "candidate" || owner === "C01");
