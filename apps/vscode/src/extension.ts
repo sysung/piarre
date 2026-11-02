@@ -1,3 +1,4 @@
+import { KnowledgeController } from "./knowledge-controller.js";
 import * as vscode from "vscode";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
@@ -18,6 +19,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const output = vscode.window.createOutputChannel("Piarre");
   let repository: SqliteProjectRepository | undefined;
   let conversation: ConversationController | undefined;
+  let knowledge: KnowledgeController | undefined;
   let opening: Promise<void> | undefined;
   let generation = 0;
   const view = new WorkView(undefined, {
@@ -41,6 +43,7 @@ export function activate(context: vscode.ExtensionContext): void {
     disconnect: () => conversation?.disconnect(),
     send: async text => { if (isTrusted()) await conversation?.send(text); },
     interrupt: async () => { await conversation?.interrupt(); },
+    knowledge: async (kind, id) => { if (isTrusted()) await knowledge?.handle(kind, id); },
   });
   const open = async (interactive: boolean, observedGeneration: number): Promise<void> => {
     const isCurrent = (): boolean => observedGeneration === generation && isTrusted();
@@ -84,10 +87,11 @@ export function activate(context: vscode.ExtensionContext): void {
     );
     try {
       const project = next.open({ repositoryUri, name: path.basename(root) });
-      conversation?.dispose();
+      conversation?.dispose(); knowledge?.dispose();
       repository?.close();
       repository = next;
       view.show(project);
+      knowledge = new KnowledgeController(next, snapshot => { view.update(snapshot); }, (projectId, result) => { view.updateLookup(projectId, result); });
       conversation = new ConversationController(next, (snapshot, state) => { view.updateConversation(snapshot, state); },
         () => new CodexConversationClient({ command: vscode.workspace.getConfiguration("piarre").inspect<string>("codexExecutable")?.globalValue ?? "codex" }));
     } catch (error) {
@@ -118,6 +122,7 @@ export function activate(context: vscode.ExtensionContext): void {
     output,
     {
       dispose: () => {
+        knowledge?.dispose();
         conversation?.dispose();
         repository?.close();
       },
@@ -218,6 +223,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.workspace.onDidChangeWorkspaceFolders(() => {
       generation += 1;
       opening = undefined;
+      knowledge?.dispose(); knowledge = undefined;
       conversation?.dispose(); conversation = undefined;
       repository?.close();
       repository = undefined;

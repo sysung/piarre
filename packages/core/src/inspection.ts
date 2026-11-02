@@ -1,15 +1,16 @@
+import { currentKnowledge } from "./knowledge.js";
 import { parseBillingPlan, type BillingPlan } from "./costs.js";
 import type { ProjectSnapshot, RecordedProposalGroup } from "./index.js";
 
 export type RecordReference = {
   readonly projectId: ProjectSnapshot["projectId"];
-  readonly kind: "proposal" | "task";
+  readonly kind: "proposal" | "task" | "knowledge";
   readonly recordId: string;
   readonly revision: number;
 };
 
 export type ReferenceResolution =
-  | { readonly kind: "resolved"; readonly text: string; readonly source: "deterministic-draft" }
+  | { readonly kind: "resolved"; readonly text: string; readonly source: "deterministic-draft" | "user-statement" }
   | { readonly kind: "wrong-project" | "missing" | "stale" };
 
 export function resolveRecordReference(
@@ -17,6 +18,12 @@ export function resolveRecordReference(
   reference: RecordReference,
 ): ReferenceResolution {
   if (reference.projectId !== project.projectId) return { kind: "wrong-project" };
+  if (reference.kind === "knowledge") {
+    const entry = currentKnowledge(project).find(item => item.knowledgeId === reference.recordId);
+    if (!entry) return { kind: "missing" };
+    if (entry.recordedAtRevision !== reference.revision) return { kind: "stale" };
+    return { kind: "resolved", text: entry.content.text, source: "user-statement" };
+  }
   let proposal: RecordedProposalGroup | undefined;
   let text: string | undefined;
   if (reference.kind === "proposal") {
@@ -74,18 +81,18 @@ export function parseProviderConfiguration(value: unknown): ProviderConfiguratio
 }
 
 export interface RecommendationEntry {
-  readonly kind: "submitted-goal" | "proposed-task";
+  readonly kind: "submitted-goal" | "proposed-task" | "knowledge";
   readonly reference: RecordReference;
   readonly text: string;
-  readonly source: "deterministic-draft";
+  readonly source: "deterministic-draft" | "user-statement";
 }
 export interface ProjectInspection {
   readonly recommendation: readonly RecommendationEntry[];
   readonly policy: {
-    readonly memory: "automatic-capture-disabled-policy-unresolved";
-    readonly confirmedMemory: "explicit-approval-required-not-implemented";
+    readonly memory: "manual-observations-only";
+    readonly confirmedMemory: "explicit-memory-review-required";
     readonly spending: "per-operation-approval-required-not-implemented";
-    readonly disclosure: "local-only-no-external-adapter";
+    readonly disclosure: "explicit-conversation-disclosure";
     readonly execution: "unsupported";
   };
   readonly providers: readonly (
@@ -111,13 +118,17 @@ export function inspectProject(
       recommendation.push({ kind: "proposed-task", reference, text: resolved.text, source: resolved.source });
     }
   }
+  for (const entry of currentKnowledge(project)) {
+    recommendation.push({ kind: "knowledge", text: entry.content.text, source: "user-statement",
+      reference: { projectId: project.projectId, kind: "knowledge", recordId: entry.knowledgeId, revision: entry.recordedAtRevision } });
+  }
   return {
     recommendation,
     policy: {
-      memory: "automatic-capture-disabled-policy-unresolved",
-      confirmedMemory: "explicit-approval-required-not-implemented",
+      memory: "manual-observations-only",
+      confirmedMemory: "explicit-memory-review-required",
       spending: "per-operation-approval-required-not-implemented",
-      disclosure: "local-only-no-external-adapter",
+      disclosure: "explicit-conversation-disclosure",
       execution: "unsupported",
     },
     providers: providerRoles.map((role) => {

@@ -1,3 +1,4 @@
+import { parseKnowledgeAction, parseKnowledgeEvent } from "./knowledge.js";
 import type {
   ProjectCommand,
   ProjectEvent,
@@ -46,7 +47,7 @@ function positiveInteger(value: unknown): number {
 function sourceReference(value: unknown): RecordReference {
   if (!isObject(value) || !hasOnlyKeys(value, ["projectId", "kind", "recordId", "revision"]) ||
       !("projectId" in value) || !("kind" in value) || !("recordId" in value) || !("revision" in value) ||
-      (value.kind !== "proposal" && value.kind !== "task")) invalid();
+      (value.kind !== "proposal" && value.kind !== "task" && value.kind !== "knowledge")) invalid();
   return { projectId: nonblank(value.projectId), kind: value.kind, recordId: nonblank(value.recordId), revision: positiveInteger(value.revision) };
 }
 
@@ -233,6 +234,8 @@ export function validateProjectCommand(value: unknown): ProjectCommand {
   const projectId = nonblank(value.projectId);
   const expectedProjectRevision = positiveInteger(value.expectedProjectRevision);
   const action = value.action;
+  const knowledgeAction = parseKnowledgeAction(action);
+  if (knowledgeAction) return { commandId, projectId, expectedProjectRevision, action: knowledgeAction };
   if (action.kind === "begin-conversation" && hasOnlyKeys(action, ["kind", "submitted", "sources"]) && "submitted" in action && "sources" in action) {
     return { commandId, projectId, expectedProjectRevision, action: { kind: action.kind, submitted: parseSubmittedStatement(action.submitted), sources: conversationSources(action.sources) } };
   }
@@ -276,6 +279,8 @@ function storedTask(value: unknown): ProposedTask {
 }
 
 export function parseProjectEvent(value: unknown): ProjectEvent {
+  const knowledgeEvent = parseKnowledgeEvent(value);
+  if (knowledgeEvent) return knowledgeEvent;
   if (!isObject(value) || !("kind" in value)) invalid();
   if (value.kind === "conversation-started" && hasOnlyKeys(value, ["kind", "submitted", "sources"]) && "submitted" in value && "sources" in value) {
     return { kind: value.kind, submitted: parseSubmittedStatement(value.submitted), sources: conversationSources(value.sources) };

@@ -34,6 +34,8 @@ function showGoal() {
   title.textContent = 'What would you like to work on?'; step.textContent = 'Step 1 of 2 · Goal';
 }
 document.getElementById('inspection').addEventListener('click', (event) => {
+  const knowledge = event.target instanceof Element ? event.target.closest('[data-knowledge-action]') : null;
+  if (knowledge) api.postMessage(knowledge.dataset.knowledgeId ? {kind:knowledge.dataset.knowledgeAction,knowledgeId:knowledge.dataset.knowledgeId} : {kind:knowledge.dataset.knowledgeAction});
   const card = event.target instanceof Element ? event.target.closest('[data-open-goal]') : null;
   const remove = event.target instanceof Element ? event.target.closest('[data-delete-goal]') : null;
   if (remove) api.postMessage({kind: 'delete-proposal', groupId: remove.dataset.deleteGoal});
