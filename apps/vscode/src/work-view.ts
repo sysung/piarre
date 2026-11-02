@@ -1,3 +1,5 @@
+import { parseExecutionMessage, type ExecutionMessage } from "./execution-actions.js";
+import { renderExecutionControls, renderExecutionDesk, renderExecutionResult, taskExecutionStatus } from "./execution-view.js";
 import type { RetrievalResult } from "./project-retrieval.js";
 import type { ConversationState } from "./conversation-controller.js";
 import { randomUUID } from "node:crypto";
@@ -30,6 +32,7 @@ export function renderInspection(
   project: ProjectSnapshot,
   configuration?: ProviderConfiguration,
   selectedGroupId?: string,
+  executionEnabled = false,
 ): string {
   const inspection = inspectProject(project, configuration);
   const coding = inspection.providers.find((provider) => provider.role === "coding");
@@ -60,7 +63,7 @@ export function renderInspection(
         .map(
           (task) => {
             const estimate = estimateBudget({ budget: task.proposedBudget, model: selection?.model ?? "", provider: selection?.provider ?? "", billing: selection?.billing ?? { kind: "unknown" } });
-            return `<details><summary>${escape(task.title)} · Unapproved</summary><article><p><strong>Unapproved</strong> · Plan version ${String(task.planVersion)}</p><h4>Requirements</h4>${list(task.requirements.map(({ text }) => text), "No requirements")}<h4>Proposed scope</h4><p>Included</p>${list(task.proposedScope.included, "No paths proposed")}<p>Excluded</p>${list(task.proposedScope.excluded, "No exclusions proposed")}<h4>Dependencies</h4>${list(task.dependsOn, "No dependencies")}<h4>Manual checks</h4>${list(task.checks.map(({ description }) => description), "No checks")}<h4>Proposed budget</h4><dl class="budget-grid"><div><dt>Token limit</dt><dd>${task.proposedBudget.maxTokens.toLocaleString("en-US")} tokens</dd></div><div><dt>Time limit</dt><dd>${String(task.proposedBudget.maxElapsedMinutes)} minutes</dd></div><div><dt>Attempts</dt><dd>${String(task.proposedBudget.maxAttempts)} attempt</dd></div></dl><h4>Plan-based estimate</h4>${cost(estimate)}</article></details>`;
+            return `<details><summary>${escape(task.title)} · ${executionEnabled ? escape(taskExecutionStatus(project, task.taskId)) : "Unapproved"}</summary><article>${executionEnabled ? `<button type="button" data-execution-action="prepare" data-execution-id="${escape(task.taskId)}">Review run plan</button>` : ""}<p><strong>Original proposal · Unapproved</strong> · Plan version ${String(task.planVersion)}</p><h4>Requirements</h4>${list(task.requirements.map(({ text }) => text), "No requirements")}<h4>Proposed scope</h4><p>Included</p>${list(task.proposedScope.included, "No paths proposed")}<p>Excluded</p>${list(task.proposedScope.excluded, "No exclusions proposed")}<h4>Dependencies</h4>${list(task.dependsOn, "No dependencies")}<h4>Manual checks</h4>${list(task.checks.map(({ description }) => description), "No checks")}<h4>Proposed budget</h4><dl class="budget-grid"><div><dt>Token limit</dt><dd>${task.proposedBudget.maxTokens.toLocaleString("en-US")} tokens</dd></div><div><dt>Time limit</dt><dd>${String(task.proposedBudget.maxElapsedMinutes)} minutes</dd></div><div><dt>Attempts</dt><dd>${String(task.proposedBudget.maxAttempts)} attempt</dd></div></dl><h4>Plan-based estimate</h4>${cost(estimate)}</article></details>`;
           },
         )
         .join("");
@@ -72,16 +75,16 @@ export function renderInspection(
   const recommendation = inspection.recommendation.length === 0
     ? "<p>No proposal sources recorded yet.</p>"
     : `<ul>${inspection.recommendation.map((entry) => `<li><strong>${entry.kind === "submitted-goal" ? "Submitted goal" : entry.kind === "knowledge" ? "User knowledge" : "Proposed task"}</strong>: ${escape(entry.text)}<br>Record ${escape(entry.reference.recordId)}, recorded at project revision ${String(entry.reference.revision)}. Source: ${escape(entry.source)}. Source content is not independently verified.</li>`).join("")}</ul>`;
-  const providers = `<ul>${inspection.providers.map((item) => `<li>${escape(item.role)}: ${item.status === "invalid-configuration" ? "Invalid settings. No provider connected." : "selection" in item ? `${escape(item.selection.provider)} / ${escape(item.selection.model)} selected. Connection unavailable.` : "Not configured."}</li>`).join("")}</ul>`;
+  const providers = `<ul>${inspection.providers.filter(item => item.role !== "speech-input" && item.role !== "speech-output").map((item) => `<li>${escape(item.role)}: ${item.status === "invalid-configuration" ? "Invalid settings. No provider connected." : "selection" in item ? `${escape(item.selection.provider)} / ${escape(item.selection.model)} selected. ${executionEnabled ? "Connection is checked when explicitly requested; selection does not approve a run." : "Connection unavailable."}` : "Not configured."}</li>`).join("")}</ul>`;
   const policyLabels: Readonly<Record<ProjectInspection["policy"][keyof ProjectInspection["policy"]], string>> = {
     "manual-observations-only": "Automatic memory capture is off. Explicit observations stay unconfirmed until reviewed.",
     "explicit-memory-review-required": "Confirming or replacing knowledge requires an explicit review of the exact record and revision.",
-    "per-operation-approval-required-not-implemented": "Paid work needs approval for each operation. No paid coding provider is connected.",
+    "per-operation-approval-required-not-implemented": executionEnabled ? "Each coding run requires approval. Actual charges and quotas remain unknown unless the adapter supplies observations." : "Paid work needs approval for each operation. No paid coding provider is connected.",
     "explicit-conversation-disclosure": "Local planning stays local. Explicit Send to Codex shares the displayed conversation context with your configured account.",
-    "unsupported": "Running, verifying, and accepting coding work are not available yet.",
+    "unsupported": executionEnabled ? "Coding work requires a reviewed scope and observed adapter capabilities. Check completion and human acceptance are separate." : "Running, verifying, and accepting coding work are not available yet.",
   };
   const policy = Object.values(inspection.policy).map((state) => `<li>${escape(policyLabels[state])}</li>`).join("");
-  const permissions = `<details><summary>Recommendation and permissions</summary><h3>Recorded recommendation</h3>${recommendation}<h3>What works now</h3><p>You can rename this project and save task proposals. A proposed budget is not permission to spend.</p><ul>${policy}</ul><h3>Providers</h3>${providers}<p>Local task drafting uses the built-in deterministic generator. Connect Codex and Send are separate explicit conversation actions. Provider selections do not approve coding work.</p></details>`;
+  const permissions = `<details><summary>Recommendation and permissions</summary><h3>Recorded recommendation</h3>${recommendation}<h3>What works now</h3><p>${executionEnabled ? "Review task scope, start approved agent work, inspect current evidence, and control recovery from the work overview." : "You can rename this project and save task proposals."} A proposed budget is not permission to spend.</p><ul>${policy}</ul><h3>Providers</h3>${providers}<p>Local task drafting uses the built-in deterministic generator. Connect Codex and Send are separate explicit conversation actions. Provider selections do not approve coding work.</p></details>`;
 
   return `${work}${renderKnowledge(project)}${permissions}<details><summary>Project information</summary><dl><dt>Repository</dt><dd>${escape(project.repositoryUri)}</dd><dt>Project ID</dt><dd>${escape(project.projectId)}</dd><dt>Revision</dt><dd>${String(project.revision)}</dd></dl></details>`;
 }
@@ -126,16 +129,17 @@ export function renderSessionBrief(project: ProjectSnapshot): string {
   const latest = project.conversation.at(-1);
   const discussion = latest ? ` Latest discussion: ${latest.kind === "answered" ? "reply saved as inference" : latest.kind}.` : "";
   const next = staleCount > 0 ? `Review ${String(staleCount)} task plan(s) affected by corrected knowledge before approving work.` : disputedCount > 0 ? "Resolve the different confirmed values in project knowledge." : count === 0 ? "Describe the outcome you want to plan." : "Review a saved proposal, or plan a new goal.";
-  return `<div class="workspace-identity"><strong>Piarre</strong><span class="project-name">${escape(project.name)}</span><span class="capability">Planning and conversation</span></div><p class="eyebrow">Project brief</p><h1>Pick up your work</h1><dl class="session-summary"><div><dt>Where you left off</dt><dd>${saved}${escape(discussion)}${changed ? ` <a href="#project-knowledge">${escape(changed.topic)} · recorded revision ${String(changed.recordedAtRevision)}</a>` : ""}</dd></div><div><dt>Next step</dt><dd>${next}</dd></div><div><dt>Still open</dt><dd>${String(unconfirmedCount)} unconfirmed knowledge record(s); ${String(disputedCount)} disputed record(s). No recorded approvals or run results. Saving does not start work.</dd></div></dl>`;
+  return `<div class="workspace-identity"><strong>Piarre</strong><span class="project-name">${escape(project.name)}</span><span class="capability">Planning and conversation</span></div><p class="eyebrow">Project brief</p><h1>Pick up your work</h1><dl class="session-summary"><div><dt>Where you left off</dt><dd>${saved}${escape(discussion)}${changed ? ` <a href="#project-knowledge">${escape(changed.topic)} · recorded revision ${String(changed.recordedAtRevision)}</a>` : ""}</dd></div><div><dt>Next step</dt><dd>${next}</dd></div><div><dt>Still open</dt><dd>${String(unconfirmedCount)} unconfirmed knowledge record(s); ${String(disputedCount)} disputed record(s). ${project.executionRuns.length ? `${String(project.executionRuns.length)} recorded run(s); review agent activity and current evidence.` : "No recorded approvals or run results. Saving does not start work."}</dd></div></dl>`;
 }
 
-export function renderWorkView(project: ProjectSnapshot, configuration?: ProviderConfiguration): string {
-  return renderWorkspaceShell({ inspection: renderInspection(project, configuration), brief: renderSessionBrief(project) });
+export function renderWorkView(project: ProjectSnapshot, configuration?: ProviderConfiguration, executionEnabled = false): string {
+  return renderWorkspaceShell({ inspection: renderInspection(project, configuration, undefined, executionEnabled), brief: renderSessionBrief(project), agentOverview: executionEnabled ? renderExecutionDesk(project) : "<p>No coding agents are running. Save a task proposal to prepare work for an agent.</p>", executionControls: executionEnabled ? renderExecutionControls(project) : "" });
 }
 
 export class WorkView {
   private current: { readonly panel: vscode.WebviewPanel; readonly project: ProjectSnapshot; readonly draft: WorkspaceDraft } | undefined;
   private deleting = false;
+  private runDetail: { readonly panel: vscode.WebviewPanel; readonly runId: string; readonly html?: string } | undefined;
   private lookup: { readonly projectId: string; readonly result: RetrievalResult } | undefined;
   private conversationState: ConversationState = { kind: "disconnected", message: "Connect your configured Codex account to discuss this project." };
   private detail: { readonly panel: vscode.WebviewPanel; readonly groupId: string; readonly html?: string } | undefined;
@@ -148,7 +152,8 @@ export class WorkView {
     }, private readonly confirmDelete: (goal: string) => Promise<boolean> = async (goal) =>
       await vscode.window.showWarningMessage(`Delete “${goal}” and its proposal?`,
         { modal: true, detail: "Removes this saved goal and its proposed tasks. Repository files are unchanged. Prior project history is retained." }, "Delete goal") === "Delete goal",
-    private readonly conversation?: { connect(): Promise<void>; disconnect(): void; send(text: string): Promise<void>; interrupt(): Promise<void>; knowledge?(kind: "observe-business" | "observe-decision" | "confirm-knowledge" | "correct-knowledge" | "lookup-project", id?: string): Promise<void> }) {
+    private readonly conversation?: { connect(): Promise<void>; disconnect(): void; send(text: string): Promise<void>; interrupt(): Promise<void>; knowledge?(kind: "observe-business" | "observe-decision" | "confirm-knowledge" | "correct-knowledge" | "lookup-project", id?: string): Promise<void> },
+    private readonly execution?: { handle(message: ExecutionMessage): Promise<void>; renderDetails?(runId: string): string }) {
     this.settingsChanged = vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration("piarre.providers")) this.refresh();
     });
@@ -164,7 +169,7 @@ export class WorkView {
       this.current = { panel, project, draft };
       panel.onDidDispose(() => {
         draft.dispose();
-        if (this.current?.panel === panel) { this.current = undefined; this.closeDetail(); }
+        if (this.current?.panel === panel) { this.current = undefined; this.closeDetail(); this.closeRunDetail(); }
       });
       panel.webview.onDidReceiveMessage((message: unknown) => {
         if (this.current?.panel !== panel) return;
@@ -200,9 +205,11 @@ export class WorkView {
             void this.conversation?.knowledge?.(message.kind, message.knowledgeId); return;
           }
         }
+        const executionMessage = parseExecutionMessage(message);
+        if (executionMessage) { void this.execution?.handle(executionMessage); return; }
         void draft.receive(message);
       });
-      panel.webview.html = renderWorkView(project, this.configuration());
+      panel.webview.html = renderWorkView(project, this.configuration(), this.execution !== undefined);
     } else {
       this.update(project);
     }
@@ -221,7 +228,7 @@ export class WorkView {
 
   update(project: ProjectSnapshot): void {
     if (!this.current) return;
-    if (this.current.project.projectId !== project.projectId) this.closeDetail();
+    if (this.current.project.projectId !== project.projectId) { this.closeDetail(); this.closeRunDetail(); }
     this.current.draft.update(project);
     this.current = { ...this.current, project };
     this.refresh();
@@ -252,7 +259,10 @@ export class WorkView {
         { enableScripts: true, localResourceRoots: [] });
       this.detail = { panel, groupId };
       panel.webview.onDidReceiveMessage((message: unknown) => {
-        if (this.detail?.panel !== panel || typeof message !== "object" || message === null || Object.keys(message).length !== 1 || !("kind" in message) || message.kind !== "delete-proposal") return;
+        if (this.detail?.panel !== panel) return;
+        const executionMessage = parseExecutionMessage(message);
+        if (executionMessage) { void this.execution?.handle(executionMessage); return; }
+        if (typeof message !== "object" || message === null || Object.keys(message).length !== 1 || !("kind" in message) || message.kind !== "delete-proposal") return;
         void this.deleteProposal(this.detail.groupId);
       });
       panel.onDidDispose(() => { if (this.detail?.panel === panel) { this.detail = undefined; void this.current?.panel.webview.postMessage({ kind: "proposal-opened" }); } });
@@ -261,6 +271,35 @@ export class WorkView {
     this.detail.panel.reveal();
     void this.current.panel.webview.postMessage({ kind: "proposal-opened", groupId });
   }
+
+  openExecutionResult(runId: string): void {
+    if (!this.current?.project.executionRuns.some(run => run.runId === runId)) return;
+    if (!this.runDetail) {
+      const panel = this.createPanel("piarre.execution", "Agent work review", vscode.ViewColumn.Beside,
+        { enableScripts: true, localResourceRoots: [] });
+      this.runDetail = { panel, runId };
+      panel.webview.onDidReceiveMessage((message: unknown) => {
+        if (this.runDetail?.panel !== panel) return;
+        const parsed = parseExecutionMessage(message);
+        if (parsed) void this.execution?.handle(parsed);
+      });
+      panel.onDidDispose(() => { if (this.runDetail?.panel === panel) this.runDetail = undefined; });
+    } else this.runDetail = { ...this.runDetail, runId };
+    this.refreshRunDetail(); this.runDetail.panel.reveal();
+  }
+
+  private refreshRunDetail(): void {
+    const detail = this.runDetail; if (!detail || !this.current) return;
+    if (!this.current.project.executionRuns.some(run => run.runId === detail.runId)) { this.closeRunDetail(); return; }
+    const html = renderExecutionResult(this.current.project, detail.runId) + (this.execution?.renderDetails?.(detail.runId) ?? "");
+    if (detail.html === html) return;
+    this.runDetail = { ...detail, html };
+    const nonce = randomUUID();
+    const identity = JSON.stringify(detail.runId).replaceAll("<", "\\u003c");
+    detail.panel.webview.html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'"><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{font-family:var(--vscode-font-family);color:var(--vscode-foreground);background:var(--vscode-editor-background);line-height:1.6;padding:24px;overflow-wrap:anywhere}details{border-top:1px solid var(--vscode-panel-border);padding:12px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere}button{font:inherit;min-height:36px;margin:8px 8px 8px 0;padding:8px 16px;background:var(--vscode-button-background);color:var(--vscode-button-foreground);border:0;cursor:pointer}:focus-visible{outline:2px solid var(--vscode-focusBorder);outline-offset:3px}</style></head><body>${html}<script nonce="${nonce}">const api=acquireVsCodeApi();const identity=${identity};const disclosures=[...document.querySelectorAll('details')];const state=api.getState();if(state&&state.identity===identity){disclosures.forEach((item,index)=>{item.open=state.open.includes(index);});requestAnimationFrame(()=>{window.scrollTo(0,state.scroll);if(state.focus>=0)disclosures[state.focus]?.querySelector('summary')?.focus({preventScroll:true});});}function remember(){api.setState({identity,open:disclosures.flatMap((item,index)=>item.open?[index]:[]),scroll:window.scrollY,focus:disclosures.findIndex(item=>item.querySelector('summary')===document.activeElement)});}disclosures.forEach(item=>item.addEventListener('toggle',remember));window.addEventListener('scroll',remember,{passive:true});document.addEventListener('focusin',remember);document.addEventListener('click',event=>{const button=event.target instanceof Element?event.target.closest('[data-execution-action]'):null;if(!button)return;api.postMessage(button.dataset.executionId?{kind:'execution',action:button.dataset.executionAction,id:button.dataset.executionId}:{kind:'execution',action:button.dataset.executionAction});});</script></body></html>`;
+  }
+
+  private closeRunDetail(): void { const detail = this.runDetail; this.runDetail = undefined; detail?.panel.dispose(); }
 
   private refreshDetail(): void {
     if (!this.detail || !this.current) return;
@@ -276,6 +315,7 @@ export class WorkView {
 const api = acquireVsCodeApi();
 const groupId = ${groupKey};
 document.getElementById('delete-goal').addEventListener('click', () => api.postMessage({kind:'delete-proposal'}));
+document.addEventListener('click',event=>{const button=event.target instanceof Element?event.target.closest('[data-execution-action]'):null;if(button)api.postMessage(button.dataset.executionId?{kind:'execution',action:button.dataset.executionAction,id:button.dataset.executionId}:{kind:'execution',action:button.dataset.executionAction});});
 const disclosures = [...document.querySelectorAll('details')];
 const state = api.getState();
 if (state && state.groupId === groupId) {
@@ -301,8 +341,9 @@ document.addEventListener('focusin', remember);
   private refresh(): void {
     if (!this.current) return;
     this.refreshDetail();
+    this.refreshRunDetail();
     void this.current.panel.webview.postMessage({ kind: "conversation", state: this.conversationState, html: renderConversation(this.current.project) });
-    void this.current.panel.webview.postMessage({ kind: "inspection", selectedGroupId: this.detail?.groupId, html: renderInspection(this.current.project, this.configuration()) + (this.lookup?.projectId === this.current.project.projectId ? renderLookup(this.lookup.result) : ""), brief: renderSessionBrief(this.current.project) });
+    void this.current.panel.webview.postMessage({ kind: "inspection", selectedGroupId: this.detail?.groupId, html: renderInspection(this.current.project, this.configuration(), undefined, this.execution !== undefined) + (this.lookup?.projectId === this.current.project.projectId ? renderLookup(this.lookup.result) : ""), brief: renderSessionBrief(this.current.project), agentOverview: this.execution ? renderExecutionDesk(this.current.project) : "<p>No coding agents are running. Save a task proposal to prepare work for an agent.</p>", executionControls: this.execution ? renderExecutionControls(this.current.project) : "" });
   }
 
   private publishDraft(): void {
@@ -310,6 +351,7 @@ document.addEventListener('focusin', remember);
   }
 
   close(): void {
+    this.closeRunDetail();
     this.closeDetail();
     const current = this.current;
     this.current = undefined;

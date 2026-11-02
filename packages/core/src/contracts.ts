@@ -1,3 +1,4 @@
+import { parseExecutionAction, parseExecutionEvent } from "./execution-contracts.js";
 import { parseKnowledgeAction, parseKnowledgeEvent } from "./knowledge.js";
 import type {
   ProjectCommand,
@@ -234,6 +235,8 @@ export function validateProjectCommand(value: unknown): ProjectCommand {
   const projectId = nonblank(value.projectId);
   const expectedProjectRevision = positiveInteger(value.expectedProjectRevision);
   const action = value.action;
+  const executionAction = parseExecutionAction(action);
+  if (executionAction) return { commandId, projectId, expectedProjectRevision, action: executionAction };
   const knowledgeAction = parseKnowledgeAction(action);
   if (knowledgeAction) return { commandId, projectId, expectedProjectRevision, action: knowledgeAction };
   if (action.kind === "begin-conversation" && hasOnlyKeys(action, ["kind", "submitted", "sources"]) && "submitted" in action && "sources" in action) {
@@ -279,6 +282,8 @@ function storedTask(value: unknown): ProposedTask {
 }
 
 export function parseProjectEvent(value: unknown): ProjectEvent {
+  const executionEvent = parseExecutionEvent(value);
+  if (executionEvent) return executionEvent;
   const knowledgeEvent = parseKnowledgeEvent(value);
   if (knowledgeEvent) return knowledgeEvent;
   if (!isObject(value) || !("kind" in value)) invalid();

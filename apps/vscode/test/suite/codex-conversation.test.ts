@@ -16,6 +16,16 @@ suite("Codex conversation process adapter", () => {
     } finally { connection.dispose(); }
   });
 
+  test("patch mode uses a private bounded output schema while retaining read-only policy", async () => {
+    const connection = client("patch");
+    try {
+      await connection.connect();
+      const result = await connection.proposePatch({ prompt: "Change only the disclosed file", cwd: process.cwd() });
+      assert.equal(result.status, "completed");
+      assert.deepEqual(result.output, { summary: "Adjust the refund rule", operations: [{ fileId: "opaque-file", content: "export const days = 45;" }] });
+    } finally { connection.dispose(); }
+  });
+
   test("handles partial frames and terminal notifications before start acknowledgement", async () => {
     const connection = client();
     const progress: string[] = [];

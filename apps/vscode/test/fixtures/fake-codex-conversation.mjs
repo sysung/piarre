@@ -27,7 +27,14 @@ for await (const line of createInterface({ input: process.stdin })) {
       reply({ thread: { id: "thread-1" }, sandbox: { type: "readOnly", networkAccess: false }, approvalPolicy: "never" }); break;
     case "turn/start":
       assert.deepEqual(request.params.sandboxPolicy, { type: "readOnly", networkAccess: false });
+      if (mode === "patch") {
+        assert.deepEqual(request.params.outputSchema.required, ["summary", "operations"]);
+        assert.equal(request.params.outputSchema.additionalProperties, false);
+        assert.deepEqual(request.params.outputSchema.properties.operations.items.required, ["fileId", "content"]);
+        item.text = JSON.stringify({ summary: "Adjust the refund rule", operations: [{ fileId: "opaque-file", content: "export const days = 45;" }] });
+      } else {
       assert.deepEqual(request.params.outputSchema, { type: "object", additionalProperties: false, required: ["summary", "sourceIndexes"], properties: { summary: { type: "string", minLength: 1 }, sourceIndexes: { type: "array", minItems: 1, items: { type: "integer", minimum: 0 } } } });
+      }
       start = request;
       if (mode === "inline-terminal") { reply({ turn: { id: "turn-1", status: "completed", items: [item] } }); break; }
       if (mode === "disconnect") process.exit(0);

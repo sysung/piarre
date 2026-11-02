@@ -1,5 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { isAbsolute } from "node:path";
+import { parseDefaultModel, parseObservedUsage, parseThreadMetadata, type CodexExecutionContext, type CodexDefaultModel, type CodexObservedUsage, type CodexThreadMetadata } from "./codex-account-context";
 
 const MAX_FRAME_BYTES = 1024 * 1024;
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -9,6 +10,14 @@ const OUTPUT_SCHEMA = {
   type: "object", additionalProperties: false, required: ["summary", "sourceIndexes"],
   properties: { summary: { type: "string", minLength: 1 }, sourceIndexes: { type: "array", minItems: 1, items: { type: "integer", minimum: 0 } } },
 };
+
+const PATCH_SCHEMA = {
+  type: "object", additionalProperties: false, required: ["summary", "operations"],
+  properties: { summary: { type: "string", minLength: 1, maxLength: 10_000 }, operations: { type: "array", maxItems: 20,
+    items: { type: "object", additionalProperties: false, required: ["fileId", "content"],
+      properties: { fileId: { type: "string", minLength: 1, maxLength: 128 }, content: { anyOf: [{ type: "string", maxLength: 100_000 }, { type: "null" }] } } } } },
+};
+type TurnInput = { readonly prompt: string; readonly cwd: string; readonly model?: string; readonly onProgress?: (text: string) => void; readonly onThreadStarted?: (threadId: string) => void; readonly onThreadMetadata?: (metadata: CodexThreadMetadata) => void; readonly onTurnStarted?: (threadId: string, turnId: string) => void };
 
 type ConnectResult = { kind: "ready"; authType: "chatgpt" | "apiKey" | "unknown" } | { kind: "login-required" };
 type Response = { output: unknown; threadId: string; turnId: string; status: "completed" | "interrupted" };
@@ -70,7 +79,39 @@ export class CodexConversationClient {
     }
   }
 
-  async respond(input: { prompt: string; cwd: string; model?: string; onProgress?: (text: string) => void }): Promise<Response> {
+  /** Explicit preflight only; connection and activation never query usage/model metadata. */
+  async readExecutionContext(): Promise<CodexExecutionContext> {
+    if (this.state !== "ready") throw new Error("Connect Codex explicitly before reading execution context; no turn may be active.");
+    this.state = "busy";
+    let model: CodexDefaultModel = { kind: "unknown" };
+    let usage: CodexObservedUsage = { kind: "unknown" };
+    try {
+      const pages: unknown[] = [];
+      let cursor: string | undefined;
+      const seen = new Set<string>();
+      try {
+        for (let page = 0; page < 4; page++) {
+          const result = object(await this.request("model/list", { limit: 100, includeHidden: false, ...(cursor === undefined ? {} : { cursor }) }));
+          pages.push(result);
+          if (result.nextCursor === null || result.nextCursor === undefined) { model = parseDefaultModel(pages, true); break; }
+          if (typeof result.nextCursor !== "string" || !result.nextCursor || result.nextCursor.length > 512 || seen.has(result.nextCursor)) break;
+          cursor = result.nextCursor;
+          seen.add(cursor);
+        }
+      } catch { /* Unsupported or malformed public metadata remains unknown. */ }
+      try { usage = parseObservedUsage(await this.request("account/rateLimits/read", {})); }
+      catch { /* Do not expose provider error text or infer a quota. */ }
+      return { observedAt: new Date().toISOString(), model, usage, taskForecast: { kind: "unknown" } };
+    } finally {
+      if (this.process) this.state = "ready";
+    }
+  }
+
+  respond(input: TurnInput): Promise<Response> { return this.requestTurn(input, OUTPUT_SCHEMA); }
+
+  proposePatch(input: TurnInput): Promise<Response> { return this.requestTurn(input, PATCH_SCHEMA); }
+
+  private async requestTurn(input: TurnInput, outputSchema: typeof OUTPUT_SCHEMA | typeof PATCH_SCHEMA): Promise<Response> {
     if (this.state !== "ready") throw new Error("Connect Codex explicitly before starting one conversation turn.");
     if (!input.prompt.trim() || !isAbsolute(input.cwd)) throw new Error("A prompt and absolute working directory are required.");
     this.state = "busy";
@@ -80,9 +121,11 @@ export class CodexConversationClient {
         config: { web_search: "disabled", features: { shell_tool: false, unified_exec: false, plugins: false } },
       }));
       const threadId = identifier(object(started.thread).id);
+      input.onThreadMetadata?.(parseThreadMetadata(started));
       const sandbox = object(started.sandbox);
       if (sandbox.type !== "readOnly" || sandbox.networkAccess === true || started.approvalPolicy !== "never") throw new Error("Codex did not confirm read-only policy.");
       await this.checkTools(threadId);
+      input.onThreadStarted?.(threadId);
       const completion = new Promise<Response>((resolve, reject) => {
         this.active = { threadId, buffered: [], resolve, reject, onProgress: input.onProgress,
           timer: setTimeout(() => { this.fail(new Error("Codex turn timed out; completion is unknown.")); }, TURN_TIMEOUT_MS) };
@@ -91,12 +134,13 @@ export class CodexConversationClient {
       void completion.catch(() => undefined);
       const result = object(await this.request("turn/start", {
         threadId, cwd: input.cwd, model: input.model, input: [{ type: "text", text: input.prompt }],
-        sandboxPolicy: { type: "readOnly", networkAccess: false }, approvalPolicy: "never", outputSchema: OUTPUT_SCHEMA,
+        sandboxPolicy: { type: "readOnly", networkAccess: false }, approvalPolicy: "never", outputSchema,
       }));
       const turn = object(result.turn);
       const active = this.active;
       if (!active) throw new Error("Codex disconnected while starting the turn.");
       active.turnId = identifier(turn.id);
+      input.onTurnStarted?.(threadId, active.turnId);
       for (const event of active.buffered.splice(0)) this.notification(event.method, event.params);
       if (this.active && turn.status !== undefined && turn.status !== "inProgress") this.notification("turn/completed", { threadId, turn });
       return await completion;

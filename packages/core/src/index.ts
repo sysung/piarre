@@ -1,3 +1,6 @@
+import { applyExecutionEvent, ownsExecutionLease, type ExecutionAction, type ExecutionEvent, type ExecutionPlan, type ExecutionRun } from "./execution.js";
+export { currentExecutionPlan, planFreshness, ownsExecutionLease } from "./execution.js";
+export type { ExecutionAction, ExecutionEvent, ExecutionPlan, ExecutionPlanDraft, ExecutionRun, ExecutionResult, ExecutionCheck, CheckEvidence } from "./execution.js";
 import { applyKnowledgeEvent, knowledgeEvent, type KnowledgeAction, type KnowledgeEvent, type RecordedKnowledge, type KnowledgeImpact } from "./knowledge.js";
 export { currentKnowledge, knowledgeConflicts } from "./knowledge.js";
 export type { RecordedKnowledge, KnowledgeImpact, KnowledgeAction, KnowledgeEvent } from "./knowledge.js";
@@ -17,6 +20,9 @@ export interface ProjectSnapshot {
   readonly conversation: readonly ConversationTurn[];
   readonly knowledge: readonly RecordedKnowledge[];
   readonly knowledgeImpacts: readonly KnowledgeImpact[];
+  readonly executionPlans: readonly ExecutionPlan[];
+  readonly executionRuns: readonly ExecutionRun[];
+  readonly schedulingPaused: boolean;
 }
 
 export interface ProposalRequirement {
@@ -80,13 +86,13 @@ export interface ProjectCommand {
   readonly commandId: string;
   readonly projectId: string;
   readonly expectedProjectRevision: number;
-  readonly action: ConversationAction | KnowledgeAction
+  readonly action: ConversationAction | KnowledgeAction | ExecutionAction
     | { readonly kind: "rename-project"; readonly name: string }
     | { readonly kind: "delete-proposal"; readonly groupId: string }
     | { readonly kind: "propose-tasks"; readonly draft: ProposalDraft };
 }
 
-export type ProjectEvent = ConversationEvent | KnowledgeEvent
+export type ProjectEvent = ConversationEvent | KnowledgeEvent | ExecutionEvent
   | {
       readonly kind: "project-created";
       readonly projectId: string;
@@ -125,11 +131,16 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
         conversation: [],
         knowledge: [],
         knowledgeImpacts: [],
+        executionPlans: [],
+        executionRuns: [],
+        schedulingPaused: false,
       };
       continue;
     }
     if (!snapshot) throw new Error("Invalid project history: missing creation");
     switch (event.kind) {
+      case "execution-recorded":
+        snapshot = applyExecutionEvent(snapshot, event); break;
       case "knowledge-observed":
       case "knowledge-confirmed":
       case "knowledge-corrected":
@@ -148,6 +159,8 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
         };
         break;
       case "proposal-deleted": {
+        const currentTasks = snapshot.tasks;
+        if (snapshot.executionRuns.some(run => ownsExecutionLease(run) && currentTasks.some(task => task.taskId === run.grant.plan.taskId && task.groupId === event.groupId))) throw new Error("Stop and reconcile active work before deleting its proposal");
         if (!snapshot.proposals.some(proposal => proposal.groupId === event.groupId)) throw new Error("Invalid project history: unknown proposal deletion");
         snapshot = { ...snapshot, revision: snapshot.revision + 1,
           proposals: snapshot.proposals.filter(proposal => proposal.groupId !== event.groupId),
@@ -195,6 +208,26 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
 
 export function decideProjectEvent(command: ProjectCommand): ProjectEvent {
   switch (command.action.kind) {
+    case "prepare-execution-plan":
+    case "approve-execution":
+    case "request-execution":
+    case "bind-execution-thread":
+    case "bind-execution-turn":
+    case "begin-candidate-apply":
+    case "begin-execution-check":
+    case "bind-check-process":
+    case "record-execution-check":
+    case "mark-execution-unknown":
+    case "reconcile-execution-process":
+    case "finish-execution":
+    case "accept-execution-result":
+    case "begin-workspace-operation":
+    case "finish-workspace-operation":
+    case "abandon-workspace-operation":
+    case "mark-workspace-unknown":
+    case "invalidate-execution-workspace":
+    case "set-scheduling-paused":
+      return { kind: "execution-recorded", commandId: command.commandId, action: command.action };
     case "observe-knowledge":
     case "confirm-knowledge":
     case "correct-knowledge":
