@@ -11,8 +11,8 @@ function status(project: ProjectSnapshot, run: ExecutionRun): string {
   switch (run.state.kind) {
     case "reserved": return "Approved · generation not requested";
     case "generating": return "Generating candidate · not verified";
-    case "applying": return "Applying candidate · not verified";
-    case "checking": return "Checking candidate · acceptance pending";
+    case "applying": return "Piarre applying candidate · not verified";
+    case "checking": return "Piarre checking candidate · acceptance pending";
     case "unknown": return "Run state unknown · stop is not confirmed";
     case "terminal": {
       if (!current(project, run)) return "Historical result · current behavior not verified";
@@ -44,8 +44,9 @@ function planDetails(plan: ExecutionPlan): string {
 }
 
 function agentCards(project: ProjectSnapshot): string {
-  const runs = project.executionRuns.slice(-10).reverse();
-  return `<section aria-label="Known agent sessions"><h3>Agents and assignments</h3><p>Known Piarre-managed work only. Unattached sessions in other tools are not observed.</p>${runs.map(run => {
+  const active = project.executionRuns.filter(ownsExecutionLease);
+  const runs = [...active, ...project.executionRuns.filter(run => !ownsExecutionLease(run)).slice(-10).reverse()];
+  return `<section aria-label="Known agent sessions"><h3>Agents and assignments</h3><p>Active Piarre-managed work and up to 10 recent coding sessions. Unattached sessions in other tools are not observed.</p>${runs.map(run => {
     const provider = run.providerTurn;
     const session = provider.kind === "turn" ? `${provider.threadId} / ${provider.turnId}` : provider.kind === "thread" ? provider.threadId : provider.kind === "unacknowledged" ? "Request sent; acknowledgment unavailable" : "Not started";
     const observed = Math.max(run.grant.approvedAt, ...run.evidence.map(item => item.observedAt), run.workspace.kind === "integrated" || run.workspace.kind === "restored" ? run.workspace.observedAt : 0);
