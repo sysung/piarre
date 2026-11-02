@@ -271,6 +271,24 @@
           "real webview preserves unsent input on inspection updates and requires explicit save"
         ]
       }
+    },
+    {
+      "id": "context-proposal-boundaries",
+      "owner": "C01",
+      "source": {
+        "document": "docs/01_PRODUCT_PRD.md",
+        "heading": "Translation and shared understanding"
+      },
+      "requirement": "Preserve original statements and revisions, bind citations and correction targets to trusted inputs, and reject provider authority fields.",
+      "verification": {
+        "kind": "automated",
+        "check": "host-tests",
+        "tests": [
+          "submitted context preserves original wording and rejects fabricated authority",
+          "interpretations cite only supplied sources and remain inferred",
+          "correction candidates retain the host-selected target and cannot confirm it"
+        ]
+      }
     }
   ]
 }

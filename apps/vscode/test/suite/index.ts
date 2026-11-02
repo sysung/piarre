@@ -1,4 +1,5 @@
 import path from "node:path";
+import { readdirSync } from "node:fs";
 import Mocha from "mocha";
 
 export function run(): Promise<void> {
@@ -8,13 +9,9 @@ export function run(): Promise<void> {
   } else if (process.env.PIARRE_PACKAGE_TEST === "1") {
     mocha.addFile(path.resolve(__dirname, "activation.test.js"));
   } else {
-    mocha.addFile(path.resolve(__dirname, "activation.test.js"));
-    mocha.addFile(path.resolve(__dirname, "project.test.js"));
-    mocha.addFile(path.resolve(__dirname, "proposal.test.js"));
-    mocha.addFile(path.resolve(__dirname, "foundations.test.js"));
-    mocha.addFile(path.resolve(__dirname, "costs.test.js"));
-    mocha.addFile(path.resolve(__dirname, "provider-settings.test.js"));
-    mocha.addFile(path.resolve(__dirname, "workspace.test.js"));
+    for (const name of readdirSync(__dirname).filter((name) => name.endsWith(".test.js") && name !== "untrusted.test.js").sort()) {
+      mocha.addFile(path.resolve(__dirname, name));
+    }
   }
 
   return new Promise((resolve, reject) => {
