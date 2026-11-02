@@ -10,6 +10,7 @@ await build({
     "test/suite/proposal.test.ts",
     "test/suite/foundations.test.ts",
     "test/suite/costs.test.ts",
+    "test/suite/provider-settings.test.ts",
     "test/suite/untrusted.test.ts",
   ],
   format: "cjs",

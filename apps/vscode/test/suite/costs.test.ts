@@ -9,14 +9,14 @@ const api = { kind: "api", name: "Example API", inputUsdPerMillion: 2, outputUsd
 const subscription = {
   kind: "subscription", name: "Example subscription",
   samples: [
-    { model: "fixture-model", window: "five-hour", tokensUsed: 20_000, usedPercentagePoints: 1.5 },
-    { model: "fixture-model", window: "weekly", tokensUsed: 20_000, usedPercentagePoints: 0.5 },
+    { provider: "fixture-provider", plan: "Example subscription", model: "fixture-model", window: "five-hour", tokensUsed: 20_000, usedPercentagePoints: 1.5 },
+    { provider: "fixture-provider", plan: "Example subscription", model: "fixture-model", window: "weekly", tokensUsed: 20_000, usedPercentagePoints: 0.5 },
   ],
 };
 function estimate(raw: unknown, model = "fixture-model") {
   const billing = parseBillingPlan(raw);
   assert.ok(billing);
-  return estimateBudget({ billing, budget, model });
+  return estimateBudget({ billing, budget, model, provider: "fixture-provider" });
 }
 function render(billing?: unknown) {
   const draft = parseProposalOutput("Plan the change", {
@@ -77,6 +77,24 @@ suite("Plan-aware cost estimates", () => {
     assert.equal(partial.windows[0]?.kind, "calibrated");
     assert.equal(partial.windows[1]?.kind, "unknown");
   });
+  test("subscription calibration is not reused after a plan or provider change", () => {
+    const changedPlan = estimate({ ...subscription, name: "Another subscription" });
+    assert.ok(changedPlan.kind === "subscription");
+    assert.ok(changedPlan.windows.every((window) => window.kind === "unknown"));
+    const billing = parseBillingPlan(subscription);
+    assert.ok(billing);
+    const request = { budget, billing, model: "fixture-model", provider: "another-provider" };
+    const changedProvider = estimateBudget(request);
+    assert.ok(changedProvider.kind === "subscription");
+    assert.ok(changedProvider.windows.every((window) => window.kind === "unknown"));
+  });
+  test("legacy samples without billing context stay unknown instead of inheriting the selected plan", () => {
+    const result = estimate({ kind: "subscription", name: "Example subscription", samples: [
+      { model: "fixture-model", window: "five-hour", tokensUsed: 20_000, usedPercentagePoints: 1.5 },
+    ] });
+    assert.ok(result.kind === "subscription");
+    assert.ok(result.windows.every((window) => window.kind === "unknown"));
+  });
   test("invalid rates and usage samples fail closed without exposing credentials", () => {
     const invalid = [
       { ...api, inputUsdPerMillion: -1 }, { ...api, outputUsdPerMillion: Infinity },
@@ -84,6 +102,8 @@ suite("Plan-aware cost estimates", () => {
       { ...subscription, samples: [{ ...subscription.samples[0], tokensUsed: 0 }] },
       { ...subscription, samples: [{ ...subscription.samples[0], usedPercentagePoints: 101 }] },
       { ...subscription, samples: [{ ...subscription.samples[0], usedPercentagePoints: 0 }] },
+      { ...subscription, samples: [{ ...subscription.samples[0], provider: "" }] },
+      { ...subscription, samples: [{ ...subscription.samples[0], plan: "" }] },
     ];
     for (const raw of invalid) {
       assert.equal(parseBillingPlan(raw), undefined);
@@ -100,8 +120,8 @@ suite("Plan-aware cost estimates", () => {
   test("oversized budget scenarios are unknown and percentages are not capped at remaining allowance", () => {
     const billing = parseBillingPlan(subscription);
     assert.ok(billing);
-    assert.equal(estimateBudget({ billing, model: "fixture-model", budget: { maxTokens: Number.MAX_SAFE_INTEGER, maxAttempts: 2 } }).kind, "unknown");
-    const result = estimateBudget({ billing, model: "fixture-model", budget: { maxTokens: 2_000_000, maxAttempts: 1 } });
+    assert.equal(estimateBudget({ billing, model: "fixture-model", provider: "fixture-provider", budget: { maxTokens: Number.MAX_SAFE_INTEGER, maxAttempts: 2 } }).kind, "unknown");
+    const result = estimateBudget({ billing, model: "fixture-model", provider: "fixture-provider", budget: { maxTokens: 2_000_000, maxAttempts: 1 } });
     assert.ok(result.kind === "subscription");
     const window = result.windows[0];
     assert.ok(window?.kind === "calibrated");

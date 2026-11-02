@@ -44,7 +44,7 @@ Worker adapters expose observed capabilities for start, status, steering, interr
 
 Separate observed usage, provider estimates, and application estimates. Reject spending without applicable authority. Stop new scheduling at enforceable limits while preserving honest active-run state. Never promise a hard cap unsupported by the provider.
 
-Billing context distinguishes API rates from subscription allowances. A requested plan is not proof of the authenticated billing route. Metered estimates use configured input/output rates and disclose the unknown token mix, retry assumptions, and excluded costs. Subscription projections need same-model usage calibration or a provider estimate for each supported window. Current usage percentages are observations, not task forecasts or a token-to-quota conversion. Missing calibration remains unknown. No estimator may authorize spending or assume that extra usage is free.
+Billing context distinguishes API rates from subscription allowances. A requested plan is not proof of the authenticated billing route. Metered estimates use configured input/output rates and disclose the unknown token mix, retry assumptions, and excluded costs. Subscription projections need usage samples bound to the originating provider, plan, and model, or a provider estimate for each supported window. Old samples without that context remain unbound and yield unknown estimates. Open Work views refresh when provider settings change without taking focus or reopening a closed panel. Current usage percentages are observations, not task forecasts or a token-to-quota conversion. Missing calibration remains unknown. No estimator may authorize spending or assume that extra usage is free.
 
 ## Preparation, threads, and council
 

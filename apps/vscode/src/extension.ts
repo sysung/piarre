@@ -7,7 +7,6 @@ import { promisify } from "node:util";
 import { GoalInterpreter } from "./goal-interpreter.js";
 import { SqliteProjectRepository } from "./sqlite-project-repository.js";
 import { assertStorageOutsideRepository } from "./storage-boundary.js";
-import { parseProviderConfiguration } from "../../../packages/core/src/inspection.js";
 import { WorkView } from "./work-view.js";
 
 const execute = promisify(execFile);
@@ -16,9 +15,6 @@ const isTrusted = (): boolean => vscode.workspace.isTrusted;
 export function activate(context: vscode.ExtensionContext): void {
   const view = new WorkView();
   const interpreter = new GoalInterpreter();
-  const providerSettings = () => parseProviderConfiguration(
-    vscode.workspace.getConfiguration("piarre").get<unknown>("providers", []),
-  );
   const output = vscode.window.createOutputChannel("Piarre");
   let repository: SqliteProjectRepository | undefined;
   let opening: Promise<void> | undefined;
@@ -72,7 +68,7 @@ export function activate(context: vscode.ExtensionContext): void {
       const project = next.open({ repositoryUri, name: path.basename(root) });
       repository?.close();
       repository = next;
-      view.show(project, providerSettings());
+      view.show(project);
     } catch (error) {
       next.close();
       throw error;
@@ -127,7 +123,7 @@ export function activate(context: vscode.ExtensionContext): void {
           action: { kind: "rename-project", name: name.trim() },
         });
         if (result.kind === "applied" || result.kind === "duplicate")
-          view.show(result.snapshot, providerSettings());
+          view.show(result.snapshot);
         else
           await vscode.window.showWarningMessage(
             "The project changed. Run Piarre: Open and try again.",
@@ -177,7 +173,7 @@ export function activate(context: vscode.ExtensionContext): void {
             action: { kind: "propose-tasks", draft },
           });
           if (result.kind === "applied" || result.kind === "duplicate")
-            view.show(result.snapshot, providerSettings());
+            view.show(result.snapshot);
           else
             await vscode.window.showWarningMessage(
               "The project changed. Review the latest Work view and try again.",
@@ -202,7 +198,7 @@ export function activate(context: vscode.ExtensionContext): void {
       opening = undefined;
       repository?.close();
       repository = undefined;
-      view.dispose();
+      view.close();
       void requestOpen(false);
     }),
   );

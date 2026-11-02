@@ -1,12 +1,16 @@
 import type { ProposedBudget } from "./index.js";
 
 export type UsageWindow = "five-hour" | "weekly";
-export interface UsageSample {
+interface UsageMeasurement {
   readonly model: string;
   readonly window: UsageWindow;
   readonly tokensUsed: number;
   readonly usedPercentagePoints: number;
 }
+export type UsageSample = UsageMeasurement & (
+  | { readonly kind: "unbound" }
+  | { readonly kind: "bound"; readonly provider: string; readonly plan: string }
+);
 export type BillingPlan =
   | { readonly kind: "unknown" }
   | { readonly kind: "api"; readonly name: string; readonly inputUsdPerMillion: number; readonly outputUsdPerMillion: number }
@@ -18,8 +22,8 @@ function object(value: unknown): value is object {
 function keys(value: object, allowed: readonly string[]): boolean {
   return Object.keys(value).length === allowed.length && Object.keys(value).every((key) => allowed.includes(key));
 }
-function name(value: unknown): value is string {
-  return typeof value === "string" && value.trim().length > 0 && value.length <= 100;
+function name(value: unknown, maximumLength = 100): value is string {
+  return typeof value === "string" && value.trim().length > 0 && value.length <= maximumLength;
 }
 function rate(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0;
@@ -40,12 +44,20 @@ export function parseBillingPlan(value: unknown): BillingPlan | undefined {
   const samples: UsageSample[] = [];
   const rawSamples: readonly unknown[] = value.samples;
   for (const sample of rawSamples) {
-    if (!object(sample) || !keys(sample, ["model", "window", "tokensUsed", "usedPercentagePoints"]) ||
+    if (!object(sample) ||
         !("model" in sample) || !("window" in sample) || !("tokensUsed" in sample) || !("usedPercentagePoints" in sample) ||
-        !name(sample.model) || (sample.window !== "five-hour" && sample.window !== "weekly") ||
+        !name(sample.model, 128) || (sample.window !== "five-hour" && sample.window !== "weekly") ||
         typeof sample.tokensUsed !== "number" || !Number.isSafeInteger(sample.tokensUsed) || sample.tokensUsed <= 0 ||
         !rate(sample.usedPercentagePoints) || sample.usedPercentagePoints <= 0 || sample.usedPercentagePoints > 100) return undefined;
-    samples.push({ model: sample.model, window: sample.window, tokensUsed: sample.tokensUsed, usedPercentagePoints: sample.usedPercentagePoints });
+    const measurement: UsageMeasurement = { model: sample.model, window: sample.window,
+      tokensUsed: sample.tokensUsed, usedPercentagePoints: sample.usedPercentagePoints };
+    const measurementKeys = ["model", "window", "tokensUsed", "usedPercentagePoints"];
+    if (keys(sample, measurementKeys)) {
+      samples.push({ ...measurement, kind: "unbound" });
+    } else if (keys(sample, [...measurementKeys, "provider", "plan"]) &&
+        "provider" in sample && "plan" in sample && name(sample.provider, 128) && name(sample.plan)) {
+      samples.push({ ...measurement, kind: "bound", provider: sample.provider, plan: sample.plan });
+    } else return undefined;
   }
   return { kind: "subscription", name: value.name, samples };
 }
@@ -62,6 +74,7 @@ export function estimateBudget(input: {
   readonly budget: Pick<ProposedBudget, "maxTokens" | "maxAttempts">;
   readonly billing: BillingPlan;
   readonly model: string;
+  readonly provider: string;
 }): BudgetEstimate {
   const tokens = input.budget.maxTokens * input.budget.maxAttempts;
   if (!Number.isSafeInteger(tokens) || tokens <= 0) return { kind: "unknown", reason: "Token budget is too large to estimate safely." };
@@ -75,7 +88,9 @@ export function estimateBudget(input: {
   }
   const windows: UsageWindow[] = ["five-hour", "weekly"];
   return { kind: "subscription", plan: billing.name, tokens, windows: windows.map((window) => {
-    const percentages = billing.samples.filter((sample) => sample.window === window && sample.model === input.model)
+    const percentages = billing.samples.filter((sample) => sample.kind === "bound" &&
+        sample.provider === input.provider && sample.plan === billing.name &&
+        sample.window === window && sample.model === input.model)
       .map((sample) => tokens / sample.tokensUsed * sample.usedPercentagePoints);
     if (percentages.length === 0 || percentages.some((percentage) => !Number.isFinite(percentage))) return { kind: "unknown", window };
     return { kind: "calibrated", window, minimumPercent: percentages.reduce((minimum, value) => Math.min(minimum, value), Infinity), maximumPercent: percentages.reduce((maximum, value) => Math.max(maximum, value), 0), sampleCount: percentages.length };

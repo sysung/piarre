@@ -248,7 +248,10 @@
           "missing billing or calibration stays unknown instead of free",
           "calibration from another model or window is not reused",
           "invalid rates and usage samples fail closed without exposing credentials",
-          "plan names are escaped and pricing never enables a provider"
+          "plan names are escaped and pricing never enables a provider",
+          "subscription calibration is not reused after a plan or provider change",
+          "legacy samples without billing context stay unknown instead of inheriting the selected plan",
+          "provider edits refresh existing estimates without moving focus or reopening closed views"
         ]
       }
     }

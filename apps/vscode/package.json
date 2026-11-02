@@ -144,7 +144,7 @@
                             "model": {
                               "type": "string",
                               "minLength": 1,
-                              "maxLength": 100
+                              "maxLength": 128
                             },
                             "window": {
                               "enum": [
@@ -160,9 +160,46 @@
                               "type": "number",
                               "exclusiveMinimum": 0,
                               "maximum": 100
+                            },
+                            "provider": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 128,
+                              "description": "Provider identifier when the sample was recorded. Must match the selected provider."
+                            },
+                            "plan": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 100,
+                              "description": "Subscription plan name when recorded. Must match billing.name."
                             }
-                          }
-                        }
+                          },
+                          "oneOf": [
+                            {
+                              "required": [
+                                "provider",
+                                "plan"
+                              ]
+                            },
+                            {
+                              "not": {
+                                "anyOf": [
+                                  {
+                                    "required": [
+                                      "provider"
+                                    ]
+                                  },
+                                  {
+                                    "required": [
+                                      "plan"
+                                    ]
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        "description": "Measurements are bound to their original provider, plan and model. Legacy samples without provider/plan remain unbound and cannot estimate a percentage."
                       }
                     }
                   }
