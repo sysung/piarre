@@ -1,6 +1,8 @@
 export { parseProposalOutput, parseProjectEvent, validateProjectCommand } from "./contracts.js";
 export { parseSubmittedStatement, parseInterpretationOutput, parseKnowledgeCorrection } from "./context.js";
 export type { SubmittedStatement, KnowledgeSource, SourcedText, Interpretation, KnowledgeVersion, KnowledgeEntry, KnowledgeCorrection } from "./context.js";
+import { applyConversationEvent, conversationEvent, type ConversationAction, type ConversationEvent, type ConversationTurn } from "./conversation.js";
+export type { ConversationAction, ConversationEvent, ConversationTurn, ConversationSource } from "./conversation.js";
 
 export interface ProjectSnapshot {
   readonly projectId: string;
@@ -9,6 +11,7 @@ export interface ProjectSnapshot {
   readonly revision: number;
   readonly proposals: readonly RecordedProposalGroup[];
   readonly tasks: readonly ProposedTask[];
+  readonly conversation: readonly ConversationTurn[];
 }
 
 export interface ProposalRequirement {
@@ -72,13 +75,13 @@ export interface ProjectCommand {
   readonly commandId: string;
   readonly projectId: string;
   readonly expectedProjectRevision: number;
-  readonly action:
+  readonly action: ConversationAction
     | { readonly kind: "rename-project"; readonly name: string }
     | { readonly kind: "delete-proposal"; readonly groupId: string }
     | { readonly kind: "propose-tasks"; readonly draft: ProposalDraft };
 }
 
-export type ProjectEvent =
+export type ProjectEvent = ConversationEvent
   | {
       readonly kind: "project-created";
       readonly projectId: string;
@@ -114,11 +117,17 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
         revision: 1,
         proposals: [],
         tasks: [],
+        conversation: [],
       };
       continue;
     }
     if (!snapshot) throw new Error("Invalid project history: missing creation");
     switch (event.kind) {
+      case "conversation-started":
+      case "conversation-replied":
+      case "conversation-ended":
+        snapshot = applyConversationEvent(snapshot, event);
+        break;
       case "project-renamed":
         snapshot = {
           ...snapshot,
@@ -174,6 +183,10 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
 
 export function decideProjectEvent(command: ProjectCommand): ProjectEvent {
   switch (command.action.kind) {
+    case "begin-conversation":
+    case "record-conversation-reply":
+    case "end-conversation":
+      return conversationEvent(command.action);
     case "rename-project":
       return { kind: "project-renamed", name: command.action.name };
     case "delete-proposal":
