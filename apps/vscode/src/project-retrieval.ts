@@ -202,3 +202,15 @@ export class ProjectRetrieval {
     this.database.close();
   }
 }
+
+export function lookupProjectSources(options: ConstructorParameters<typeof ProjectRetrieval>[0] & { readonly query: string }): RetrievalResult {
+  let index: ProjectRetrieval | undefined;
+  try {
+    index = new ProjectRetrieval(options);
+    index.rebuild();
+    return index.search({ projectId: options.projectId, query: options.query });
+  } catch {
+    return { kind: "error", reason: "Project lookup could not build or read current sources. No context is available from this attempt.", hits: [],
+      coverage: { files: 0, records: 0, issues: ["Current index unavailable; earlier results cannot be reused."], limitation } };
+  } finally { index?.dispose(); }
+}

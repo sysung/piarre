@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-import { ProjectRetrieval, type RetrievalResult } from "./project-retrieval.js";
+import { lookupProjectSources, type RetrievalResult } from "./project-retrieval.js";
 import * as vscode from "vscode";
 import { randomUUID } from "node:crypto";
 import { currentKnowledge, knowledgeConflicts, type KnowledgeAction, type ProjectSnapshot, type RecordedKnowledge } from "../../../packages/core/src/index.js";
@@ -29,13 +29,10 @@ export class KnowledgeController {
       validateInput: value => value.trim() && value.length <= 1000 ? undefined : "Enter 1 to 1,000 characters." });
     if (query === undefined || !this.isCurrent()) return;
     const project = this.repository.read();
-    const index = new ProjectRetrieval({ projectId: project.projectId, root: fileURLToPath(project.repositoryUri),
+    const result = lookupProjectSources({ query, projectId: project.projectId, root: fileURLToPath(project.repositoryUri),
       readRecords: () => currentKnowledge(this.repository.read()).map(entry => ({ projectId: entry.projectId, recordId: entry.knowledgeId,
         revision: entry.recordedAtRevision, text: `${entry.topic}\n${entry.content.text}`, category: entry.category, standing: entry.standing.kind })) });
-    try {
-      index.rebuild();
-      this.publishLookup?.(project.projectId, index.search({ projectId: project.projectId, query }));
-    } finally { index.dispose(); }
+    this.publishLookup?.(project.projectId, result);
   }
 
   private apply(project: ProjectSnapshot, action: KnowledgeAction): void {

@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, unlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { ProjectRetrieval, type RetrievalRecord } from "../../src/project-retrieval.js";
+import { ProjectRetrieval, lookupProjectSources, type RetrievalRecord } from "../../src/project-retrieval.js";
 
 suite("Grounded project retrieval", () => {
   let root: string;
@@ -156,4 +156,11 @@ suite("Grounded project retrieval", () => {
     assert.equal(search("refund").kind, "error");
     assert.throws(() => index.rebuild(), /closed/);
   });
+  test("a failed new lookup replaces old context with an explicit empty error", () => {
+    const result = lookupProjectSources({ projectId: "project", root: "/piarre-definitely-missing-root", query: "refund" });
+    assert.equal(result.kind, "error");
+    assert.deepEqual(result.hits, []);
+    assert.match(result.coverage.issues.join(" "), /earlier results cannot be reused/);
+  });
+
 });
