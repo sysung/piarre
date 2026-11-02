@@ -36,7 +36,45 @@
         "title": "Piarre: Propose Task",
         "enablement": "isWorkspaceTrusted"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Piarre",
+      "properties": {
+        "piarre.providers": {
+          "type": "array",
+          "default": [],
+          "description": "Requested provider identifiers only. Connections and model calls are not implemented; these settings do not authorize spending or data sharing. Do not enter credentials.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "role",
+              "provider",
+              "model"
+            ],
+            "properties": {
+              "role": {
+                "type": "string",
+                "enum": [
+                  "conversation",
+                  "coding",
+                  "speech-input",
+                  "speech-output"
+                ]
+              },
+              "provider": {
+                "type": "string",
+                "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._/-]{0,127}$"
+              },
+              "model": {
+                "type": "string",
+                "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._/-]{0,127}$"
+              }
+            }
+          }
+        }
+      }
+    }
   },
   "capabilities": {
     "untrustedWorkspaces": {

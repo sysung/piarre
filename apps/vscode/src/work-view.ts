@@ -1,7 +1,12 @@
 import * as vscode from "vscode";
+import { inspectProject, type ProjectInspection, type ProviderConfiguration } from "../../../packages/core/src/inspection.js";
 import type { ProjectSnapshot } from "../../../packages/core/src/index.js";
 
-export function renderWorkView(project: ProjectSnapshot): string {
+export function renderWorkView(
+  project: ProjectSnapshot,
+  configuration?: ProviderConfiguration,
+): string {
+  const inspection = inspectProject(project, configuration);
   const escape = (value: string): string =>
     value.replace(/[&<>"']/g, (character) => {
       switch (character) {
@@ -35,12 +40,26 @@ export function renderWorkView(project: ProjectSnapshot): string {
     })
     .join("");
   const work = proposals || "<p>Your project is ready. No tasks yet.</p>";
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{font-family:var(--vscode-font-family);padding:24px;color:var(--vscode-foreground)}dt{margin-top:16px;color:var(--vscode-descriptionForeground)}dd{margin:4px 0;overflow-wrap:anywhere}section{margin-top:24px;border-top:1px solid var(--vscode-panel-border)}article{margin:16px 0;padding:16px;background:var(--vscode-editor-background)}</style></head><body><h1>Work</h1><h2>${escape(project.name)}</h2>${work}<dl><dt>Repository</dt><dd>${escape(project.repositoryUri)}</dd><dt>Project ID</dt><dd>${escape(project.projectId)}</dd><dt>Revision</dt><dd>${String(project.revision)}</dd></dl><p>Use Piarre commands in the Command Palette to manage this project.</p></body></html>`;
+  const basis = inspection.basis.length === 0
+    ? "<p>No proposal sources recorded yet.</p>"
+    : `<ul>${inspection.basis.map((entry) => `<li><strong>${entry.kind === "submitted-goal" ? "Submitted goal" : "Proposed task"}</strong>: ${escape(entry.text)}<br>Record ${escape(entry.reference.recordId)}, recorded at project revision ${String(entry.reference.revision)}. Source: deterministic draft. Unapproved, not independently verified.</li>`).join("")}</ul>`;
+  const providers = `<ul>${inspection.providers.map((item) => `<li>${escape(item.role)}: ${item.status === "invalid-configuration" ? "Invalid configuration. No connection enabled." : "selection" in item ? `${escape(item.selection.provider)} / ${escape(item.selection.model)} requested, but unsupported and not connected.` : "Not configured."}</li>`).join("")}</ul>`;
+  const policyLabels: Readonly<Record<ProjectInspection["policy"][keyof ProjectInspection["policy"]], string>> = {
+    "automatic-capture-disabled-policy-unresolved": "Automatic memory capture is disabled until its policy is agreed.",
+    "explicit-approval-required-not-implemented": "Changing confirmed memory requires approval; that operation is not implemented.",
+    "per-operation-approval-required-not-implemented": "Paid operations require per-operation approval; no paid adapter is connected.",
+    "local-only-no-external-adapter": "Project content stays local in this version. External disclosure is not enabled.",
+    "unsupported": "Coding execution, verification and acceptance are not implemented.",
+  };
+  const policy = Object.values(inspection.policy).map((state) => `<li>${escape(policyLabels[state])}</li>`).join("");
+  const permissions = `<details><summary>Basis and permissions</summary><h3>Recorded basis</h3>${basis}<h3>Current boundaries</h3><p>Only project renaming and unapproved proposals are supported. A proposed budget is not permission to spend.</p><ul>${policy}</ul><h3>Providers</h3>${providers}<p>Drafting uses the built-in deterministic generator, not a conversational model. Provider selection alone never connects a model or grants permission.</p></details>`;
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{font-family:var(--vscode-font-family);padding:24px;color:var(--vscode-foreground)}dt{margin-top:16px;color:var(--vscode-descriptionForeground)}dd{margin:4px 0;overflow-wrap:anywhere}section{margin-top:24px;border-top:1px solid var(--vscode-panel-border)}article{margin:16px 0;padding:16px;background:var(--vscode-editor-background)}</style></head><body><h1>Work</h1><h2>${escape(project.name)}</h2>${work}${permissions}<dl><dt>Repository</dt><dd>${escape(project.repositoryUri)}</dd><dt>Project ID</dt><dd>${escape(project.projectId)}</dd><dt>Revision</dt><dd>${String(project.revision)}</dd></dl><p>Use Piarre commands in the Command Palette to manage this project.</p></body></html>`;
 }
 
 export class WorkView {
   private panel: vscode.WebviewPanel | undefined;
-  show(project: ProjectSnapshot): void {
+  show(project: ProjectSnapshot, configuration?: ProviderConfiguration): void {
     if (!this.panel) {
       this.panel = vscode.window.createWebviewPanel(
         "piarre.work",
@@ -52,7 +71,7 @@ export class WorkView {
         this.panel = undefined;
       });
     }
-    this.panel.webview.html = renderWorkView(project);
+    this.panel.webview.html = renderWorkView(project, configuration);
     this.panel.reveal();
   }
   dispose(): void {

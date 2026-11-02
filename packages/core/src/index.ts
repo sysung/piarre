@@ -1,9 +1,11 @@
+export { parseProposalOutput, parseProjectEvent, validateProjectCommand } from "./contracts.js";
+
 export interface ProjectSnapshot {
   readonly projectId: string;
   readonly repositoryUri: string;
   readonly name: string;
   readonly revision: number;
-  readonly proposals: readonly ProposalGroup[];
+  readonly proposals: readonly RecordedProposalGroup[];
   readonly tasks: readonly ProposedTask[];
 }
 
@@ -50,6 +52,10 @@ export interface ProposalGroup {
   readonly goal: string;
   readonly source: "deterministic-draft";
   readonly taskIds: readonly string[];
+}
+
+export interface RecordedProposalGroup extends ProposalGroup {
+  readonly recordedAtRevision: number;
 }
 
 export interface ProposedTask extends Omit<ProposalTaskDraft, "key" | "dependsOn"> {
@@ -140,7 +146,7 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
         snapshot = {
           ...snapshot,
           revision: snapshot.revision + 1,
-          proposals: [...snapshot.proposals, event.group],
+          proposals: [...snapshot.proposals, { ...event.group, recordedAtRevision: snapshot.revision + 1 }],
           tasks: [...snapshot.tasks, ...event.tasks],
         };
         break;

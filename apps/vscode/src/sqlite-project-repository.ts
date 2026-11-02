@@ -5,147 +5,10 @@ import {
   replay,
   type ProjectEvent,
   type ProjectSnapshot,
-  type ProjectCommand,
   type CommandResult,
-  type ProposedTask,
+  parseProjectEvent,
+  validateProjectCommand,
 } from "../../../packages/core/src/index.js";
-
-function isRecord(value: unknown): value is Record<PropertyKey, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function readString(value: Record<PropertyKey, unknown>, key: string): string {
-  if (!(key in value) || typeof value[key] !== "string" || !value[key])
-    throw new Error("Invalid project history: malformed event");
-  return value[key];
-}
-
-function readStrings(
-  value: Record<PropertyKey, unknown>,
-  key: string,
-): readonly string[] {
-  if (!(key in value) || !Array.isArray(value[key]))
-    throw new Error("Invalid project history: malformed event");
-  return value[key].map((item) => {
-    if (typeof item !== "string" || !item)
-      throw new Error("Invalid project history: malformed event");
-    return item;
-  });
-}
-
-function parseStoredRequirement(value: unknown) {
-  if (!isRecord(value))
-    throw new Error("Invalid project history: malformed event");
-  return { key: readString(value, "key"), text: readString(value, "text") };
-}
-
-function parseStoredCheck(value: unknown) {
-  if (!isRecord(value))
-    throw new Error("Invalid project history: malformed event");
-  return {
-    key: readString(value, "key"),
-    requirementKeys: readStrings(value, "requirementKeys"),
-    description: readString(value, "description"),
-  };
-}
-
-function parseStoredTask(value: unknown): ProposedTask {
-  if (
-    !isRecord(value) ||
-    !("requirements" in value) ||
-    !Array.isArray(value.requirements) ||
-    !("checks" in value) ||
-    !Array.isArray(value.checks) ||
-    !("proposedScope" in value) ||
-    !isRecord(value.proposedScope) ||
-    !("proposedBudget" in value) ||
-    !isRecord(value.proposedBudget) ||
-    !("planVersion" in value) ||
-    value.planVersion !== 1 ||
-    !("state" in value) ||
-    !isRecord(value.state) ||
-    !("kind" in value.state) ||
-    value.state.kind !== "unapproved"
-  )
-    throw new Error("Invalid project history: malformed event");
-  const { proposedBudget } = value;
-  const integer = (key: string): number => {
-    if (
-      !(key in proposedBudget) ||
-      typeof proposedBudget[key] !== "number" ||
-      !Number.isSafeInteger(proposedBudget[key]) ||
-      proposedBudget[key] < 1
-    )
-      throw new Error("Invalid project history: malformed event");
-    return proposedBudget[key];
-  };
-  return {
-    taskId: readString(value, "taskId"),
-    groupId: readString(value, "groupId"),
-    planVersion: 1,
-    state: { kind: "unapproved" },
-    title: readString(value, "title"),
-    requirements: value.requirements.map(parseStoredRequirement),
-    proposedScope: {
-      included: readStrings(value.proposedScope, "included"),
-      excluded: readStrings(value.proposedScope, "excluded"),
-    },
-    checks: value.checks.map(parseStoredCheck),
-    proposedBudget: {
-      maxAttempts: integer("maxAttempts"),
-      maxElapsedMinutes: integer("maxElapsedMinutes"),
-      maxTokens: integer("maxTokens"),
-    },
-    dependsOn: readStrings(value, "dependsOn"),
-  };
-}
-
-function parseEvent(value: unknown): ProjectEvent {
-  if (
-    !isRecord(value) ||
-    !("kind" in value) ||
-    typeof value.kind !== "string"
-  )
-    throw new Error("Invalid project history: malformed event");
-  if (value.kind === "project-renamed") {
-    const name = readString(value, "name");
-    return { kind: value.kind, name };
-  }
-  if (
-    value.kind === "project-created" &&
-    "projectId" in value &&
-    typeof value.projectId === "string" &&
-    "repositoryUri" in value &&
-    typeof value.repositoryUri === "string" &&
-    "name" in value &&
-    typeof value.name === "string" &&
-    value.name.trim()
-  )
-    return {
-      kind: value.kind,
-      projectId: value.projectId,
-      repositoryUri: value.repositoryUri,
-      name: value.name,
-    };
-  if (
-    value.kind === "proposal-created" &&
-    "group" in value &&
-    isRecord(value.group) &&
-    "tasks" in value &&
-    Array.isArray(value.tasks)
-  )
-    return {
-      kind: value.kind,
-      group: {
-        groupId: readString(value.group, "groupId"),
-        goal: readString(value.group, "goal"),
-        source: "deterministic-draft",
-        taskIds: readStrings(value.group, "taskIds"),
-      },
-      tasks: value.tasks.map(parseStoredTask),
-    };
-  throw new Error("Invalid project history: unknown event");
-}
 
 export class SqliteProjectRepository {
   private readonly database: DatabaseSync;
@@ -206,7 +69,7 @@ export class SqliteProjectRepository {
       )
         throw new Error("Invalid project history: revision or schema");
       try {
-        return parseEvent(JSON.parse(row.payload));
+        return parseProjectEvent(JSON.parse(row.payload));
       } catch {
         throw new Error("Invalid project history: malformed event");
       }
@@ -214,7 +77,8 @@ export class SqliteProjectRepository {
     return replay(events);
   }
 
-  dispatch(command: ProjectCommand): CommandResult {
+  dispatch(inputCommand: unknown): CommandResult {
+    const command = validateProjectCommand(inputCommand);
     if (
       !command.commandId ||
       !Number.isSafeInteger(command.expectedProjectRevision) ||
