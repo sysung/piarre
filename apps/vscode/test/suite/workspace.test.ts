@@ -6,7 +6,7 @@ import * as vscode from "vscode";
 import { SqliteProjectRepository } from "../../src/sqlite-project-repository.js";
 import { WorkspaceDraft, parseComposerMessage } from "../../src/workspace-draft.js";
 import { GoalInterpreter } from "../../src/goal-interpreter.js";
-import { WorkView } from "../../src/work-view.js";
+import { WorkView, renderWorkView } from "../../src/work-view.js";
 import type { ProposalDraft } from "../../../../packages/core/src/index.js";
 
 suite("Typed workspace previews", () => {
@@ -108,6 +108,53 @@ suite("Typed workspace previews", () => {
     assert.equal(repository.read().proposals.length, 0);
   });
 
+  test("saved goal cards are newest first without changing project history", async () => {
+    const session = controller();
+    for (const { requestId, goal } of [{requestId: "old", goal: "Older goal"}, {requestId: "new", goal: "Newer goal"}]) {
+      await session.receive({ kind: "preview", requestId, goal });
+      await session.receive({ kind: "save", requestId });
+      session.update(repository.read());
+    }
+    const project = repository.read();
+    const original = project.proposals.map(item => item.groupId);
+    const html = renderWorkView(project);
+    assert.ok(html.indexOf('data-open-goal="' + String(project.proposals[1]?.groupId)) <
+      html.indexOf('data-open-goal="' + String(project.proposals[0]?.groupId)));
+    assert.deepEqual(project.proposals.map(item => item.groupId), original);
+  });
+
+  test("proposal panes validate identity, reuse the panel and close with Work", async () => {
+    const session = controller();
+    for (const goal of ["First saved goal", "Second saved goal"]) {
+      await session.receive({ kind: "preview", requestId: goal, goal });
+      await session.receive({ kind: "save", requestId: goal });
+    }
+    const project = repository.read();
+    const first = project.proposals[0]; const second = project.proposals[1];
+    assert.ok(first); assert.ok(second);
+    const panels: vscode.WebviewPanel[] = [];
+    const view = new WorkView((...args) => { const panel = vscode.window.createWebviewPanel(...args); panels.push(panel); return panel; });
+    try {
+      view.show(project);
+      view.openProposal("foreign");
+      assert.equal(panels.length, 1);
+      view.openProposal(first.groupId);
+      const detail = panels[1]; assert.ok(detail);
+      assert.ok(detail.webview.html.includes("First saved goal"));
+      assert.ok(!detail.webview.html.includes("Second saved goal"));
+      const html = detail.webview.html;
+      view.update(project);
+      assert.equal(detail.webview.html, html, "Unrelated refresh must preserve detail document");
+      view.openProposal(second.groupId);
+      assert.equal(panels.length, 2);
+      assert.ok(detail.webview.html.includes("Second saved goal"));
+      let closed = false;
+      detail.onDidDispose(() => { closed = true; });
+      panels[0]?.dispose();
+      assert.equal(closed, true, "Manual Work tab closure must close its details");
+    } finally { view.dispose(); }
+  });
+
   test("IPC rejects empty, oversized, and fabricated messages", () => {
     for (const value of [null, [], {}, { kind: "preview", requestId: "x", goal: " " },
       { kind: "preview", requestId: "x", goal: "x".repeat(10001) },
@@ -182,6 +229,12 @@ window.addEventListener('message', ({data}) => { if (data.kind === 'test-checked
     const savedRequest = requestId;
     save.click();
     await waitFor(() => status.textContent.includes('Proposal saved'));
+    api.postMessage({kind: 'test-refresh'});
+    await waitFor(() => document.querySelector('[data-open-goal]'));
+    const card = document.querySelector('[data-open-goal]');
+    if (!card || card.querySelector('details')) throw new Error('Goal overview must contain compact cards');
+    card.click();
+    await waitFor(() => document.getElementById('browse-status').textContent.includes('Proposal opened'));
     goal.value = 'A second idea';
     goal.dispatchEvent(new Event('input'));
     document.getElementById('composer').requestSubmit();

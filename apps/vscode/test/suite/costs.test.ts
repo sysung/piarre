@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { estimateBudget, parseBillingPlan } from "../../../../packages/core/src/costs.js";
 import { parseProviderConfiguration } from "../../../../packages/core/src/inspection.js";
 import { decideProjectEvent, parseProposalOutput, replay } from "../../../../packages/core/src/index.js";
-import { renderWorkView } from "../../src/work-view.js";
+import { renderInspection } from "../../src/work-view.js";
 
 const budget = { maxTokens: 20_000, maxAttempts: 2 };
 const api = { kind: "api", name: "Example API", inputUsdPerMillion: 2, outputUsdPerMillion: 8 };
@@ -30,7 +30,7 @@ function render(billing?: unknown) {
       action: { kind: "propose-tasks", draft } }),
   ]);
   const selection = { role: "coding", provider: "fixture-provider", model: "fixture-model", ...(billing === undefined ? {} : { billing }) };
-  return renderWorkView(project, parseProviderConfiguration([selection]));
+  return renderInspection(project, parseProviderConfiguration([selection]), project.proposals[0]?.groupId);
 }
 suite("Plan-aware cost estimates", () => {
   test("API budget scenarios use configured rates and all proposed attempts", () => {

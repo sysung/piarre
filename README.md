@@ -34,3 +34,5 @@ To launch the extension manually, open this repository in VS Code, select **Run 
 Open and trust a local Git repository in the development host. Piarre shows its Work tab with the project name, ID, and revision. **Piarre: Rename Project** changes the name. Reloading the window restores the project from its event log. Project data is stored in VS Code extension storage, outside the repository.
 
 The Work panel also accepts a typed goal. **Review goal** prepares a deterministic draft without saving it. **Save proposal** records it; no coding work starts. Editing or discarding a preview invalidates it. Unsent text stays in the panel and is lost when the panel closes.
+
+Saved goals appear newest first as compact cards. Choose **Open proposal** to inspect one in a reusable VS Code pane beside Work. Opening a saved proposal does not save, approve, or run anything.

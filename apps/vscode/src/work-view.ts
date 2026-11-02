@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import * as vscode from "vscode";
 import { GoalInterpreter } from "./goal-interpreter.js";
 import { WorkspaceDraft, type DraftOperations } from "./workspace-draft.js";
@@ -6,9 +7,10 @@ import { estimateBudget, type BudgetEstimate } from "../../../packages/core/src/
 import { inspectProject, parseProviderConfiguration, type ProjectInspection, type ProviderConfiguration } from "../../../packages/core/src/inspection.js";
 import type { ProjectSnapshot } from "../../../packages/core/src/index.js";
 
-function renderInspection(
+export function renderInspection(
   project: ProjectSnapshot,
   configuration?: ProviderConfiguration,
+  selectedGroupId?: string,
 ): string {
   const inspection = inspectProject(project, configuration);
   const coding = inspection.providers.find((provider) => provider.role === "coding");
@@ -44,8 +46,10 @@ function renderInspection(
     const windows = estimate.windows.map((window) => `<li>${window.window === "five-hour" ? "Five-hour allowance" : "Weekly allowance"}: ${window.kind === "unknown" ? "Unknown. No matching usage samples." : `${escape(range(window.minimumPercent, window.maximumPercent, percent))} estimated consumption.`}</li>`).join("");
     return `<p>Subscription estimate: ${escape(estimate.plan)}. Extra usage can incur charges.</p><ul>${windows}</ul><details><summary>Estimate basis</summary><p>Uses supplied samples for the same provider, plan, and model. Account usage has not been checked. Context and effort can change the estimate. Percentages describe task usage, not your remaining allowance.</p><p>${escape(assumptions)}</p></details>`;
   };
-  const proposals = project.proposals
+  const proposals = [...project.proposals].sort((a, b) => b.recordedAtRevision - a.recordedAtRevision)
+    .filter(proposal => selectedGroupId === undefined || proposal.groupId === selectedGroupId)
     .map((proposal) => {
+      if (selectedGroupId === undefined) return `<button class="goal-card" data-open-goal="${escape(proposal.groupId)}"><span class="goal-title">${escape(proposal.goal)}</span><span class="goal-meta">Unapproved · ${String(proposal.taskIds.length)} task(s) · Saved at revision ${String(proposal.recordedAtRevision)}</span><span class="goal-action">Open proposal →</span></button>`;
       const tasks = proposal.taskIds
         .map((taskId) => project.tasks.find((task) => task.taskId === taskId))
         .filter((task) => task !== undefined)
@@ -59,6 +63,7 @@ function renderInspection(
       return `<section><h3>${escape(proposal.goal)}</h3><p>Built-in draft. Review its scope before approval.</p>${tasks}</section>`;
     })
     .join("");
+  if (selectedGroupId !== undefined) return `${proposals}<p>A proposed budget is not permission to spend. Connection unavailable: no provider is connected.</p>`;
   const work = proposals || "<p>No task proposals yet.</p>";
   const basis = inspection.basis.length === 0
     ? "<p>No proposal sources recorded yet.</p>"
@@ -83,6 +88,7 @@ export function renderWorkView(project: ProjectSnapshot, configuration?: Provide
 
 export class WorkView {
   private current: { readonly panel: vscode.WebviewPanel; readonly project: ProjectSnapshot; readonly draft: WorkspaceDraft } | undefined;
+  private detail: { readonly panel: vscode.WebviewPanel; readonly groupId: string; readonly html?: string } | undefined;
   private readonly settingsChanged: vscode.Disposable;
 
   constructor(private readonly createPanel: typeof vscode.window.createWebviewPanel = vscode.window.createWebviewPanel,
@@ -105,13 +111,17 @@ export class WorkView {
       this.current = { panel, project, draft };
       panel.onDidDispose(() => {
         draft.dispose();
-        if (this.current?.panel === panel) this.current = undefined;
+        if (this.current?.panel === panel) { this.current = undefined; this.closeDetail(); }
       });
       panel.webview.onDidReceiveMessage((message: unknown) => {
         if (this.current?.panel !== panel) return;
         if (typeof message === "object" && message !== null && "kind" in message && message.kind === "ready") {
           this.refresh();
           this.publishDraft();
+          return;
+        }
+        if (typeof message === "object" && message !== null && "kind" in message && message.kind === "open-proposal") {
+          if (Object.keys(message).length === 2 && "groupId" in message && typeof message.groupId === "string" && message.groupId.length <= 2048) this.openProposal(message.groupId);
           return;
         }
         void draft.receive(message);
@@ -125,9 +135,54 @@ export class WorkView {
 
   update(project: ProjectSnapshot): void {
     if (!this.current) return;
+    if (this.current.project.projectId !== project.projectId) this.closeDetail();
     this.current.draft.update(project);
     this.current = { ...this.current, project };
     this.refresh();
+  }
+
+  openProposal(groupId: string): void {
+    if (!this.current?.project.proposals.some(proposal => proposal.groupId === groupId)) return;
+    if (!this.detail) {
+      const panel = this.createPanel("piarre.proposal", "Proposal details", vscode.ViewColumn.Beside,
+        { enableScripts: true, localResourceRoots: [] });
+      this.detail = { panel, groupId };
+      panel.onDidDispose(() => { if (this.detail?.panel === panel) { this.detail = undefined; void this.current?.panel.webview.postMessage({ kind: "proposal-opened" }); } });
+    } else this.detail = { ...this.detail, groupId };
+    this.refreshDetail();
+    this.detail.panel.reveal();
+    void this.current.panel.webview.postMessage({ kind: "proposal-opened", groupId });
+  }
+
+  private refreshDetail(): void {
+    if (!this.detail || !this.current) return;
+    if (!this.current.project.proposals.some(proposal => proposal.groupId === this.detail?.groupId)) {
+      this.closeDetail(); return;
+    }
+    const html = renderInspection(this.current.project, this.configuration(), this.detail.groupId);
+    if (this.detail.html === html) return;
+    this.detail = { ...this.detail, html };
+    const nonce = randomUUID();
+    const groupKey = JSON.stringify(this.detail.groupId).replaceAll("<", "\\u003c");
+    this.detail.panel.webview.html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'"><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{font-family:var(--vscode-font-family);line-height:1.6;padding:24px;color:var(--vscode-foreground);background:var(--vscode-editor-background);overflow-wrap:anywhere}section{max-width:760px;margin:auto;animation:arrive 140ms ease-out}details{margin:16px 0;border:1px solid var(--vscode-panel-border);padding:16px}summary{cursor:pointer;min-height:32px}:focus-visible{outline:2px solid var(--vscode-focusBorder);outline-offset:3px}@keyframes arrive{from{opacity:.7}to{opacity:1}}@media(prefers-reduced-motion:reduce){section{animation:none}}</style></head><body><h1>Proposal details</h1><p>Read only · Not approved to run</p>${html}<script nonce="${nonce}">
+const api = acquireVsCodeApi();
+const groupId = ${groupKey};
+const disclosures = [...document.querySelectorAll('details')];
+const state = api.getState();
+if (state && state.groupId === groupId) {
+  disclosures.forEach((item, index) => { item.open = state.open.includes(index); });
+  requestAnimationFrame(() => { window.scrollTo(0, state.scroll); if (state.focus >= 0) disclosures[state.focus]?.querySelector('summary')?.focus({preventScroll:true}); });
+}
+function remember() { api.setState({groupId, open: disclosures.flatMap((item,index) => item.open ? [index] : []), scroll: window.scrollY, focus: disclosures.findIndex(item => item.querySelector('summary') === document.activeElement)}); }
+disclosures.forEach(item => item.addEventListener('toggle', remember));
+window.addEventListener('scroll', remember, {passive:true});
+document.addEventListener('focusin', remember);
+</script></body></html>`;
+  }
+
+  private closeDetail(): void {
+    const detail = this.detail; this.detail = undefined; detail?.panel.dispose();
+    if (detail) void this.current?.panel.webview.postMessage({ kind: "proposal-opened" });
   }
 
   private configuration(): ProviderConfiguration {
@@ -136,7 +191,8 @@ export class WorkView {
 
   private refresh(): void {
     if (!this.current) return;
-    void this.current.panel.webview.postMessage({ kind: "inspection", html: renderInspection(this.current.project, this.configuration()) });
+    this.refreshDetail();
+    void this.current.panel.webview.postMessage({ kind: "inspection", selectedGroupId: this.detail?.groupId, html: renderInspection(this.current.project, this.configuration()) });
   }
 
   private publishDraft(): void {
@@ -144,6 +200,7 @@ export class WorkView {
   }
 
   close(): void {
+    this.closeDetail();
     const current = this.current;
     this.current = undefined;
     current?.draft.dispose();
