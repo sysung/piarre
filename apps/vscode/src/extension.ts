@@ -1,15 +1,14 @@
 import * as vscode from "vscode";
 import { createHash, randomUUID } from "node:crypto";
-import { execFile } from "node:child_process";
-import { mkdir, realpath } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import { promisify } from "node:util";
 import { GoalInterpreter } from "./goal-interpreter.js";
 import { SqliteProjectRepository } from "./sqlite-project-repository.js";
 import { assertStorageOutsideRepository } from "./storage-boundary.js";
+import { findRepositoryRoot } from "./repository-root.js";
 import { WorkView } from "./work-view.js";
 
-const execute = promisify(execFile);
+
 const isTrusted = (): boolean => vscode.workspace.isTrusted;
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -61,12 +60,7 @@ export function activate(context: vscode.ExtensionContext): void {
             })
           : undefined;
     if (!folder || folder.uri.scheme !== "file" || !isCurrent()) return;
-    const { stdout } = await execute("git", ["rev-parse", "--show-toplevel"], {
-      cwd: folder.uri.fsPath,
-      timeout: 5000,
-      maxBuffer: 1024 * 1024,
-    });
-    const root = await realpath(stdout.trim());
+    const root = await findRepositoryRoot(folder.uri.fsPath);
     if (!isCurrent()) return;
     const repositoryUri = vscode.Uri.file(root).toString();
     const key = createHash("sha256").update(repositoryUri).digest("hex");
