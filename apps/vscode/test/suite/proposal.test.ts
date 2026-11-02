@@ -1,3 +1,4 @@
+import { parseProposalOutput } from "../../../../packages/core/src/contracts.js";
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -47,9 +48,9 @@ suite("Goal interpreter proposal contract", () => {
     assert.equal(task.checks.length, 1);
   });
   test("creates a complete unapproved draft from a typed goal", async () => {
-    const interpreter = new GoalInterpreter(() => completeDraft);
+    const interpreter = ((goal: string) => Promise.resolve().then(() => parseProposalOutput(goal, completeDraft)));
 
-    const proposal = await interpreter.propose("Add a pricing page");
+    const proposal = await interpreter("Add a pricing page");
 
     assert.deepEqual(proposal, {
       goal: "Add a pricing page",
@@ -59,36 +60,36 @@ suite("Goal interpreter proposal contract", () => {
   });
 
   test("keeps the submitted goal authoritative", async () => {
-    const interpreter = new GoalInterpreter(() => ({
+    const interpreter = ((goal: string) => Promise.resolve().then(() => parseProposalOutput(goal, ({
       ...completeDraft,
       goal: "Replace the user's goal",
-    }));
+    }))));
 
     await assert.rejects(
-      interpreter.propose("Add a pricing page"),
+      interpreter("Add a pricing page"),
       /Invalid interpreter output/,
     );
   });
 
   test("rejects authority supplied by the interpreter", async () => {
-    const interpreter = new GoalInterpreter(() => ({
+    const interpreter = ((goal: string) => Promise.resolve().then(() => parseProposalOutput(goal, ({
       ...completeDraft,
       approved: true,
-    }));
+    }))));
 
     await assert.rejects(
-      interpreter.propose("Add a pricing page"),
+      interpreter("Add a pricing page"),
       /Invalid interpreter output/,
     );
   });
 
   test("rejects unknown and cyclic task dependencies", async () => {
-    const unknownDependency = new GoalInterpreter(() => ({
+    const unknownDependency = ((goal: string) => Promise.resolve().then(() => parseProposalOutput(goal, ({
       tasks: [
         { ...completeDraft.tasks[0], dependsOn: ["missing-task"] },
       ],
-    }));
-    const cyclicDependency = new GoalInterpreter(() => ({
+    }))));
+    const cyclicDependency = ((goal: string) => Promise.resolve().then(() => parseProposalOutput(goal, ({
       tasks: [
         { ...completeDraft.tasks[0], dependsOn: ["second-task"] },
         {
@@ -97,20 +98,20 @@ suite("Goal interpreter proposal contract", () => {
           dependsOn: ["pricing-page"],
         },
       ],
-    }));
+    }))));
 
     await assert.rejects(
-      unknownDependency.propose("Add a pricing page"),
+      unknownDependency("Add a pricing page"),
       /Invalid interpreter output/,
     );
     await assert.rejects(
-      cyclicDependency.propose("Add a pricing page"),
+      cyclicDependency("Add a pricing page"),
       /Invalid interpreter output/,
     );
   });
 
   test("requires every requirement to have a manual check", async () => {
-    const interpreter = new GoalInterpreter(() => ({
+    const interpreter = ((goal: string) => Promise.resolve().then(() => parseProposalOutput(goal, ({
       tasks: [
         {
           ...completeDraft.tasks[0],
@@ -123,15 +124,15 @@ suite("Goal interpreter proposal contract", () => {
           ],
         },
       ],
-    }));
+    }))));
 
     await assert.rejects(
-      interpreter.propose("Add a pricing page"),
+      interpreter("Add a pricing page"),
       /Invalid interpreter output/,
     );
   });
   test("rejects duplicate check keys", async () => {
-    const interpreter = new GoalInterpreter(() => ({
+    const interpreter = ((goal: string) => Promise.resolve().then(() => parseProposalOutput(goal, ({
       tasks: [
         {
           ...completeDraft.tasks[0],
@@ -149,10 +150,10 @@ suite("Goal interpreter proposal contract", () => {
           ],
         },
       ],
-    }));
+    }))));
 
     await assert.rejects(
-      interpreter.propose("Add a pricing page"),
+      interpreter("Add a pricing page"),
       /Invalid interpreter output/,
     );
   });

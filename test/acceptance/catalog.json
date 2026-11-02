@@ -1,0 +1,259 @@
+{
+  "schemaVersion": 1,
+  "scenarios": [
+    {
+      "id": "foundation-authority-and-basis",
+      "owner": "C01",
+      "source": {
+        "document": "docs/02_TECHNICAL_DESIGN.md",
+        "heading": "Ownership and data"
+      },
+      "requirement": "Proposal authority, original record revisions, compatibility, and visible unsupported capabilities.",
+      "verification": {
+        "kind": "automated",
+        "check": "host-tests",
+        "tests": [
+          "Basis keeps original proposal revisions through rename and restart",
+          "a rename before a proposal does not invent an earlier source revision",
+          "invalid direct dispatch cannot bypass the interpreter or append receipts",
+          "corrupt stored provenance, authority, and graph envelopes are rejected",
+          "pre-C01 receipts with alternate draft property order survive replay and retry",
+          "Work exposes unapproved Basis and unavailable capabilities without running providers",
+          "invalid provider configuration fails closed and does not expose credentials"
+        ]
+      }
+    },
+    {
+      "id": "resume",
+      "owner": "C03",
+      "source": {
+        "document": "docs/01_PRODUCT_PRD.md",
+        "heading": "Memory and the Basis view"
+      },
+      "requirement": "Brief accomplishments, upcoming tasks, unresolved decisions, and correct project sources.",
+      "verification": {
+        "kind": "pending",
+        "criterion": "Stored history and current-source integration journey."
+      }
+    },
+    {
+      "id": "conversation",
+      "owner": "C02",
+      "source": {
+        "document": "docs/01_PRODUCT_PRD.md",
+        "heading": "Conversation and project inspection"
+      },
+      "requirement": "Broad typed conversation, consequential clarification, and direct controls.",
+      "verification": {
+        "kind": "pending",
+        "criterion": "Real conversational-provider and Extension Host journey."
+      }
+    },
+    {
+      "id": "progress",
+      "owner": "C02",
+      "source": {
+        "document": "docs/01_PRODUCT_PRD.md",
+        "heading": "Product principles"
+      },
+      "requirement": "Observed concise progress during work without interrupting unfinished thought.",
+      "verification": {
+        "kind": "pending",
+        "criterion": "Event-driven checks and recorded active-run observation."
+      }
+    },
+    {
+      "id": "preparation",
+      "owner": "C02",
+      "source": {
+        "document": "docs/01_PRODUCT_PRD.md",
+        "heading": "Parallel ideas, council, and preparation"
+      },
+      "requirement": "Cancel provisional drafts when intent changes and reject obsolete results.",
+      "verification": {
+        "kind": "pending",
+        "criterion": "Delayed-result, cancellation, and denied-authority cases."
+      }
+    },
+    {
+      "id": "memory-correction",
+      "owner": "C03",
+      "source": {
+        "document": "docs/01_PRODUCT_PRD.md",
+        "heading": "Memory and the Basis view"
+      },
+      "requirement": "Inspect and approve corrections with provenance and affected-work invalidation.",
+      "verification": {
+        "kind": "pending",
+        "criterion": "Contradiction, restart, and stale-plan integration checks."
+      }
+    },
+    {
+      "id": "triage",
+      "owner": "C04",
+      "source": {
+        "document": "docs/01_PRODUCT_PRD.md",
+        "heading": "Work and user authority"
+      },
+      "requirement": "Reversible priorities and dependency-aware work without implied approval.",
+      "verification": {
+        "kind": "pending",
+        "criterion": "Direct-control and conversation integration checks."
+      }
+    },
+    {
+      "id": "execution",
+      "owner": "C04",
+      "source": {
+        "document": "docs/01_PRODUCT_PRD.md",
+        "heading": "Work and user authority"
+      },
+      "requirement": "One supported coding writer under explicit scope, cost, and data-sharing authority.",
+      "verification": {
+        "kind": "pending",
+        "criterion": "Live adapter, denied approval, single-writer, and disk readback checks."
+      }
+    },
+    {
+      "id": "verification",
+      "owner": "C04",
+      "source": {
+        "document": "docs/01_PRODUCT_PRD.md",
+        "heading": "Testing experience and success"
+      },
+      "requirement": "Review current independent checks and one outcome package.",
+      "verification": {
+        "kind": "pending",
+        "criterion": "Revision-bound checks, stale evidence rejection, and human review."
+      }
+    },
+    {
+      "id": "recovery",
+      "owner": "C04",
+      "source": {
+        "document": "docs/01_PRODUCT_PRD.md",
+        "heading": "Work and user authority"
+      },
+      "requirement": "Stop, restart, manual edits, and lost acknowledgments preserve honest state.",
+      "verification": {
+        "kind": "pending",
+        "criterion": "Fault injection and live-worker reconciliation."
+      }
+    },
+    {
+      "id": "checkpoints",
+      "owner": "C04",
+      "source": {
+        "document": "docs/01_PRODUCT_PRD.md",
+        "heading": "Work and user authority"
+      },
+      "requirement": "Preview and restore supported scope while preserving newer work.",
+      "verification": {
+        "kind": "pending",
+        "criterion": "Isolated repository edits, untracked files, partial failure, and repeated restoration."
+      }
+    },
+    {
+      "id": "linked-ideas",
+      "owner": "C05",
+      "source": {
+        "document": "docs/01_PRODUCT_PRD.md",
+        "heading": "Parallel ideas, council, and preparation"
+      },
+      "requirement": "Investigate side ideas and return without losing or silently changing the main goal.",
+      "verification": {
+        "kind": "pending",
+        "criterion": "Thread-switch, scope conflict, and restart journey."
+      }
+    },
+    {
+      "id": "council",
+      "owner": "C05",
+      "source": {
+        "document": "docs/01_PRODUCT_PRD.md",
+        "heading": "Parallel ideas, council, and preparation"
+      },
+      "requirement": "Bounded independent findings, available traces, dissent, and resource transparency.",
+      "verification": {
+        "kind": "pending",
+        "criterion": "Failed/cancelled agents, denied spend, no writes, and synthesis review."
+      }
+    },
+    {
+      "id": "reflection",
+      "owner": "C06",
+      "source": {
+        "document": "docs/01_PRODUCT_PRD.md",
+        "heading": "Reflection and adaptation"
+      },
+      "requirement": "Optional evidence-based reflection and correctable preferences without silent policy changes.",
+      "verification": {
+        "kind": "pending",
+        "criterion": "Decline, correction, forced close, and policy-boundary scenarios."
+      }
+    },
+    {
+      "id": "documentation",
+      "owner": "C06",
+      "source": {
+        "document": "docs/01_PRODUCT_PRD.md",
+        "heading": "Product principles"
+      },
+      "requirement": "Promote reviewed lasting conclusions from linked temporary artifacts.",
+      "verification": {
+        "kind": "pending",
+        "criterion": "Planned/observed outcome, supersession, and source-link checks."
+      }
+    },
+    {
+      "id": "candidate-isolation",
+      "owner": "C07",
+      "source": {
+        "document": "docs/01_PRODUCT_PRD.md",
+        "heading": "Testing experience and success"
+      },
+      "requirement": "Stable daily use remains separate from candidate tests and diagnostics.",
+      "verification": {
+        "kind": "pending",
+        "criterion": "Separate installations/state, redaction/export/deletion, and failure recovery."
+      }
+    },
+    {
+      "id": "user-value",
+      "owner": "C08",
+      "source": {
+        "document": "docs/01_PRODUCT_PRD.md",
+        "heading": "Testing experience and success"
+      },
+      "requirement": "Observe useful, business-grounded explanations and supervision effort without hiding defects.",
+      "verification": {
+        "kind": "pending",
+        "criterion": "Concentrated user round against a comparable existing workflow, with recorded limitations."
+      }
+    },
+    {
+      "id": "billing-plan-estimates",
+      "owner": "C01",
+      "source": {
+        "document": "docs/01_PRODUCT_PRD.md",
+        "heading": "Models and business constraints"
+      },
+      "requirement": "API dollars or calibrated subscription-window consumption with explicit missing inputs and unverified billing context.",
+      "verification": {
+        "kind": "automated",
+        "check": "host-tests",
+        "tests": [
+          "API budget scenarios use configured rates and all proposed attempts",
+          "subscription windows use same-model calibration rather than invented token quotas",
+          "missing billing or calibration stays unknown instead of free",
+          "calibration from another model or window is not reused",
+          "invalid rates and usage samples fail closed without exposing credentials",
+          "plan names are escaped and pricing never enables a provider",
+          "subscription calibration is not reused after a plan or provider change",
+          "legacy samples without billing context stay unknown instead of inheriting the selected plan",
+          "provider edits refresh existing estimates without moving focus or reopening closed views"
+        ]
+      }
+    }
+  ]
+}

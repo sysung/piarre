@@ -198,7 +198,7 @@ export function activate(context: vscode.ExtensionContext): void {
       opening = undefined;
       repository?.close();
       repository = undefined;
-      view.dispose();
+      view.close();
       void requestOpen(false);
     }),
   );
