@@ -20,6 +20,12 @@ export function activate(context: vscode.ExtensionContext): void {
   let generation = 0;
   const view = new WorkView(undefined, {
     prepare: (goal) => interpreter.propose(goal),
+    deleteProposal: (snapshot, groupId, commandId) => {
+      if (!repository || !isTrusted()) return;
+      const result = repository.dispatch({ commandId, projectId: snapshot.projectId,
+        expectedProjectRevision: snapshot.revision, action: { kind: "delete-proposal", groupId } });
+      return result.kind === "applied" || result.kind === "duplicate" ? result.snapshot : undefined;
+    },
     save: (snapshot, draft, commandId) => {
       if (!repository || !isTrusted()) return;
       const result = repository.dispatch({ commandId, projectId: snapshot.projectId,

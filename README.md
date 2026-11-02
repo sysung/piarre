@@ -36,3 +36,5 @@ Open and trust a local Git repository in the development host. Piarre shows its 
 The Work panel also accepts a typed goal. **Review goal** prepares a deterministic draft without saving it. **Save proposal** records it; no coding work starts. Editing or discarding a preview invalidates it. Unsent text stays in the panel and is lost when the panel closes.
 
 Saved goals appear newest first as compact cards. Choose **Open proposal** to inspect one in a reusable VS Code pane beside Work. Opening a saved proposal does not save, approve, or run anything.
+
+Use **Delete goal** on a saved card or **Delete goal and proposal** in its detail pane to remove that goal and its proposed tasks after confirmation. Repository files and prior project history are retained.

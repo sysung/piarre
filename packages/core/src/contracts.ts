@@ -212,6 +212,9 @@ export function validateProjectCommand(value: unknown): ProjectCommand {
     assertProposalDraft(action.draft);
     return { commandId, projectId, expectedProjectRevision, action: { kind: action.kind, draft: action.draft } };
   }
+  if (action.kind === "delete-proposal" && hasOnlyKeys(action, ["kind", "groupId"]) && "groupId" in action) {
+    return { commandId, projectId, expectedProjectRevision, action: { kind: action.kind, groupId: nonblank(action.groupId) } };
+  }
   throw new Error("Unsupported or invalid project action");
 }
 
@@ -241,6 +244,8 @@ export function parseProjectEvent(value: unknown): ProjectEvent {
       repositoryUri: nonblank(value.repositoryUri), name: nonblank(value.name) };
   if (value.kind === "project-renamed" && hasOnlyKeys(value, ["kind", "name"]) && "name" in value)
     return { kind: value.kind, name: nonblank(value.name) };
+  if (value.kind === "proposal-deleted" && hasOnlyKeys(value, ["kind", "groupId"]) && "groupId" in value)
+    return { kind: value.kind, groupId: nonblank(value.groupId) };
   if (value.kind !== "proposal-created" || !hasOnlyKeys(value, ["kind", "group", "tasks"]) ||
       !("group" in value) || !("tasks" in value) || !isObject(value.group) || !Array.isArray(value.tasks)) invalid();
   const group = value.group;

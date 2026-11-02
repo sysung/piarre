@@ -155,6 +155,54 @@ suite("Typed workspace previews", () => {
     } finally { view.dispose(); }
   });
 
+  test("deletion removes only the selected goal and its tasks and survives replay", async () => {
+    const session = controller();
+    for (const goal of ["Keep", "Delete"]) {
+      await session.receive({ kind: "preview", requestId: goal, goal });
+      await session.receive({ kind: "save", requestId: goal });
+    }
+    const before = repository.read();
+    const target = before.proposals[1]; assert.ok(target);
+    const command = { commandId: "delete-once", projectId: before.projectId,
+      expectedProjectRevision: before.revision, action: { kind: "delete-proposal", groupId: target.groupId } };
+    assert.equal(repository.dispatch({ ...command, commandId: "stale-delete", expectedProjectRevision: before.revision - 1 }).kind, "stale");
+    assert.throws(() => repository.dispatch({ ...command, commandId: "unknown-delete", action: { kind: "delete-proposal", groupId: "foreign" } }), /no longer exists/);
+    assert.deepEqual(repository.read(), before);
+    assert.equal(repository.dispatch(command).kind, "applied");
+    assert.equal(repository.dispatch(command).kind, "duplicate");
+    assert.deepEqual(repository.read().proposals.map(item => item.goal), ["Keep"]);
+    assert.ok(repository.read().tasks.every(task => task.groupId !== target.groupId));
+    repository.close(); repository = new SqliteProjectRepository(path.join(directory, "project.sqlite"));
+    assert.deepEqual(repository.read().proposals.map(item => item.goal), ["Keep"]);
+    assert.equal(repository.read(before.revision).proposals.length, 2, "Historical records remain inspectable");
+  });
+
+  test("deletion requires confirmation and closes the selected pane after success", async () => {
+    const session = controller();
+    await session.receive({ kind: "preview", requestId: "delete", goal: "Remove me" });
+    await session.receive({ kind: "save", requestId: "delete" });
+    const project = repository.read(); const target = project.proposals[0]; assert.ok(target);
+    let confirmed = false; let prompts = 0;
+    const panels: vscode.WebviewPanel[] = [];
+    const view = new WorkView((...args) => { const panel = vscode.window.createWebviewPanel(...args); panels.push(panel); return panel; }, {
+      prepare: (goal) => interpreter.propose(goal), save: () => undefined,
+      deleteProposal: (snapshot, groupId, commandId) => {
+        const result = repository.dispatch({ commandId, projectId: snapshot.projectId, expectedProjectRevision: snapshot.revision,
+          action: { kind: "delete-proposal", groupId } });
+        return result.kind === "applied" ? result.snapshot : undefined;
+      },
+    }, (goal) => { assert.equal(goal, "Remove me"); prompts++; return Promise.resolve(confirmed); });
+    try {
+      view.show(project); view.openProposal(target.groupId);
+      await view.deleteProposal("foreign"); assert.equal(prompts, 0);
+      await view.deleteProposal(target.groupId); assert.equal(repository.read().proposals.length, 1);
+      const detail = panels[1]; assert.ok(detail); let closed = false; detail.onDidDispose(() => { closed = true; });
+      confirmed = true; await view.deleteProposal(target.groupId);
+      assert.equal(repository.read().proposals.length, 0); assert.equal(closed, true);
+      assert.equal(prompts, 2);
+    } finally { view.dispose(); }
+  });
+
   test("IPC rejects empty, oversized, and fabricated messages", () => {
     for (const value of [null, [], {}, { kind: "preview", requestId: "x", goal: " " },
       { kind: "preview", requestId: "x", goal: "x".repeat(10001) },
@@ -217,7 +265,7 @@ window.addEventListener('message', ({data}) => { if (data.kind === 'test-checked
     await waitFor(() => !save.hidden);
     if (!composer.hidden || preview.hidden) throw new Error('Review did not replace goal entry');
     if (preview.querySelector('script') || !preview.textContent.includes(content)) throw new Error('Unsafe preview rendering');
-    if (!preview.textContent.includes(String.fromCharCode(10))) throw new Error('Preview has no line breaks');
+    if (preview.querySelectorAll('.proposal-metadata section').length !== 4 || preview.querySelectorAll('.budget-grid dt').length !== 3) throw new Error('Metadata must have labeled sections and budget values');
     if (!preview.textContent.includes('Excluded paths:') || !preview.textContent.includes('Dependencies:') || !preview.textContent.includes('15 minutes')) throw new Error('Incomplete preview');
     if (preview.querySelector('details').open) throw new Error('Technical details should start collapsed');
     discard.click();

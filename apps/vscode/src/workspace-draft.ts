@@ -27,6 +27,7 @@ export type DraftState =
   | { readonly kind: "ready"; readonly requestId: string; readonly message: string; readonly draft: ProposalDraft };
 
 export interface DraftOperations {
+  readonly deleteProposal?: (project: ProjectSnapshot, groupId: string, commandId: string) => ProjectSnapshot | undefined;
   readonly prepare: (goal: string) => Promise<ProposalDraft>;
   readonly save: (project: ProjectSnapshot, draft: ProposalDraft, commandId: string) => ProjectSnapshot | undefined;
 }

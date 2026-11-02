@@ -49,14 +49,14 @@ export function renderInspection(
   const proposals = [...project.proposals].sort((a, b) => b.recordedAtRevision - a.recordedAtRevision)
     .filter(proposal => selectedGroupId === undefined || proposal.groupId === selectedGroupId)
     .map((proposal) => {
-      if (selectedGroupId === undefined) return `<button class="goal-card" data-open-goal="${escape(proposal.groupId)}"><span class="goal-title">${escape(proposal.goal)}</span><span class="goal-meta">Unapproved · ${String(proposal.taskIds.length)} task(s) · Saved at revision ${String(proposal.recordedAtRevision)}</span><span class="goal-action">Open proposal →</span></button>`;
+      if (selectedGroupId === undefined) return `<div class="goal-container"><button class="goal-card" data-open-goal="${escape(proposal.groupId)}"><span class="goal-title">${escape(proposal.goal)}</span><span class="goal-meta">Unapproved · ${String(proposal.taskIds.length)} task(s) · Saved at revision ${String(proposal.recordedAtRevision)}</span><span class="goal-action">Open proposal →</span></button><button class="delete-goal secondary" data-delete-goal="${escape(proposal.groupId)}" aria-label="Delete goal: ${escape(proposal.goal)}">Delete goal</button></div>`;
       const tasks = proposal.taskIds
         .map((taskId) => project.tasks.find((task) => task.taskId === taskId))
         .filter((task) => task !== undefined)
         .map(
           (task) => {
             const estimate = estimateBudget({ budget: task.proposedBudget, model: selection?.model ?? "", provider: selection?.provider ?? "", billing: selection?.billing ?? { kind: "unknown" } });
-            return `<details><summary>${escape(task.title)} · Unapproved</summary><article><p><strong>Unapproved</strong> · Plan version ${String(task.planVersion)}</p><h4>Requirements</h4>${list(task.requirements.map(({ text }) => text), "No requirements")}<h4>Proposed scope</h4><p>Included</p>${list(task.proposedScope.included, "No paths proposed")}<p>Excluded</p>${list(task.proposedScope.excluded, "No exclusions proposed")}<h4>Dependencies</h4>${list(task.dependsOn, "No dependencies")}<h4>Manual checks</h4>${list(task.checks.map(({ description }) => description), "No checks")}<h4>Proposed budget</h4><p>${task.proposedBudget.maxTokens.toLocaleString("en-US")} tokens · ${String(task.proposedBudget.maxElapsedMinutes)} minutes · ${String(task.proposedBudget.maxAttempts)} attempt</p><h4>Plan-based estimate</h4>${cost(estimate)}</article></details>`;
+            return `<details><summary>${escape(task.title)} · Unapproved</summary><article><p><strong>Unapproved</strong> · Plan version ${String(task.planVersion)}</p><h4>Requirements</h4>${list(task.requirements.map(({ text }) => text), "No requirements")}<h4>Proposed scope</h4><p>Included</p>${list(task.proposedScope.included, "No paths proposed")}<p>Excluded</p>${list(task.proposedScope.excluded, "No exclusions proposed")}<h4>Dependencies</h4>${list(task.dependsOn, "No dependencies")}<h4>Manual checks</h4>${list(task.checks.map(({ description }) => description), "No checks")}<h4>Proposed budget</h4><dl class="budget-grid"><div><dt>Token limit</dt><dd>${task.proposedBudget.maxTokens.toLocaleString("en-US")} tokens</dd></div><div><dt>Time limit</dt><dd>${String(task.proposedBudget.maxElapsedMinutes)} minutes</dd></div><div><dt>Attempts</dt><dd>${String(task.proposedBudget.maxAttempts)} attempt</dd></div></dl><h4>Plan-based estimate</h4>${cost(estimate)}</article></details>`;
           },
         )
         .join("");
@@ -88,6 +88,7 @@ export function renderWorkView(project: ProjectSnapshot, configuration?: Provide
 
 export class WorkView {
   private current: { readonly panel: vscode.WebviewPanel; readonly project: ProjectSnapshot; readonly draft: WorkspaceDraft } | undefined;
+  private deleting = false;
   private detail: { readonly panel: vscode.WebviewPanel; readonly groupId: string; readonly html?: string } | undefined;
   private readonly settingsChanged: vscode.Disposable;
 
@@ -95,7 +96,9 @@ export class WorkView {
     private readonly operations: DraftOperations = {
       prepare: (goal) => new GoalInterpreter().propose(goal),
       save: () => undefined,
-    }) {
+    }, private readonly confirmDelete: (goal: string) => Promise<boolean> = async (goal) =>
+      await vscode.window.showWarningMessage(`Delete “${goal}” and its proposal?`,
+        { modal: true, detail: "Removes this saved goal and its proposed tasks. Repository files are unchanged. Prior project history is retained." }, "Delete goal") === "Delete goal") {
     this.settingsChanged = vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration("piarre.providers")) this.refresh();
     });
@@ -124,6 +127,10 @@ export class WorkView {
           if (Object.keys(message).length === 2 && "groupId" in message && typeof message.groupId === "string" && message.groupId.length <= 2048) this.openProposal(message.groupId);
           return;
         }
+        if (typeof message === "object" && message !== null && "kind" in message && message.kind === "delete-proposal") {
+          if (Object.keys(message).length === 2 && "groupId" in message && typeof message.groupId === "string") void this.deleteProposal(message.groupId);
+          return;
+        }
         void draft.receive(message);
       });
       panel.webview.html = renderWorkView(project, this.configuration());
@@ -141,12 +148,34 @@ export class WorkView {
     this.refresh();
   }
 
+  async deleteProposal(groupId: string): Promise<void> {
+    const current = this.current;
+    const proposal = current?.project.proposals.find(item => item.groupId === groupId);
+    if (!current || !proposal || !this.operations.deleteProposal || this.deleting) return;
+    this.deleting = true;
+    try {
+      if (!await this.confirmDelete(proposal.goal)) return;
+      if (this.current !== current) {
+        await vscode.window.showInformationMessage("The project changed. Review the goal before deleting it."); return;
+      }
+      const result = this.operations.deleteProposal(current.project, groupId, randomUUID());
+      if (result) this.update(result);
+      else await vscode.window.showInformationMessage("The goal could not be deleted. Refresh the project and try again.");
+    } catch {
+      await vscode.window.showErrorMessage("The goal could not be deleted. Refresh the project and try again.");
+    } finally { this.deleting = false; }
+  }
+
   openProposal(groupId: string): void {
     if (!this.current?.project.proposals.some(proposal => proposal.groupId === groupId)) return;
     if (!this.detail) {
       const panel = this.createPanel("piarre.proposal", "Proposal details", vscode.ViewColumn.Beside,
         { enableScripts: true, localResourceRoots: [] });
       this.detail = { panel, groupId };
+      panel.webview.onDidReceiveMessage((message: unknown) => {
+        if (this.detail?.panel !== panel || typeof message !== "object" || message === null || Object.keys(message).length !== 1 || !("kind" in message) || message.kind !== "delete-proposal") return;
+        void this.deleteProposal(this.detail.groupId);
+      });
       panel.onDidDispose(() => { if (this.detail?.panel === panel) { this.detail = undefined; void this.current?.panel.webview.postMessage({ kind: "proposal-opened" }); } });
     } else this.detail = { ...this.detail, groupId };
     this.refreshDetail();
@@ -164,9 +193,10 @@ export class WorkView {
     this.detail = { ...this.detail, html };
     const nonce = randomUUID();
     const groupKey = JSON.stringify(this.detail.groupId).replaceAll("<", "\\u003c");
-    this.detail.panel.webview.html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'"><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{font-family:var(--vscode-font-family);line-height:1.6;padding:24px;color:var(--vscode-foreground);background:var(--vscode-editor-background);overflow-wrap:anywhere}section{max-width:760px;margin:auto;animation:arrive 140ms ease-out}details{margin:16px 0;border:1px solid var(--vscode-panel-border);padding:16px}summary{cursor:pointer;min-height:32px}:focus-visible{outline:2px solid var(--vscode-focusBorder);outline-offset:3px}@keyframes arrive{from{opacity:.7}to{opacity:1}}@media(prefers-reduced-motion:reduce){section{animation:none}}</style></head><body><h1>Proposal details</h1><p>Read only · Not approved to run</p>${html}<script nonce="${nonce}">
+    this.detail.panel.webview.html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'"><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{font-family:var(--vscode-font-family);line-height:1.6;padding:24px;color:var(--vscode-foreground);background:var(--vscode-editor-background);overflow-wrap:anywhere}section{max-width:760px;margin:auto;animation:arrive 140ms ease-out}details{margin:16px 0;border:1px solid var(--vscode-panel-border);padding:16px}summary{cursor:pointer;min-height:32px}.budget-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:16px}.budget-grid dt{color:var(--vscode-descriptionForeground)}.budget-grid dd{font-weight:600;margin:4px 0}button{font:inherit;padding:8px 16px;min-height:36px;background:var(--vscode-button-secondaryBackground);color:var(--vscode-button-secondaryForeground);border:1px solid var(--vscode-panel-border);cursor:pointer}:focus-visible{outline:2px solid var(--vscode-focusBorder);outline-offset:3px}@keyframes arrive{from{opacity:.7}to{opacity:1}}@media(prefers-reduced-motion:reduce){section{animation:none}}</style></head><body><h1>Proposal details</h1><p>Not approved to run</p><button id="delete-goal" type="button">Delete goal and proposal</button>${html}<script nonce="${nonce}">
 const api = acquireVsCodeApi();
 const groupId = ${groupKey};
+document.getElementById('delete-goal').addEventListener('click', () => api.postMessage({kind:'delete-proposal'}));
 const disclosures = [...document.querySelectorAll('details')];
 const state = api.getState();
 if (state && state.groupId === groupId) {
