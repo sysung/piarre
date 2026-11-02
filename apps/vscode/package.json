@@ -69,6 +69,104 @@
               "model": {
                 "type": "string",
                 "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._/-]{0,127}$"
+              },
+              "billing": {
+                "description": "Plan used for estimates only; this does not detect your authenticated billing route or connect the provider. API rates are user supplied. Subscription samples are past usage measurements, not official token quotas.",
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "kind"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "const": "unknown"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "name",
+                      "inputUsdPerMillion",
+                      "outputUsdPerMillion"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "const": "api"
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                      },
+                      "inputUsdPerMillion": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "outputUsdPerMillion": {
+                        "type": "number",
+                        "minimum": 0
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "name"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "const": "subscription"
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                      },
+                      "samples": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "model",
+                            "window",
+                            "tokensUsed",
+                            "usedPercentagePoints"
+                          ],
+                          "properties": {
+                            "model": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 100
+                            },
+                            "window": {
+                              "enum": [
+                                "five-hour",
+                                "weekly"
+                              ]
+                            },
+                            "tokensUsed": {
+                              "type": "integer",
+                              "minimum": 1
+                            },
+                            "usedPercentagePoints": {
+                              "type": "number",
+                              "exclusiveMinimum": 0,
+                              "maximum": 100
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
               }
             }
           }

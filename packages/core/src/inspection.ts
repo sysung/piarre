@@ -1,3 +1,4 @@
+import { parseBillingPlan, type BillingPlan } from "./costs.js";
 import type { ProjectSnapshot, RecordedProposalGroup } from "./index.js";
 
 export type RecordReference = {
@@ -39,6 +40,7 @@ export interface ProviderSelection {
   readonly role: ProviderRole;
   readonly provider: string;
   readonly model: string;
+  readonly billing: BillingPlan;
 }
 export type ProviderConfiguration =
   | { readonly kind: "valid"; readonly selections: readonly ProviderSelection[] }
@@ -58,13 +60,15 @@ export function parseProviderConfiguration(value: unknown): ProviderConfiguratio
   const items: readonly unknown[] = value;
   for (const item of items) {
     if (typeof item !== "object" || item === null || Array.isArray(item) ||
-        Object.keys(item).length !== 3 ||
-        !Object.keys(item).every((key) => ["role", "provider", "model"].includes(key)) ||
+        (Object.keys(item).length !== 3 && Object.keys(item).length !== 4) ||
+        !Object.keys(item).every((key) => ["role", "provider", "model", "billing"].includes(key)) ||
         !("role" in item) || !("provider" in item) || !("model" in item) ||
         !isRole(item.role) || !identifier(item.provider) || !identifier(item.model) || roles.has(item.role))
       return { kind: "invalid" };
+    const billing = parseBillingPlan("billing" in item ? item.billing : undefined);
+    if (!billing) return { kind: "invalid" };
     roles.add(item.role);
-    selections.push({ role: item.role, provider: item.provider, model: item.model });
+    selections.push({ role: item.role, provider: item.provider, model: item.model, billing });
   }
   return { kind: "valid", selections };
 }

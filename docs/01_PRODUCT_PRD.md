@@ -81,6 +81,8 @@ Prefer a local conversational system to limit recurring provider costs. Keep con
 
 The 6–8 GB voice-system target is an unmeasured goal, not a guaranteed application footprint. Higher memory use or hosted conversation can establish a quality baseline before optimization. Users still need resources for their development tools.
 
+Cost estimates follow the user's actual billing route. API-token usage shows estimated dollar charges. Claude Code or Codex subscription usage shows estimated token use and five-hour or weekly allowance consumption where applicable. Use observed calibration or provider estimates for percentages; tokens alone do not establish subscription quotas. Show unknown estimates explicitly, separate current usage from predicted task consumption, and disclose extra-usage charges.
+
 Connected coding accounts may supply workers through supported integrations. They are not automatically free, unlimited, or permitted for arbitrary credential reuse. Provider eligibility and prices need current verification. The revenue model and realistic per-session costs remain unresolved.
 
 Use research papers and engineering practice to select experiments, then test actual recall, dialogue, latency, resource use, and failure behavior. No particular model is selected here.

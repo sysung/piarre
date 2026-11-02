@@ -230,6 +230,27 @@
         "kind": "pending",
         "criterion": "Concentrated user round against a comparable existing workflow, with recorded limitations."
       }
+    },
+    {
+      "id": "billing-plan-estimates",
+      "owner": "C01",
+      "source": {
+        "document": "docs/01_PRODUCT_PRD.md",
+        "heading": "Models and business constraints"
+      },
+      "requirement": "API dollars or calibrated subscription-window consumption with explicit missing inputs and unverified billing context.",
+      "verification": {
+        "kind": "automated",
+        "check": "host-tests",
+        "tests": [
+          "API budget scenarios use configured rates and all proposed attempts",
+          "subscription windows use same-model calibration rather than invented token quotas",
+          "missing billing or calibration stays unknown instead of free",
+          "calibration from another model or window is not reused",
+          "invalid rates and usage samples fail closed without exposing credentials",
+          "plan names are escaped and pricing never enables a provider"
+        ]
+      }
     }
   ]
 }

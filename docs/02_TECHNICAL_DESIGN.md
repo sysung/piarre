@@ -44,6 +44,8 @@ Worker adapters expose observed capabilities for start, status, steering, interr
 
 Separate observed usage, provider estimates, and application estimates. Reject spending without applicable authority. Stop new scheduling at enforceable limits while preserving honest active-run state. Never promise a hard cap unsupported by the provider.
 
+Billing context distinguishes API rates from subscription allowances. A requested plan is not proof of the authenticated billing route. Metered estimates use configured input/output rates and disclose the unknown token mix, retry assumptions, and excluded costs. Subscription projections need same-model usage calibration or a provider estimate for each supported window. Current usage percentages are observations, not task forecasts or a token-to-quota conversion. Missing calibration remains unknown. No estimator may authorize spending or assume that extra usage is free.
+
 ## Preparation, threads, and council
 
 Provisional preparation belongs to a project, thread, input revision, context revision, cancellation state, and resource allowance. It accepts submitted input or explicitly enabled streams. It cannot confirm knowledge, apply plans, start writers, or cause unapproved spending or disclosure.
