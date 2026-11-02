@@ -146,13 +146,15 @@
     "renameTo": "packages/core/src/renamed-inspection.ts",
     "old": "parseProviderConfiguration",
     "replacement": "parseProviderSettings",
-    "decisionPath": "docs/02_TECHNICAL_DESIGN.md",
+    "decisionPath": "docs/01_PRODUCT_PRD.md",
     "oldDecision": "A dedicated graph database is a candidate, not a committed dependency.",
-    "newDecision": "A dedicated graph database is required."
+    "newDecision": "A dedicated graph database is required.",
+    "conflictingDecisionPath": "fixture/conflicting-decision.md"
   },
   "dynamicDependency": {
     "description": "Synthetic computed dispatch. The runtime dependency is supplied explicitly by this fixture. This does not claim a dynamic dependency exists in production Piarre.",
     "source": "const moduleName = \"billing\"; const symbolName = [\"parse\", \"BillingPlan\"].join(\"\"); dependencies[moduleName][symbolName]();",
     "target": "packages/core/src/costs.ts#parseBillingPlan"
-  }
+  },
+  "projectId": "piarre-retrieval-evaluation"
 }

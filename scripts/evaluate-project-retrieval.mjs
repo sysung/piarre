@@ -16,7 +16,7 @@ const sha256 = (text) => createHash("sha256").update(text).digest("hex");
 const git = (...args) => execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
 const sources = fixture.paths.map((path) => {
   const text = execFileSync("git", ["show", `${fixture.revision}:${path}`], { cwd: root, encoding: "utf8" });
-  return { id: path, path, text, revision: fixture.revision, hash: sha256(text), state: "static-source", confirmation: "unconfirmed", extraction: "git-blob" };
+  return { projectId: fixture.projectId, id: path, path, text, revision: fixture.revision, hash: sha256(text), state: "static-source", confirmation: "unconfirmed", extraction: "git-blob" };
 });
 const chunks = sources.flatMap((source) => {
   const lines = source.text.split("\n");
@@ -31,7 +31,7 @@ const methods = ["exact", "fts5", "fts5-relations", "compiler"];
 const runs = [];
 const stopwords = new Set(["a", "an", "the", "is", "are", "of", "for", "to", "and", "does", "how", "which", "what", "in"]);
 const terms = (query) => query.match(/[A-Za-z0-9_]+/g)?.filter((word) => !stopwords.has(word.toLowerCase())) ?? [];
-const evidence = (chunk) => ({ sourceId: chunk.path, location: `${chunk.start}-${chunk.end}`, revision: chunk.revision,
+const evidence = (chunk) => ({ projectId: chunk.projectId, sourceId: chunk.path, location: `${chunk.start}-${chunk.end}`, revision: chunk.revision,
   contentHash: chunk.hash, excerptHash: sha256(chunk.text), extraction: chunk.extraction, state: chunk.state, confirmation: chunk.confirmation, text: chunk.text });
 let report;
 try {
@@ -67,7 +67,7 @@ try {
             const target = ts.resolveModuleName(node.moduleSpecifier.text, ast.fileName, program.getCompilerOptions(), ts.sys).resolvedModule;
             const targetPath = target && relative(scratch, target.resolvedFileName).replaceAll("\\", "/");
             if (!sources.some((item) => item.path === targetPath)) coverageGaps.push({ sourceId: source.path, specifier: node.moduleSpecifier.text, status: "unresolved-or-outside-corpus" });
-            if (sources.some((item) => item.path === targetPath)) edges.push({ from: source.path, to: targetPath,
+            if (sources.some((item) => item.path === targetPath)) edges.push({ projectId: fixture.projectId, from: source.path, to: targetPath,
               sourceId: source.path, location: ast.getLineAndCharacterOfPosition(node.getStart(ast)).line + 1,
               revision: source.revision, contentHash: source.hash, extraction: "typescript-resolved-module", state: "static-source", confirmation: "unconfirmed" });
           }
@@ -77,7 +77,7 @@ try {
             for (const declaration of symbol?.declarations ?? []) {
               const targetPath = relative(scratch, declaration.getSourceFile().fileName).replaceAll("\\", "/");
               if (!sources.some((item) => item.path === targetPath)) continue;
-              symbols.push({ revision: source.revision, contentHash: source.hash, extraction: "typescript-type-checker", state: "static-source", confirmation: "unconfirmed", name: node.text, source: source.path, line: ast.getLineAndCharacterOfPosition(node.getStart(ast)).line + 1,
+              symbols.push({ projectId: fixture.projectId, revision: source.revision, contentHash: source.hash, extraction: "typescript-type-checker", state: "static-source", confirmation: "unconfirmed", name: node.text, source: source.path, line: ast.getLineAndCharacterOfPosition(node.getStart(ast)).line + 1,
                 target: targetPath, declarationLine: declaration.getSourceFile().getLineAndCharacterOfPosition(declaration.getStart(declaration.getSourceFile())).line + 1 });
             }
           }
@@ -124,8 +124,9 @@ try {
     "uncommitted-edit": sources.map((source) => source === original ? { ...source, text: source.text.replaceAll(fixture.freshness.old, fixture.freshness.replacement) } : source),
     rename: sources.map((source) => source === original ? { ...source, path: fixture.freshness.renameTo } : source),
     deletion: sources.filter((source) => source !== original),
-    correction: sources.map((source) => source.path === "docs/01_PRODUCT_PRD.md" ? { ...source,
+    correction: sources.map((source) => source.path === fixture.freshness.decisionPath ? { ...source,
       text: source.text.replace(fixture.freshness.oldDecision, fixture.freshness.newDecision) } : source),
+    "conflicting-decisions": [...sources, { projectId: fixture.projectId, path: fixture.freshness.conflictingDecisionPath, text: fixture.freshness.newDecision, revision: "synthetic-overlay" }],
     conflict: sources.map((source) => source === original ? { ...source, text: `<<<<<<< HEAD\n${source.text}\n=======\ncontradictory proposal\n>>>>>>> proposal\n` } : source),
     "unsupported-language": [...sources, { path: "runtime/plugin.py", text: "getattr(import_module(name), function_name)()\n", revision: "uncommitted" }],
   };
@@ -151,13 +152,23 @@ try {
     }
     if (scenario === "rename") assert.ok(oldSymbolMatches.includes(fixture.freshness.renameTo));
     if (scenario === "deletion" || scenario === "conflict") assert.ok(!oldSymbolMatches.includes(original.path));
-    const refreshed = accepted.map((live) => ({ sourceId: live.path, revision: "synthetic-overlay", hash: sha256(live.text) }));
+    const conflictingEvidence = scenario === "conflicting-decisions" ? accepted.filter((live) => [fixture.freshness.decisionPath, fixture.freshness.conflictingDecisionPath].includes(live.path))
+      .map((live) => ({ projectId: fixture.projectId, sourceId: live.path, hash: sha256(live.text), text: live.path === fixture.freshness.decisionPath ? fixture.freshness.oldDecision : live.text,
+        extraction: "fixture-declared-conflict", state: "disputed-fixture-only", confirmation: "unconfirmed" })) : [];
+    if (scenario === "conflicting-decisions") {
+      const graphMatches = lookup("dedicated graph database");
+      assert.ok(graphMatches.includes(fixture.freshness.decisionPath));
+      assert.ok(graphMatches.includes(fixture.freshness.conflictingDecisionPath));
+      assert.equal(conflictingEvidence.length, 2);
+      assert.ok(accepted.find((live) => live.path === fixture.freshness.decisionPath).text.includes(fixture.freshness.oldDecision));
+    }
+    const refreshed = accepted.map((live) => ({ projectId: fixture.projectId, sourceId: live.path, revision: "synthetic-overlay", hash: sha256(live.text) }));
     assert.ok(changes.length + additions.length > 0, `${scenario} must change indexed coverage`);
     assert.ok(refreshed.every((record) => accepted.some((live) => live.path === record.sourceId && sha256(live.text) === record.hash)));
-    if (scenario === "correction") assert.ok(accepted.find((live) => live.path === "docs/01_PRODUCT_PRD.md").text.includes(fixture.freshness.newDecision));
+    if (scenario === "correction") assert.ok(accepted.find((live) => live.path === fixture.freshness.decisionPath).text.includes(fixture.freshness.newDecision));
     if (scenario === "deletion" || scenario === "rename") assert.ok(!refreshed.some((record) => record.sourceId === original.path));
     refreshedDb.close();
-    return { scenario, changes, additions, conflicts, unsupported, refreshed, oldSymbolMatches, newSymbolMatches, reusableOldEvidence: reusable.length, staleEvidenceBlocked: changes.length > 0,
+    return { scenario, changes, additions, conflicts, unsupported, conflictingEvidence, refreshed, oldSymbolMatches, newSymbolMatches, reusableOldEvidence: reusable.length, staleEvidenceBlocked: changes.length > 0,
       interpretation: scenario === "unsupported-language" ? "Coverage incomplete. Dynamic dependencies remain unknown." : "Source hashes detect drift before evidence reuse. Rebuild replaces the snapshot." };
   });
   let observedCalls = 0;
@@ -166,7 +177,7 @@ try {
   const staticImports = dynamicAst.statements.filter((node) => ts.isImportDeclaration(node) || ts.isExportDeclaration(node)).length;
   assert.equal(observedCalls, 1);
   assert.equal(staticImports, 0);
-  const dynamicDependency = { source: fixture.dynamicDependency.source, sourceHash: sha256(fixture.dynamicDependency.source),
+  const dynamicDependency = { projectId: fixture.projectId, source: fixture.dynamicDependency.source, sourceHash: sha256(fixture.dynamicDependency.source),
     sourceId: "fixture:dynamicDependency", revision: sha256(readFileSync(join(root, "test/acceptance/retrieval-fixture.json"), "utf8")),
     target: fixture.dynamicDependency.target, observedCalls, staticImports, missedDependencies: 1,
     extraction: "synthetic-runtime-probe-and-typescript-ast", state: "observed-fixture-only", confirmation: "unconfirmed" };
@@ -199,7 +210,7 @@ try {
       "Static compiler references cannot establish runtime behavior, business rationale, or complete dynamic dependencies.", "No confirmed or model-inferred links created. Fixture expectations are reviewer-authored judgments.",
       "Freshness overlays simulate edits and rebuild real FTS5. No file watcher or production invalidation integration exists.", "Semantic contradictions across valid files are not detected automatically. Hash drift alone does not resolve them.", "Timing is diagnostic micro cost, not end-to-end product latency or a tuned performance comparison."],
     corpus: { sources: sources.length, bytes: sources.reduce((sum, source) => sum + Buffer.byteLength(source.text), 0), chunks: chunks.length,
-      questions: fixture.questions.length, repetitionsPerMethod: 5, sourceManifest: sources.map(({ id, path, hash, revision, state, extraction }) => ({ id, path, hash, revision, state, extraction })) },
+      questions: fixture.questions.length, repetitionsPerMethod: 5, sourceManifest: sources.map(({ projectId, id, path, hash, revision, state, extraction }) => ({ projectId, id, path, hash, revision, state, extraction })) },
     summary, freshness, dynamicDependency, runs };
   const output = process.argv[2];
   if (output) writeFileSync(resolve(output), JSON.stringify(report, null, 2) + "\n");
