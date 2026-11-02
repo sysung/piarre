@@ -24,6 +24,10 @@ Preserve keyboard access, visible transcripts, screen-reader state, and non-colo
 
 Keep conversation and deterministic stop controls responsive while workers run. Emit concise progress from observed state changes, deduplicate unchanged status, and defer nonessential speech while the user is still talking. Explanation depth is a visible, correctable preference.
 
+The translation layer builds human explanations from bounded, structured records of claims, goals, constraints, sources, uncertainty, and action state. Worker context and human explanations reference the same record identities and revisions. Translation may explain terminology and implications but cannot modify authoritative state or promote an inference into evidence. Display approval and execution state from runtime records rather than generated prose.
+
+Preserve original user statements with proposed interpretations and relevant term definitions. Corrections enter the existing knowledge or plan proposal boundary. Material ambiguity remains unresolved until clarified. Test preservation of conditions, negation, quantities, uncertainty, and authority across both directions of translation. This is an interface contract, not a requirement for an additional model call on every turn.
+
 Voice input and speech output use separate adapters. Both voice and typed interpretation enter the same untrusted-proposal boundary. Separate mute microphone, stop speaking, stop task, and stop all. Hide unsupported suspension controls rather than labeling interruption as pause.
 
 Turn-taking must support hesitation, correction, and explicit completion. Push to talk, adjustable endpoint timing, and transcript correction are candidate controls. Typed tests cannot prove speech quality or intent detection.
@@ -35,6 +39,12 @@ Knowledge records need identity, content, sources, confirmation state, revisions
 Retrieve a bounded set of relevant records for each request. Distinguish retrieval failure from no matching record. Recommendation links exact supporting sources and revisions and exposes unconfirmed premises. Test whether sources support the answer, not merely whether links render.
 
 Approved corrections invalidate affected plans and evidence while preserving unrelated work. Contradictory confirmed sources need a visible resolution proposal. Reflection and repeated interactions cannot silently grant authority or confirm requirements.
+
+Retrieval indexes are rebuildable projections of authoritative records and versioned workspace sources. Candidate methods include exact identifiers and full-text search, semantic matching, compiler-derived symbol references, and bounded traversal of sourced relationships. Keep file and symbol identity, source locations, workspace revision or content hash, index coverage, and extraction method. Track uncommitted edits and reject or label stale results. Recheck relevant sources before consequential proposals or verification claims.
+
+A knowledge graph may connect requirements, decisions, symbols, modules, infrastructure declarations, tests, and evidence. Every relationship needs provenance and a distinction between extracted observations, model inferences, and confirmed assertions. Static references do not prove runtime behavior or complete dependency coverage. A graph cannot grant approval, establish that a test ran, or infer the rationale for a decision from code alone. Expose unknown and conflicting relationships.
+
+Keep the retrieval interface independent of a dedicated graph database. Evaluate relationships stored in the existing SQLite system before introducing another service. Add semantic indexes, reranking, or a graph engine when representative evaluations justify their quality, freshness, latency, and maintenance cost. Filter retrieved context by project, source revision, and access policy. Derived summaries must retain source links and never replace original evidence.
 
 ## Execution and approval
 
