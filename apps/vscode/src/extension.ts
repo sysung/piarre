@@ -13,12 +13,22 @@ const execute = promisify(execFile);
 const isTrusted = (): boolean => vscode.workspace.isTrusted;
 
 export function activate(context: vscode.ExtensionContext): void {
-  const view = new WorkView();
   const interpreter = new GoalInterpreter();
   const output = vscode.window.createOutputChannel("Piarre");
   let repository: SqliteProjectRepository | undefined;
   let opening: Promise<void> | undefined;
   let generation = 0;
+  const view = new WorkView(undefined, {
+    prepare: (goal) => interpreter.propose(goal),
+    save: (snapshot, draft, commandId) => {
+      if (!repository || !isTrusted()) return;
+      const result = repository.dispatch({ commandId, projectId: snapshot.projectId,
+        expectedProjectRevision: snapshot.revision, action: { kind: "propose-tasks", draft } });
+      if (result.kind !== "applied" && result.kind !== "duplicate") return;
+      view.update(result.snapshot);
+      return result.snapshot;
+    },
+  });
   const open = async (interactive: boolean, observedGeneration: number): Promise<void> => {
     const isCurrent = (): boolean => observedGeneration === generation && isTrusted();
     if (!isTrusted()) {

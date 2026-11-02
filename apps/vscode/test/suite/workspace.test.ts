@@ -1,0 +1,210 @@
+import assert from "node:assert/strict";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import * as vscode from "vscode";
+import { SqliteProjectRepository } from "../../src/sqlite-project-repository.js";
+import { WorkspaceDraft, parseComposerMessage } from "../../src/workspace-draft.js";
+import { GoalInterpreter } from "../../src/goal-interpreter.js";
+import { WorkView } from "../../src/work-view.js";
+import type { ProposalDraft } from "../../../../packages/core/src/index.js";
+
+suite("Typed workspace previews", () => {
+  let directory: string;
+  let repository: SqliteProjectRepository;
+  const interpreter = new GoalInterpreter();
+  setup(() => {
+    directory = mkdtempSync(path.join(tmpdir(), "piarre-workspace-"));
+    repository = new SqliteProjectRepository(path.join(directory, "project.sqlite"));
+    repository.open({ repositoryUri: "file:///workspace-test", name: "Workspace" });
+  });
+  teardown(() => {
+    repository.close();
+    rmSync(directory, { recursive: true, force: true });
+  });
+  function controller(prepare = (goal: string) => interpreter.propose(goal)) {
+    return new WorkspaceDraft(repository.read(), { prepare,
+      save: (project, draft, commandId) => {
+        const result = repository.dispatch({ commandId, projectId: project.projectId,
+          expectedProjectRevision: project.revision, action: { kind: "propose-tasks", draft } });
+        return result.kind === "applied" || result.kind === "duplicate" ? result.snapshot : undefined;
+      },
+    }, () => {});
+  }
+  test("only explicit save persists the host-held draft and duplicate saves do nothing", async () => {
+    const session = controller();
+    const before = repository.read();
+    await session.receive({ kind: "preview", requestId: "one", goal: "Build a pricing page" });
+    assert.equal(session.state.kind, "ready");
+    assert.deepEqual(repository.read(), before);
+    await session.receive({ kind: "save", requestId: "wrong" });
+    assert.deepEqual(repository.read(), before);
+    await session.receive({ kind: "save", requestId: "one", draft: {} });
+    assert.deepEqual(repository.read(), before);
+    await session.receive({ kind: "save", requestId: "one" });
+    await session.receive({ kind: "save", requestId: "one" });
+    assert.equal(repository.read().proposals.length, 1);
+    assert.equal(repository.read().tasks[0]?.state.kind, "unapproved");
+    assert.equal(session.state.requestId, "one", "Save completion must remain bound to its request");
+  });
+  test("editing or discarding rejects delayed results and never stores unsent text", async () => {
+    let resolve: ((draft: ProposalDraft) => void) | undefined;
+    const session = controller(() => new Promise((done) => { resolve = done; }));
+    const pending = session.receive({ kind: "preview", requestId: "old", goal: "Old idea" });
+    assert.equal(session.state.kind, "preparing");
+    await session.receive({ kind: "discard", requestId: "old" });
+    resolve?.(await interpreter.propose("Old idea"));
+    await pending;
+    assert.equal(session.state.kind, "idle");
+    await session.receive({ kind: "save", requestId: "old" });
+    assert.equal(repository.read().revision, 1);
+  });
+  test("replacement, project revision changes, and closing invalidate previews", async () => {
+    const pending: ((draft: ProposalDraft) => void)[] = [];
+    const session = controller(() => new Promise((resolve) => pending.push(resolve)));
+    const first = session.receive({ kind: "preview", requestId: "first", goal: "First" });
+    const second = session.receive({ kind: "preview", requestId: "second", goal: "Second" });
+    pending[1]?.(await interpreter.propose("Second"));
+    await second;
+    pending[0]?.(await interpreter.propose("First"));
+    await first;
+    assert.equal(session.state.kind === "ready" && session.state.draft.goal, "Second");
+    const project = repository.read();
+    repository.dispatch({ commandId: "rename", projectId: project.projectId, expectedProjectRevision: project.revision,
+      action: { kind: "rename-project", name: "Changed" } });
+    session.update(repository.read());
+    await session.receive({ kind: "save", requestId: "second" });
+    assert.equal(repository.read().proposals.length, 0);
+    const third = session.receive({ kind: "preview", requestId: "third", goal: "Third" });
+    session.dispose();
+    pending[2]?.(await interpreter.propose("Third"));
+    await third;
+    await session.receive({ kind: "save", requestId: "third" });
+    assert.equal(repository.read().proposals.length, 0);
+  });
+  test("a concurrent change is rejected even without a view refresh", async () => {
+    const session = controller();
+    await session.receive({ kind: "preview", requestId: "preview", goal: "Goal" });
+    const project = repository.read();
+    repository.dispatch({ commandId: "rename", projectId: project.projectId, expectedProjectRevision: project.revision,
+      action: { kind: "rename-project", name: "Changed" } });
+    await session.receive({ kind: "save", requestId: "preview" });
+    assert.equal(repository.read().proposals.length, 0);
+    assert.equal(session.state.kind, "idle");
+  });
+  test("preparation and save failures do not persist proposals", async () => {
+    const failedPreparation = controller(() => Promise.reject(new Error("Unavailable")));
+    await failedPreparation.receive({ kind: "preview", requestId: "failed", goal: "Goal" });
+    assert.equal(failedPreparation.state.kind, "idle");
+    assert.equal(failedPreparation.state.requestId, "failed");
+    const failedSave = new WorkspaceDraft(repository.read(), {
+      prepare: (goal) => interpreter.propose(goal),
+      save: () => { throw new Error("Unavailable"); },
+    }, () => {});
+    await failedSave.receive({ kind: "preview", requestId: "save-failed", goal: "Goal" });
+    await failedSave.receive({ kind: "save", requestId: "save-failed" });
+    assert.equal(failedSave.state.kind, "idle");
+    assert.equal(failedSave.state.requestId, "save-failed");
+    assert.equal(repository.read().proposals.length, 0);
+  });
+
+  test("IPC rejects empty, oversized, and fabricated messages", () => {
+    for (const value of [null, [], {}, { kind: "preview", requestId: "x", goal: " " },
+      { kind: "preview", requestId: "x", goal: "x".repeat(10001) },
+      { kind: "save", requestId: "x", projectId: "other" }, { kind: "execute", requestId: "x" }]) {
+      assert.equal(parseComposerMessage(value), undefined);
+    }
+  });
+
+  test("real webview preserves unsent input on inspection updates and requires explicit save", async function () {
+    this.timeout(20000);
+    let panel: vscode.WebviewPanel | undefined;
+    const view = new WorkView((...args) => {
+      panel = vscode.window.createWebviewPanel(...args);
+      return panel;
+    }, { prepare: (goal) => interpreter.propose(goal), save: (project, draft, commandId) => {
+      const result = repository.dispatch({ commandId, projectId: project.projectId,
+        expectedProjectRevision: project.revision, action: { kind: "propose-tasks", draft } });
+      return result.kind === "applied" || result.kind === "duplicate" ? result.snapshot : undefined;
+    } });
+    try {
+      view.show(repository.read());
+      assert.ok(panel);
+      const actualPanel = panel;
+      const result = new Promise<unknown>((resolve) => {
+        actualPanel.webview.onDidReceiveMessage((value: unknown) => {
+          if (typeof value === "object" && value !== null && "kind" in value && value.kind === "test-result") resolve(value);
+        });
+      });
+      actualPanel.webview.html = actualPanel.webview.html.replace("const api = acquireVsCodeApi();", `
+const nativeApi = acquireVsCodeApi();
+const bridgeCalls = [];
+const api = {
+  postMessage: value => { bridgeCalls.push(value); return nativeApi.postMessage(value); },
+  setState: value => { bridgeCalls.push(value); return nativeApi.setState(value); },
+};
+`).replace("</script>", `
+window.addEventListener('message', ({data}) => { if (data.kind === 'test-checked') document.body.dataset.checked = 'yes'; });
+(async () => {
+  const waitFor = async (condition) => {
+    const deadline = Date.now() + 10000;
+    while (!condition()) {
+      if (Date.now() > deadline) throw new Error('Webview condition timed out');
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+  };
+  try {
+    goal.value = '<script>unsent & private</scr' + 'ipt>';
+    goal.dispatchEvent(new Event('input'));
+    if (bridgeCalls.some(value => JSON.stringify(value).includes('unsent & private'))) throw new Error('Unsent input crossed the renderer state bridge');
+    goal.focus();
+    goal.setSelectionRange(3, 7);
+    const content = goal.value;
+    const marker = document.createElement('span');
+    marker.id = 'inspection-marker';
+    document.getElementById('inspection').append(marker);
+    api.postMessage({kind: 'test-refresh'});
+    await waitFor(() => !document.getElementById('inspection-marker'));
+    if (goal.value !== content || document.activeElement !== goal || goal.selectionStart !== 3) throw new Error('Unsent input or focus lost: ' + JSON.stringify({value: goal.value, active: document.activeElement.tagName, start: goal.selectionStart}));
+    document.getElementById('composer').requestSubmit();
+    await waitFor(() => !save.hidden);
+    if (preview.querySelector('script') || !preview.textContent.includes(content)) throw new Error('Unsafe preview rendering');
+    if (!preview.textContent.includes(String.fromCharCode(10))) throw new Error('Preview has no line breaks');
+    if (!preview.textContent.includes('Excluded paths:') || !preview.textContent.includes('Dependencies:') || !preview.textContent.includes('15 minutes')) throw new Error('Incomplete preview');
+    api.postMessage({kind: 'test-before-save'});
+    await waitFor(() => document.body.dataset.checked === 'yes');
+    const savedRequest = requestId;
+    save.click();
+    await waitFor(() => status.textContent.includes('Proposal saved'));
+    goal.value = 'A second idea';
+    goal.dispatchEvent(new Event('input'));
+    document.getElementById('composer').requestSubmit();
+    const nextRequest = requestId;
+    window.dispatchEvent(new MessageEvent('message', {data: {kind: 'draft', state: {kind: 'idle', requestId: savedRequest, message: 'Old completion'}}}));
+    if (requestId !== nextRequest) throw new Error('Old completion dismissed newer input');
+    window.dispatchEvent(new MessageEvent('message', {data: {kind: 'draft', state: {kind: 'idle', requestId: undefined, message: 'Delayed initial state'}}}));
+    if (requestId !== nextRequest) throw new Error('Initial state dismissed newer input');
+    await waitFor(() => !save.hidden);
+    goal.value = 'Changed before saving';
+    goal.dispatchEvent(new Event('input'));
+    if (!save.hidden || !save.disabled) throw new Error('Editing left stale preview saveable');
+    save.click();
+    api.postMessage({kind: 'test-result', ok: true});
+  } catch (error) { api.postMessage({kind: 'test-result', ok: false, error: String(error)}); }
+})();
+</script>`);
+      const listener = actualPanel.webview.onDidReceiveMessage((message: unknown) => {
+        if (typeof message !== "object" || message === null || !("kind" in message)) return;
+        if (message.kind === "test-refresh") view.update(repository.read());
+        if (message.kind === "test-before-save") {
+          assert.equal(repository.read().proposals.length, 0);
+          void actualPanel.webview.postMessage({ kind: "test-checked" });
+        }
+      });
+      const observed = await result;
+      listener.dispose();
+      assert.deepEqual(observed, { kind: "test-result", ok: true });
+      assert.equal(repository.read().proposals.length, 1);
+    } finally { view.dispose(); }
+  });
+});

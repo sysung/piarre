@@ -22,8 +22,15 @@ suite("Provider settings in open Work views", () => {
     const settings = vscode.workspace.getConfiguration("piarre");
     const original = settings.inspect<unknown>("providers")?.globalValue;
     const panels: vscode.WebviewPanel[] = [];
+    const inspection = new Map<vscode.WebviewPanel, string>();
     const view = new WorkView((...args) => {
       const panel = vscode.window.createWebviewPanel(...args);
+      const postMessage = panel.webview.postMessage.bind(panel.webview);
+      panel.webview.postMessage = (message: unknown) => {
+        if (typeof message === "object" && message !== null && "kind" in message &&
+            message.kind === "inspection" && "html" in message && typeof message.html === "string") inspection.set(panel, message.html);
+        return postMessage(message);
+      };
       panels.push(panel);
       return panel;
     });
@@ -44,24 +51,24 @@ suite("Provider settings in open Work views", () => {
       view.show(project);
       const panel = panels[0];
       assert.ok(panel);
-      assert.ok(panel.webview.html.includes("$0.04 at the full token budget"));
+      assert.ok((inspection.get(panel) ?? panel.webview.html).includes("$0.04 at the full token budget"));
       const editor = await vscode.window.showTextDocument(await vscode.workspace.openTextDocument({ content: "" }));
       await change(providers(8));
-      assert.ok(panel.webview.html.includes("$0.16 at the full token budget"), "Open Work must replace the old estimate after settings change");
-      assert.ok(!panel.webview.html.includes("$0.04 at the full token budget"));
+      assert.ok((inspection.get(panel) ?? panel.webview.html).includes("$0.16 at the full token budget"), "Open Work must replace the old estimate after settings change");
+      assert.ok(!(inspection.get(panel) ?? panel.webview.html).includes("$0.04 at the full token budget"));
       assert.equal(vscode.window.activeTextEditor?.document.uri.toString(), editor.document.uri.toString());
       await change([]);
-      assert.ok(panel.webview.html.includes("Estimated coding cost: Unknown"));
-      assert.ok(!panel.webview.html.includes("$0.16 at the full token budget"));
+      assert.ok((inspection.get(panel) ?? panel.webview.html).includes("Estimated coding cost: Unknown"));
+      assert.ok(!(inspection.get(panel) ?? panel.webview.html).includes("$0.16 at the full token budget"));
       panel.dispose();
       await change(providers(4));
       assert.equal(panels.length, 1, "Settings changes must not reopen a closed view");
       view.show(project);
       const reopened = panels[1];
       assert.ok(reopened);
-      assert.ok(reopened.webview.html.includes("$0.08 at the full token budget"));
+      assert.ok((inspection.get(reopened) ?? reopened.webview.html).includes("$0.08 at the full token budget"));
       await change(providers(5));
-      assert.ok(reopened.webview.html.includes("$0.10 at the full token budget"));
+      assert.ok((inspection.get(reopened) ?? reopened.webview.html).includes("$0.10 at the full token budget"));
       view.close();
       await change(providers(6));
       assert.equal(panels.length, 2);

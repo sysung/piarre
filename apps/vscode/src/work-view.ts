@@ -1,9 +1,12 @@
 import * as vscode from "vscode";
+import { GoalInterpreter } from "./goal-interpreter.js";
+import { WorkspaceDraft, type DraftOperations } from "./workspace-draft.js";
+import { renderWorkspaceShell } from "./workspace-shell.js";
 import { estimateBudget, type BudgetEstimate } from "../../../packages/core/src/costs.js";
 import { inspectProject, parseProviderConfiguration, type ProjectInspection, type ProviderConfiguration } from "../../../packages/core/src/inspection.js";
 import type { ProjectSnapshot } from "../../../packages/core/src/index.js";
 
-export function renderWorkView(
+function renderInspection(
   project: ProjectSnapshot,
   configuration?: ProviderConfiguration,
 ): string {
@@ -71,14 +74,22 @@ export function renderWorkView(
   const policy = Object.values(inspection.policy).map((state) => `<li>${escape(policyLabels[state])}</li>`).join("");
   const permissions = `<details><summary>Basis and permissions</summary><h3>Recorded basis</h3>${basis}<h3>What works now</h3><p>You can rename this project and save task proposals. A proposed budget is not permission to spend.</p><ul>${policy}</ul><h3>Providers</h3>${providers}<p>Drafting uses the built-in deterministic generator, not a conversational model. Selecting a provider does not connect it or approve spending.</p></details>`;
 
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{font-family:var(--vscode-font-family);padding:24px;color:var(--vscode-foreground)}dt{margin-top:16px;color:var(--vscode-descriptionForeground)}dd{margin:4px 0;overflow-wrap:anywhere}section{margin-top:24px;border-top:1px solid var(--vscode-panel-border)}article{margin:16px 0;padding:16px;background:var(--vscode-editor-background)}</style></head><body><h1>Work</h1><h2>${escape(project.name)}</h2>${work}${permissions}<dl><dt>Repository</dt><dd>${escape(project.repositoryUri)}</dd><dt>Project ID</dt><dd>${escape(project.projectId)}</dd><dt>Revision</dt><dd>${String(project.revision)}</dd></dl><p>Use Piarre commands in the Command Palette to manage this project.</p></body></html>`;
+  return `<h1>Work</h1><h2>${escape(project.name)}</h2>${work}${permissions}<dl><dt>Repository</dt><dd>${escape(project.repositoryUri)}</dd><dt>Project ID</dt><dd>${escape(project.projectId)}</dd><dt>Revision</dt><dd>${String(project.revision)}</dd></dl><p>Use Piarre commands in the Command Palette to manage this project.</p>`;
+}
+
+export function renderWorkView(project: ProjectSnapshot, configuration?: ProviderConfiguration): string {
+  return renderWorkspaceShell(renderInspection(project, configuration));
 }
 
 export class WorkView {
-  private current: { readonly panel: vscode.WebviewPanel; readonly project: ProjectSnapshot } | undefined;
+  private current: { readonly panel: vscode.WebviewPanel; readonly project: ProjectSnapshot; readonly draft: WorkspaceDraft } | undefined;
   private readonly settingsChanged: vscode.Disposable;
 
-  constructor(private readonly createPanel: typeof vscode.window.createWebviewPanel = vscode.window.createWebviewPanel) {
+  constructor(private readonly createPanel: typeof vscode.window.createWebviewPanel = vscode.window.createWebviewPanel,
+    private readonly operations: DraftOperations = {
+      prepare: (goal) => new GoalInterpreter().propose(goal),
+      save: () => undefined,
+    }) {
     this.settingsChanged = vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration("piarre.providers")) this.refresh();
     });
@@ -87,29 +98,55 @@ export class WorkView {
   show(project: ProjectSnapshot): void {
     if (!this.current) {
       const panel = this.createPanel("piarre.work", "Piarre Work", vscode.ViewColumn.One,
-        { enableScripts: false, localResourceRoots: [] });
-      this.current = { panel, project };
+        { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: [] });
+      const draft = new WorkspaceDraft(project, this.operations, () => {
+        if (this.current?.panel === panel) this.publishDraft();
+      });
+      this.current = { panel, project, draft };
       panel.onDidDispose(() => {
+        draft.dispose();
         if (this.current?.panel === panel) this.current = undefined;
       });
+      panel.webview.onDidReceiveMessage((message: unknown) => {
+        if (this.current?.panel !== panel) return;
+        if (typeof message === "object" && message !== null && "kind" in message && message.kind === "ready") {
+          this.refresh();
+          this.publishDraft();
+          return;
+        }
+        void draft.receive(message);
+      });
+      panel.webview.html = renderWorkView(project, this.configuration());
     } else {
-      this.current = { panel: this.current.panel, project };
+      this.update(project);
     }
-    this.refresh();
     this.current.panel.reveal();
+  }
+
+  update(project: ProjectSnapshot): void {
+    if (!this.current) return;
+    this.current.draft.update(project);
+    this.current = { ...this.current, project };
+    this.refresh();
+  }
+
+  private configuration(): ProviderConfiguration {
+    return parseProviderConfiguration(vscode.workspace.getConfiguration("piarre").get<unknown>("providers", []));
   }
 
   private refresh(): void {
     if (!this.current) return;
-    const configuration = parseProviderConfiguration(
-      vscode.workspace.getConfiguration("piarre").get<unknown>("providers", []),
-    );
-    this.current.panel.webview.html = renderWorkView(this.current.project, configuration);
+    void this.current.panel.webview.postMessage({ kind: "inspection", html: renderInspection(this.current.project, this.configuration()) });
+  }
+
+  private publishDraft(): void {
+    if (this.current) void this.current.panel.webview.postMessage({ kind: "draft", state: this.current.draft.state });
   }
 
   close(): void {
     const current = this.current;
     this.current = undefined;
+    current?.draft.dispose();
     current?.panel.dispose();
   }
 
