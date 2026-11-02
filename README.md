@@ -1,6 +1,6 @@
 # Piarre
 
-Piarre is a conversational project partner for organizing, directing, and verifying agent work. The initial product is typing-first, with optional voice planned.
+Piarre is a centralized AI orchestrator for seeing, directing, and verifying agent work. Agent visibility is the primary product direction; typed discussion is a supporting tool and voice is deferred.
 
 The implementation backlog lives in [GitHub Project 8](https://github.com/users/sysung/projects/8/views/1).
 

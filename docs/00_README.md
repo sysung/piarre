@@ -1,6 +1,6 @@
 # Piarre documentation
 
-Piarre helps users discuss, organize, and verify agent work without repeatedly reconstructing project context.
+Piarre centralizes agent visibility, work coordination, and evidence so users can direct and verify work without reconstructing status from conversations.
 
 The four lasting documents are:
 

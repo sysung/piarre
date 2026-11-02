@@ -4,7 +4,7 @@ Status: Target architecture. This document defines lasting contracts; GitHub iss
 
 ## Ownership and data
 
-The VS Code extension presents conversation and project inspection. An editor-neutral core owns the project model. Adapters connect storage, workspaces, conversational providers, coding workers, and optional voice.
+The VS Code extension presents agent activity, work ownership, direct controls, and contextual project inspection. Typed discussion is a supporting surface. An editor-neutral core owns the project model. Adapters connect storage, workspaces, supported agent providers, coding workers, and optional typed interpretation. Voice adapters are deferred.
 
 The ProjectController validates proposals and owns authorization, task transitions, dependency readiness, scheduling, budgets, reconciliation, and evidence freshness. Only the runtime appends domain events. Workers report observations or propose actions.
 
@@ -16,21 +16,21 @@ Human-readable knowledge and decision files are possible, but their authority, i
 
 ## UI and interaction
 
-Conversation and inspection reference the same durable objects. Proposed, applied, running, unknown, failed, stale, and accepted states must be distinguishable without reading logs. Deferred tasks remain discoverable. Priority and agenda disposition are separate from execution state.
+The agent overview, work controls, supporting discussion, and inspection reference the same durable objects. Proposed, applied, running, unknown, failed, stale, and accepted states must be distinguishable without reading logs. Deferred tasks remain discoverable. Priority and agenda disposition are separate from execution state.
 
-Use the selected [Session brief layout](https://www.figma.com/design/I7CeHDqFJEvoEdmslfKrNp?node-id=7-2): one compact project brief above a conversation/planning region and contextual inspector. Derive displayed summaries from canonical project records, not a second UI store. Refresh inspection and brief without replacing the composer or capturing unsent input. Use VS Code theme tokens and stack the regions in narrow panes. A planning-only shell is not evidence of sourced conversational resumption.
+Use the selected [Session brief layout](https://www.figma.com/design/I7CeHDqFJEvoEdmslfKrNp?node-id=7-2): one compact project brief above an agent/work overview and contextual inspector. Agent visibility now takes precedence over the historical conversation-first arrangement. Derive displayed summaries from canonical project records, not a second UI store. Refresh inspection and brief without replacing the composer or capturing unsent input. Use VS Code theme tokens and stack the regions in narrow panes. A planning-only shell is not evidence of live agent visibility or sourced resumption.
 
 Preserve keyboard access, visible transcripts, screen-reader state, and non-color status cues. Detailed artifacts open on demand without repeatedly changing focus. Active-run and deterministic stop controls belong outside replaceable inspector destinations so inspecting Recommendation or memory cannot hide them. Distinguish pre-run acceptance criteria from consent controls, and carry the approved criterion identities into current result evidence. Knowledge correction revisions and review acknowledgments must bind the actual record/result rather than a page-global flag. Prototype remaining state and question formats before enabling their actions.
 
-Keep conversation and deterministic stop controls responsive while workers run. Emit concise progress from observed state changes, deduplicate unchanged status, and defer nonessential speech while the user is still talking. Explanation depth is a visible, correctable preference.
+Keep task entry, inspection, and deterministic stop controls responsive while agents work. Emit concise progress from observed state changes and deduplicate unchanged status. Explanation depth is a visible, correctable preference.
 
 The translation layer builds human explanations from bounded, structured records of claims, goals, constraints, sources, uncertainty, and action state. Worker context and human explanations reference the same record identities and revisions. Translation may explain terminology and implications but cannot modify authoritative state or promote an inference into evidence. Display approval and execution state from runtime records rather than generated prose.
 
 Preserve original user statements with proposed interpretations and relevant term definitions. Corrections enter the existing knowledge or plan proposal boundary. Material ambiguity remains unresolved until clarified. Test preservation of conditions, negation, quantities, uncertainty, and authority across both directions of translation. This is an interface contract, not a requirement for an additional model call on every turn.
 
-Voice input and speech output use separate adapters. Both voice and typed interpretation enter the same untrusted-proposal boundary. Separate mute microphone, stop speaking, stop task, and stop all. Hide unsupported suspension controls rather than labeling interruption as pause.
+An agent activity projection derives identity, role, parent assignment, task and scope, provider/session identity, last observation, progress/blocker, pending decisions, output references, and supported controls from durable assignments, runs, and adapter observations. It is a rebuildable view, not a second scheduler or source of authority. Keep worker/session connectivity distinct from task completion, evidence freshness, and human acceptance. Unknown or stale observations remain explicit, with their observation time and coverage boundary.
 
-Turn-taking must support hesitation, correction, and explicit completion. Push to talk, adjustable endpoint timing, and transcript correction are candidate controls. Typed tests cannot prove speech quality or intent detection.
+Voice input, speech output, turn-taking detection, and speech-specific performance work are deferred. Do not add microphone or speech controls to the current agent overview. Existing typed discussion remains optional and uses the same untrusted-proposal boundary.
 
 ## Memory and recommendations
 
@@ -90,11 +90,11 @@ A restore is a new auditable operation. It invalidates affected evidence and rec
 
 ## Providers, resources, and privacy
 
-Keep conversational inference, speech recognition, speech synthesis, retrieval, and coding workers independently configurable. Escalation to a stronger model obeys cost and data-sharing policy. Unsupported integrations stay unavailable.
+Keep agent connections, retrieval, and coding workers independently configurable. Supporting typed interpretation must not be required for direct controls. Voice services are deferred. Escalation to a stronger model obeys cost and data-sharing policy. Unsupported integrations stay unavailable.
 
-Measure model weights, context cache, speech processing, retrieval, and runtime overhead separately. Evaluate quality before reducing model size. Record hardware, models, context size, versions, failures, and sample counts. Research results do not substitute for product measurements.
+Measure agent connection, active-work state freshness, control latency, retrieval, and runtime overhead separately. Model footprint matters when a model is actually hosted; voice-model resource targets are deferred. Evaluate quality before reducing model size. Record hardware, models, context size, versions, failures, and sample counts. Research results do not substitute for product measurements.
 
-Capture microphone input only in an explicit session. Raw audio and screen capture require opt-in. Keep capture, storage, export, and remote analysis separate. Redact secrets from logs and artifacts. Verify local deletion and explain that provider retention is separate.
+No microphone capture is required in this release. Optional screen capture requires opt-in. Keep capture, storage, export, and remote analysis separate. Redact secrets from logs and artifacts. Verify local deletion and explain that provider retention is separate.
 
 Test bundles link timestamps, transcripts, user actions, model and prompt versions, tool activity, approvals, memory/task revisions, repository changes, checks, and optional recordings. They belong with the tested run, not in permanent design documentation.
 
@@ -102,12 +102,12 @@ Stable and development builds need distinct identity, storage, and execution roo
 
 ## Verification requirements
 
-Use domain tests for policy, revisions, replay, and idempotency; adapter contracts for actual provider behavior; and Extension Host journeys for visible state, persistence, and disk results. Mocks do not prove live speech or worker semantics.
+Use domain tests for policy, revisions, replay, and idempotency; adapter contracts for actual provider behavior; and Extension Host journeys for visible state, persistence, and disk results. Mocks do not prove live agent or worker semantics.
 
 Required failure coverage includes ambiguous targets, denied authority, changed requirements, stale completion, manual edits, build failure, provider disconnect, lost acknowledgment, stop, restart, export/redaction/deletion, contradictory memory, late preparation, thread conflicts, council failure, and checkpoint restoration.
 
 Evidence binds to the relevant plan and workspace revision. Relevant changes make it stale. A completion claim cannot accept its own result. Report scenarios as passed, failed, blocked, unsupported, or not tested.
 
-Measure useful-response latency and control responsiveness during active work, not only acknowledgment speed. Compare task outcomes and review accuracy alongside reading and interruption burden. One session does not establish a performance or fatigue-reduction claim.
+Measure agent-state freshness, visibility of pending decisions, and control responsiveness during active work, not only acknowledgment speed. Compare task outcomes and review accuracy alongside reading and interruption burden. One session does not establish a performance or fatigue-reduction claim.
 
 Internal changes require appropriate automated checks. Reproduce practical regression defects before fixing them. A release needs current end-to-end evidence and consolidated human review. Detailed test procedures, run results, and release-specific gates belong in issues and artifacts.
