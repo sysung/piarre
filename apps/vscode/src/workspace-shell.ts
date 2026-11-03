@@ -30,6 +30,7 @@ document.getElementById('connect-codex').addEventListener('click', () => api.pos
 document.getElementById('disconnect-codex').addEventListener('click', () => api.postMessage({kind:'disconnect-codex'}));
 document.getElementById('stop-conversation').addEventListener('click', () => api.postMessage({kind:'stop-conversation'}));
 document.getElementById('stop-supporting').addEventListener('click', () => api.postMessage({kind:'stop-conversation'}));
+document.addEventListener('click',event=>{const button=event.target instanceof Element?event.target.closest('[data-coordination-action]'):null;if(button)api.postMessage({kind:'coordination',action:button.dataset.coordinationAction,requestId:crypto.randomUUID(),...(button.dataset.coordinationId?{id:button.dataset.coordinationId}:{}),...(button.dataset.assignmentId?{assignmentId:button.dataset.assignmentId}:{})});});
 document.addEventListener('click', event => { const button=event.target instanceof Element?event.target.closest('[data-execution-action]'):null; if(button)api.postMessage(button.dataset.executionId?{kind:'execution',action:button.dataset.executionAction,id:button.dataset.executionId}:{kind:'execution',action:button.dataset.executionAction}); });
 function showGoal() {
   composer.hidden = false; preview.hidden = true; actions.hidden = true; next.hidden = true;
@@ -109,11 +110,15 @@ window.addEventListener('message', ({data}) => {
   }
   if (data.kind === 'inspection') {
     const focused = document.activeElement?.closest('[data-open-goal]')?.dataset.openGoal;
+    const coordinationFocus=document.activeElement?.closest('[data-coordination-action]');const coordinationAction=coordinationFocus?.dataset.coordinationAction;const coordinationId=coordinationFocus?.dataset.coordinationId;const assignmentId=coordinationFocus?.dataset.assignmentId;
+    const openCoordination=new Set([...document.querySelectorAll('details[data-coordination-disclosure][open]')].map(item=>item.dataset.coordinationDisclosure));
     const executionFocus=document.activeElement?.closest('[data-execution-action]');const action=executionFocus?.dataset.executionAction;const id=executionFocus?.dataset.executionId;
     document.getElementById('inspection').innerHTML = data.html;
     if (typeof data.agentOverview === 'string') document.getElementById('agent-overview').innerHTML = data.agentOverview;
     if (typeof data.executionControls === 'string') document.getElementById('execution-controls').innerHTML = data.executionControls;
     document.getElementById('session-brief').innerHTML = data.brief;
+    document.querySelectorAll('details[data-coordination-disclosure]').forEach(item=>{item.open=openCoordination.has(item.dataset.coordinationDisclosure);});
+    if(coordinationAction)[...document.querySelectorAll('[data-coordination-action]')].find(button=>button.dataset.coordinationAction===coordinationAction&&button.dataset.coordinationId===coordinationId&&button.dataset.assignmentId===assignmentId)?.focus({preventScroll:true});
     document.querySelectorAll('[data-open-goal]').forEach(card => { if (card.dataset.openGoal === data.selectedGroupId) card.setAttribute('aria-current', 'true'); });
     if (focused) [...document.querySelectorAll('[data-open-goal]')].find(card => card.dataset.openGoal === focused)?.focus({preventScroll:true});
     if(action)[...document.querySelectorAll('[data-execution-action]')].find(button=>button.dataset.executionAction===action&&button.dataset.executionId===id)?.focus({preventScroll:true});

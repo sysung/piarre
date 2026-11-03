@@ -1,3 +1,5 @@
+import { applyCoordinationEvent, type CoordinationAction, type CoordinationEvent, type CoordinationState } from "./coordination.js";
+export type { CoordinationAction, CoordinationGroup, Assignment, LinkedIdea } from "./coordination.js";
 import { applyExecutionEvent, ownsExecutionLease, type ExecutionAction, type ExecutionEvent, type ExecutionPlan, type ExecutionRun } from "./execution.js";
 export { currentExecutionPlan, planFreshness, executionDependenciesReady, hasUncertainProvider, ownsExecutionLease } from "./execution.js";
 export type { ExecutionAction, ExecutionEvent, ExecutionPlan, ExecutionPlanDraft, ExecutionRun, ExecutionResult, ExecutionCheck, CheckEvidence } from "./execution.js";
@@ -18,6 +20,7 @@ export interface ProjectSnapshot {
   readonly proposals: readonly RecordedProposalGroup[];
   readonly tasks: readonly ProposedTask[];
   readonly conversation: readonly ConversationTurn[];
+  readonly coordination: CoordinationState;
   readonly knowledge: readonly RecordedKnowledge[];
   readonly knowledgeImpacts: readonly KnowledgeImpact[];
   readonly executionPlans: readonly ExecutionPlan[];
@@ -86,13 +89,13 @@ export interface ProjectCommand {
   readonly commandId: string;
   readonly projectId: string;
   readonly expectedProjectRevision: number;
-  readonly action: ConversationAction | KnowledgeAction | ExecutionAction
+  readonly action: CoordinationAction | ConversationAction | KnowledgeAction | ExecutionAction
     | { readonly kind: "rename-project"; readonly name: string }
     | { readonly kind: "delete-proposal"; readonly groupId: string }
     | { readonly kind: "propose-tasks"; readonly draft: ProposalDraft };
 }
 
-export type ProjectEvent = ConversationEvent | KnowledgeEvent | ExecutionEvent
+export type ProjectEvent = CoordinationEvent | ConversationEvent | KnowledgeEvent | ExecutionEvent
   | {
       readonly kind: "project-created";
       readonly projectId: string;
@@ -129,6 +132,7 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
         proposals: [],
         tasks: [],
         conversation: [],
+        coordination: { ideas: [], groups: [] },
         knowledge: [],
         knowledgeImpacts: [],
         executionPlans: [],
@@ -139,6 +143,8 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
     }
     if (!snapshot) throw new Error("Invalid project history: missing creation");
     switch (event.kind) {
+      case "coordination-recorded":
+        snapshot = applyCoordinationEvent(snapshot, event); break;
       case "execution-recorded":
         snapshot = applyExecutionEvent(snapshot, event); break;
       case "knowledge-observed":
@@ -208,6 +214,7 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
 
 export function decideProjectEvent(command: ProjectCommand): ProjectEvent {
   switch (command.action.kind) {
+    case "coordinate": return { kind: "coordination-recorded", commandId: command.commandId, action: command.action };
     case "prepare-execution-plan":
     case "approve-execution":
     case "request-execution":

@@ -27,6 +27,7 @@ for await (const line of createInterface({ input: process.stdin })) {
       reply({ thread: { id: "thread-1" }, sandbox: { type: "readOnly", networkAccess: false }, approvalPolicy: "never" }); break;
     case "turn/start":
       assert.deepEqual(request.params.sandboxPolicy, { type: "readOnly", networkAccess: false });
+      if (mode === "standard-tier") { assert.equal(request.params.serviceTierForTurn, "default"); assert.equal(request.params.serviceTier, undefined); assert.equal(request.params.model, "fixture-model"); }
       if (mode === "patch") {
         assert.deepEqual(request.params.outputSchema.required, ["summary", "operations"]);
         assert.equal(request.params.outputSchema.additionalProperties, false);

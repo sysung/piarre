@@ -1,4 +1,6 @@
 import { resumeProject, knowledgeWorkImpact, type VisitBaseline, type ResumptionFact } from "../../../packages/core/src/resumption.js";
+import { renderCoordination } from "./coordination-view.js";
+import { parseCoordinationMessage, type CoordinationMessage } from "./coordination-actions.js";
 import { parseExecutionMessage, type ExecutionMessage } from "./execution-actions.js";
 import { renderExecutionControls, renderExecutionDesk, renderExecutionResult, taskExecutionStatus } from "./execution-view.js";
 import type { RetrievalResult } from "./project-retrieval.js";
@@ -140,7 +142,7 @@ export function renderSessionBrief(project: ProjectSnapshot, baseline: VisitBase
 }
 
 export function renderWorkView(project: ProjectSnapshot, configuration?: ProviderConfiguration, executionEnabled = false, baseline: VisitBaseline = { kind: "first-visit" }): string {
-  return renderWorkspaceShell({ inspection: renderInspection(project, configuration, undefined, executionEnabled), brief: renderSessionBrief(project, baseline), agentOverview: executionEnabled ? renderExecutionDesk(project) : "<p>No coding agents are running. Save a task proposal to prepare work for an agent.</p>", executionControls: executionEnabled ? renderExecutionControls(project) : "" });
+  return renderWorkspaceShell({ inspection: renderInspection(project, configuration, undefined, executionEnabled), brief: renderSessionBrief(project, baseline), agentOverview: executionEnabled ? renderCoordination(project) + renderExecutionDesk(project) : "<p>No coding agents are running. Save a task proposal to prepare work for an agent.</p>", executionControls: executionEnabled ? renderExecutionControls(project) : "" });
 }
 
 export class WorkView {
@@ -170,7 +172,8 @@ export class WorkView {
       await vscode.window.showWarningMessage(`Delete “${goal}” and its proposal?`,
         { modal: true, detail: "Removes this saved goal and its proposed tasks. Repository files are unchanged. Prior project history is retained." }, "Delete goal") === "Delete goal",
     private readonly conversation?: { connect(): Promise<void>; disconnect(): void; send(text: string): Promise<void>; interrupt(): Promise<void>; knowledge?(kind: "observe-business" | "observe-decision" | "confirm-knowledge" | "correct-knowledge" | "lookup-project", id?: string): Promise<void> },
-    private readonly execution?: { handle(message: ExecutionMessage): Promise<void>; renderDetails?(runId: string): string }) {
+    private readonly execution?: { handle(message: ExecutionMessage): Promise<void>; renderDetails?(runId: string): string },
+    private readonly coordination?: { handle(message: CoordinationMessage): Promise<void> }) {
     this.settingsChanged = vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration("piarre.providers")) this.refresh();
     });
@@ -222,6 +225,8 @@ export class WorkView {
             void this.conversation?.knowledge?.(message.kind, message.knowledgeId); return;
           }
         }
+        const coordinationMessage = parseCoordinationMessage(message);
+        if (coordinationMessage) { void this.coordination?.handle(coordinationMessage); return; }
         const executionMessage = parseExecutionMessage(message);
         if (executionMessage) { void this.execution?.handle(executionMessage); return; }
         void draft.receive(message);
@@ -361,7 +366,7 @@ document.addEventListener('focusin', remember);
     this.refreshDetail();
     this.refreshRunDetail();
     void this.current.panel.webview.postMessage({ kind: "conversation", state: this.conversationState, html: renderConversation(this.current.project) });
-    void this.current.panel.webview.postMessage({ kind: "inspection", selectedGroupId: this.detail?.groupId, html: renderInspection(this.current.project, this.configuration(), undefined, this.execution !== undefined) + (this.lookup?.projectId === this.current.project.projectId ? renderLookup(this.lookup.result) : ""), brief: renderSessionBrief(this.current.project, this.visitBaseline(this.current.project)), agentOverview: this.execution ? renderExecutionDesk(this.current.project) : "<p>No coding agents are running. Save a task proposal to prepare work for an agent.</p>", executionControls: this.execution ? renderExecutionControls(this.current.project) : "" });
+    void this.current.panel.webview.postMessage({ kind: "inspection", selectedGroupId: this.detail?.groupId, html: renderInspection(this.current.project, this.configuration(), undefined, this.execution !== undefined) + (this.lookup?.projectId === this.current.project.projectId ? renderLookup(this.lookup.result) : ""), brief: renderSessionBrief(this.current.project, this.visitBaseline(this.current.project)), agentOverview: this.execution ? renderCoordination(this.current.project) + renderExecutionDesk(this.current.project) : "<p>No coding agents are running. Save a task proposal to prepare work for an agent.</p>", executionControls: this.execution ? renderExecutionControls(this.current.project) : "" });
   }
 
   private publishDraft(): void {

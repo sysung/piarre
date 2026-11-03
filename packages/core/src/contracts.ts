@@ -1,3 +1,4 @@
+import { parseCoordinationAction, parseCoordinationEvent } from "./coordination-contracts.js";
 import { parseExecutionAction, parseExecutionEvent } from "./execution-contracts.js";
 import { parseKnowledgeAction, parseKnowledgeEvent } from "./knowledge.js";
 import type {
@@ -235,6 +236,8 @@ export function validateProjectCommand(value: unknown): ProjectCommand {
   const projectId = nonblank(value.projectId);
   const expectedProjectRevision = positiveInteger(value.expectedProjectRevision);
   const action = value.action;
+  const coordinationAction = parseCoordinationAction(action);
+  if (coordinationAction) return { commandId, projectId, expectedProjectRevision, action: coordinationAction };
   const executionAction = parseExecutionAction(action);
   if (executionAction) return { commandId, projectId, expectedProjectRevision, action: executionAction };
   const knowledgeAction = parseKnowledgeAction(action);
@@ -282,6 +285,8 @@ function storedTask(value: unknown): ProposedTask {
 }
 
 export function parseProjectEvent(value: unknown): ProjectEvent {
+  const coordinationEvent = parseCoordinationEvent(value);
+  if (coordinationEvent) return coordinationEvent;
   const executionEvent = parseExecutionEvent(value);
   if (executionEvent) return executionEvent;
   const knowledgeEvent = parseKnowledgeEvent(value);

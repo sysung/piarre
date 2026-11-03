@@ -1,5 +1,7 @@
 import { registerDiagnosticCommands } from "./diagnostic-commands.js";
 import { parseProviderConfiguration } from "../../../packages/core/src/inspection.js";
+import { CoordinationController } from "./coordination-controller.js";
+import { CoordinationUi } from "./coordination-ui.js";
 import { ExecutionCoordinator } from "./execution-coordinator.js";
 import { ExecutionUi } from "./execution-ui.js";
 import { canonicalWorkspacePath } from "./workspace-path.js";
@@ -25,6 +27,8 @@ export function activate(context: vscode.ExtensionContext): void {
   const output = vscode.window.createOutputChannel("Piarre");
   let repository: SqliteProjectRepository | undefined;
   let conversation: ConversationController | undefined;
+  let coordination: CoordinationController | undefined;
+  let coordinationUi: CoordinationUi | undefined;
   let knowledge: KnowledgeController | undefined;
   let execution: ExecutionUi | undefined;
   let executionPaths = new Set<string>();
@@ -83,11 +87,11 @@ export function activate(context: vscode.ExtensionContext): void {
     handle: async message => {
       if (!isTrusted()) return;
       const operation = execution?.handle(message);
-      if (message.action === "pause-all") await Promise.allSettled([operation, conversation?.interrupt()]);
+      if (message.action === "pause-all") await Promise.allSettled([operation, conversation?.interrupt(), coordination?.stopAll()]);
       else await operation;
     },
     renderDetails: runId => execution?.renderDetails(runId) ?? "",
-  });
+  }, { handle: async message => { if (isTrusted()) await coordinationUi?.handle(message); } });
   const open = async (interactive: boolean, observedGeneration: number): Promise<void> => {
     const isCurrent = (): boolean => observedGeneration === generation && isTrusted();
     if (!isTrusted()) {
@@ -137,6 +141,7 @@ export function activate(context: vscode.ExtensionContext): void {
       const project = next.open({ repositoryUri, name: path.basename(root) });
       execution?.dispose(); execution = undefined;
       fileWatcher?.dispose(); fileWatcher = undefined;
+      coordination?.dispose(); coordination = undefined; coordinationUi = undefined;
       conversation?.dispose(); knowledge?.dispose();
       repository?.close();
       repository = next;
@@ -156,6 +161,8 @@ export function activate(context: vscode.ExtensionContext): void {
       await coordinator.reconcile();
       coordinator.refreshWorkspaceFreshness();
       knowledge = new KnowledgeController(next, snapshot => { view.update(snapshot); }, (projectId, result) => { view.updateLookup(projectId, result); });
+      coordination = new CoordinationController(next, snapshot => { view.update(snapshot); }, createClient);
+      coordinationUi = new CoordinationUi(coordination, () => next.read(), groupId => { view.openProposal(groupId); });
       conversation = new ConversationController(next, (snapshot, state) => { view.updateConversation(snapshot, state); },
         createClient);
     } catch (error) {
@@ -194,6 +201,7 @@ export function activate(context: vscode.ExtensionContext): void {
         fileWatcher?.dispose();
         execution?.dispose();
         knowledge?.dispose();
+        coordination?.dispose(); coordination = undefined; coordinationUi = undefined;
         conversation?.dispose();
         repository?.close();
       },
@@ -202,7 +210,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("piarre.stopAll", async () => {
       if (!isTrusted()) return;
       const operation = execution?.handle({ kind: "execution", action: "pause-all" });
-      await Promise.allSettled([operation, conversation?.interrupt()]);
+      await Promise.allSettled([operation, conversation?.interrupt(), coordination?.stopAll()]);
     }),
     vscode.commands.registerCommand("piarre.renameProject", async () => {
       if (!repository) await requestOpen(true);
@@ -303,6 +311,7 @@ export function activate(context: vscode.ExtensionContext): void {
       fileWatcher?.dispose(); fileWatcher = undefined;
       execution?.dispose(); execution = undefined; executionPaths.clear(); stopWork.hide();
       knowledge?.dispose(); knowledge = undefined;
+      coordination?.dispose(); coordination = undefined; coordinationUi = undefined;
       conversation?.dispose(); conversation = undefined;
       repository?.close();
       repository = undefined;
