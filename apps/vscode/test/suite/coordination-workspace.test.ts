@@ -59,8 +59,9 @@ suite("Read-only assignment actual Host journey", () => {
         if (message.action === "prepare") {
           const sourceIndex = new ProjectRetrieval({ projectId: parent.projectId, root: directory });
           const captured = sourceIndex.captureFile("refund.ts", repository.read().revision, 1, 1); sourceIndex.dispose();
-          controller.prepare({ fileSources: [captured], requestId: message.requestId, parentTaskId: task.taskId, purpose: "Review the refund requirement", scope: "Supplied project records", model: "fixture-model", workers: 2, durationMs: 120_000, maxTokens: 100 });
+          const prepared = controller.prepare({ fileSources: [captured], requestId: message.requestId, parentTaskId: task.taskId, purpose: "Review the refund requirement", scope: "Supplied project records", model: "fixture-model", workers: 2, durationMs: 120_000, maxTokens: 100 });
           assert.equal(prompts.length, 0);
+          await panel?.webview.postMessage({ kind: "coordination-journey-context", groupId: prepared.groupId, source: captured });
         } else if (message.action === "steer" && message.id && message.assignmentId) {
           controller.steer(message.id, message.assignmentId, message.requestId, "Look for contradictory requirements");
         } else if (message.action === "approve" && message.id) {
@@ -88,7 +89,7 @@ suite("Read-only assignment actual Host journey", () => {
       assert.deepEqual(await observed, { kind: "coordination-journey-result", ok: true });
       await completion;
       assert.equal(prompts.length, 2); assert.ok(prompts.every(prompt => prompt.includes("refundDays = 45")));
-      assert.ok(panel.webview.html.includes("Exact shared source context")); assert.deepEqual(interruptions, [1]);
+      assert.deepEqual(interruptions, [1]);
       assert.ok(prompts[0]?.includes("Look for contradictory requirements")); assert.equal(prompts[1]?.includes("Look for contradictory requirements"), false);
       assert.equal(prompts.some(prompt => prompt.includes("private unsent fixture")), false);
       const group = repository.read().coordination.groups[0]; assert.ok(group);
@@ -107,18 +108,30 @@ suite("Read-only assignment actual Host journey", () => {
 function journeyScript(): string {
   return `(async()=>{try{
     const wait=async condition=>{const deadline=Date.now()+20000;while(!condition()){if(Date.now()>deadline)throw new Error('Coordination browser condition timeout');await new Promise(resolve=>setTimeout(resolve,10));}};
-    const overview=document.getElementById('agent-overview');let terminal=false;window.addEventListener('message',({data})=>{if(data.kind==='coordination-journey-terminal')terminal=true;});
+    const overview=document.getElementById('agent-overview');let terminal=false;let sharedContext;window.addEventListener('message',({data})=>{if(data.kind==='coordination-journey-terminal')terminal=true;if(data.kind==='coordination-journey-context')sharedContext=data;});
     goal.value='private unsent fixture';goal.dispatchEvent(new Event('input'));goal.focus();goal.setSelectionRange(2,8);
     const stable=()=>{if(goal.value!=='private unsent fixture'||document.activeElement!==goal||goal.selectionStart!==2||goal.selectionEnd!==8)throw new Error('Coordination update lost private input or selection');};
     const click=(action,extra='')=>{const button=overview.querySelector('[data-coordination-action="'+action+'"]'+extra);if(!button)throw new Error('Missing coordination control '+action);button.click();};
-    click('prepare');await wait(()=>overview.querySelector('[data-coordination-action="approve"]'));stable();
+    click('prepare');await wait(()=>sharedContext&&overview.querySelector('[data-coordination-action="approve"]'));stable();
+    const inspectContext=()=>{
+    const context=[...overview.querySelectorAll('details[data-coordination-disclosure]')].find(detail=>detail.dataset.coordinationDisclosure===sharedContext.groupId+'-sources');
+    if(!context||!context.querySelector('summary').textContent.includes('Exact shared source context'))throw new Error('Prepared shared source disclosure missing from current DOM');
+    context.open=true;
+    const excerpt=[...context.querySelectorAll(':scope > pre')].find(pre=>pre.textContent===sharedContext.source.text);
+    if(!excerpt||excerpt.getBoundingClientRect().height===0||excerpt.textContent!=='export const refundDays = 45;\\n')throw new Error('Chosen source bytes are not visible in shared context');
+    if(!excerpt.previousElementSibling.textContent.includes(sharedContext.source.reference.recordId))throw new Error('Chosen source identity missing from current DOM');
+    const provenance=excerpt.nextElementSibling;
+    provenance.open=true;
+    if(JSON.stringify(JSON.parse(provenance.querySelector('pre').textContent))!==JSON.stringify(sharedContext.source.reference))throw new Error('Shared source provenance differs from captured identity');
+    };
+    inspectContext();stable();
     click('steer');await wait(()=>overview.textContent.includes('Look for contradictory requirements'));stable();
     click('approve');await wait(()=>overview.textContent.includes('host-thread-1 / host-turn-1'));stable();
     const stops=[...overview.querySelectorAll('[data-coordination-action="stop"]')];if(stops.length!==2)throw new Error('Independent stop controls unavailable');
     stops[1].click();await wait(()=>terminal);stable();
     for(const text of ['Host sourced finding','interrupted','Finding proposal; sources','standard service tier']){if(!overview.textContent.includes(text))throw new Error('Missing recorded worker fact '+text);}
     click('capture');await wait(()=>overview.textContent.includes('Review criterion 1 with the completed finding'));stable();
-    click('return');await wait(()=>!overview.querySelector('[data-coordination-action="return"]'));stable();
+    click('return');await wait(()=>!overview.querySelector('[data-coordination-action="return"]'));inspectContext();stable();
     api.postMessage({kind:'coordination-journey-result',ok:true});
   }catch(error){api.postMessage({kind:'coordination-journey-result',ok:false,error:String(error)});}})();`;
 }

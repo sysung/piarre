@@ -354,7 +354,14 @@ window.addEventListener('message', ({data}) => { if (data.kind === 'test-checked
     await waitFor(() => status.textContent.includes('Proposal saved'));
     api.postMessage({kind: 'test-refresh'});
     await waitFor(() => document.querySelector('[data-open-goal]'));
-    if (!document.getElementById('session-brief').textContent.includes('1 saved goal.')) throw new Error('Saved brief was not refreshed');
+    const savedBrief = document.getElementById('session-brief');
+    if (!savedBrief.textContent.includes('Prepare and review an execution plan for Review and refine the proposed goal.')) throw new Error('Saved brief lacks the current task next action');
+    if (savedBrief.textContent.includes('No next action established by recorded plans.') || !savedBrief.textContent.includes('No accepted result recorded.')) throw new Error('Saved brief misstates proposal progress');
+    const savedGroupId = document.querySelector('[data-open-goal]').dataset.openGoal;
+    const nextActionSource = [...savedBrief.querySelectorAll('details')].find(detail => detail.querySelector('summary')?.textContent.startsWith('proposal ' + savedGroupId + ' · revision '));
+    if (!nextActionSource) throw new Error('Saved brief does not link the next action to its saved proposal');
+    const savedSource = JSON.parse(nextActionSource.querySelector('pre').textContent);
+    if (savedSource.groupId !== savedGroupId || savedSource.goal !== content) throw new Error('Saved brief source differs from the explicitly saved goal');
     const card = document.querySelector('[data-open-goal]');
     if (!card || card.querySelector('details')) throw new Error('Goal overview must contain compact cards');
     const trash = card.parentElement.querySelector('[data-delete-goal]');
