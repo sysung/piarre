@@ -1,4 +1,5 @@
 import { parseExecutionForecast, parseSpendingConsent } from "./execution-forecast.js";
+import type { RecoveryRequest, RecoverySelection } from "./recovery.js";
 import type { CodexExecutionContext, CodexUsageWindow } from "./provider-account-context.js";
 import type { ExecutionAction, ExecutionEvent, ExecutionPlanDraft, CheckEvidence, ExecutionCheck, ExecutionCriterion, WorkspaceRequest } from "./execution.js";
 import type { FileBaseline } from "./execution-patch.js";
@@ -103,9 +104,23 @@ function workspaceRequest(value: unknown): WorkspaceRequest {
   if (row.kind !== "restore") invalid();
   return { kind: "restore", target: enumeration(row.target, ["source", "candidate"]), checkpointId: text(row.checkpointId), expectedManifestHash: sha(row.expectedManifestHash), targetManifestHash: sha(row.targetManifestHash) };
 }
+function recoverySelection(value: unknown): RecoverySelection {
+  if (!isRecord(value)) invalid();
+  if (value.kind === "journal") { const row = fields(value, ["kind", "target", "operationId"]); return { kind: "journal", target: enumeration(row.target, ["source", "candidate"]), operationId: text(row.operationId) }; }
+  const row = fields(value, ["kind", "target", "versionId"]); if (row.kind !== "snapshot") invalid();
+  return { kind: "snapshot", target: enumeration(row.target, ["source", "candidate"]), versionId: text(row.versionId) };
+}
+function recoveryRequest(value: unknown): RecoveryRequest {
+  const row = fields(value, ["previewId", "projectRevision", "selection", "bindingHash", "parentIdentityHash", "expectedManifestHash", "targetManifestHash", "intendedPaths", "reviewedAt", "ownerId", "ownerPid"]);
+  return { previewId: text(row.previewId), projectRevision: integer(row.projectRevision), selection: recoverySelection(row.selection), bindingHash: sha(row.bindingHash), parentIdentityHash: sha(row.parentIdentityHash), expectedManifestHash: sha(row.expectedManifestHash), targetManifestHash: sha(row.targetManifestHash), intendedPaths: unique(list(row.intendedPaths, item => text(item, 4096), 20)), reviewedAt: epoch(row.reviewedAt), ownerId: text(row.ownerId), ownerPid: integer(row.ownerPid) };
+}
 export function parseExecutionAction(value: unknown, legacy = false): ExecutionAction | undefined {
   if (!isRecord(value) || typeof value.kind !== "string") return undefined;
   switch (value.kind) {
+    case "register-retained-version": { const row = fields(value, ["kind", "runId", "target", "originOperationId", "relativePath", "manifestHash", "observedAt"]); return { kind: value.kind, runId: text(row.runId), target: enumeration(row.target, ["source", "candidate"]), originOperationId: text(row.originOperationId), relativePath: text(row.relativePath, 4096), manifestHash: sha(row.manifestHash), observedAt: epoch(row.observedAt) }; }
+    case "begin-recovery": { const row = fields(value, ["kind", "runId", "request"]); return { kind: value.kind, runId: text(row.runId), request: recoveryRequest(row.request) }; }
+    case "finish-recovery": { const row = fields(value, ["kind", "runId", "operationId", "manifestHash", "observedAt"]); return { kind: value.kind, runId: text(row.runId), operationId: text(row.operationId), manifestHash: sha(row.manifestHash), observedAt: epoch(row.observedAt) }; }
+    case "mark-recovery-unknown": { const row = fields(value, ["kind", "runId", "operationId", "reason"]); return { kind: value.kind, runId: text(row.runId), operationId: text(row.operationId), reason: text(row.reason) }; }
     case "prepare-execution-plan": { const row = fields(value, ["kind", "plan"]); return { kind: value.kind, plan: plan(row.plan, legacy) }; }
     case "approve-execution": { const row = fields(value, ["kind", "planId", "planRevision", "runId", "approvedAt", "expiresAt", "ownerPid", "ownerId", ...("spendingConsent" in value ? ["spendingConsent"] : [])]); const spendingConsent = row.spendingConsent === undefined && legacy ? { kind: "legacy-unconfirmed" } as const : parseSpendingConsent(row.spendingConsent); if (!legacy && spendingConsent.kind === "legacy-unconfirmed") invalid(); return { kind: value.kind, spendingConsent, planId: text(row.planId), planRevision: integer(row.planRevision), runId: text(row.runId), approvedAt: epoch(row.approvedAt), expiresAt: epoch(row.expiresAt), ownerPid: integer(row.ownerPid), ownerId: text(row.ownerId) }; }
     case "record-execution-account-observation": { const row = fields(value, ["kind", "runId", "context"]); return { kind: value.kind, runId: text(row.runId), context: accountContext(row.context) }; }

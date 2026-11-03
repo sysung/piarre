@@ -1,3 +1,4 @@
+import { publicationParents } from "./scoped-publication.js";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { CandidateWorkspace } from "./candidate-workspace.js";
@@ -53,7 +54,7 @@ export class WorkspaceIntegration {
   }
   private begin(commandId: string, changes: readonly FileChange[], target: readonly FileImage[], afterStep?: (index: number) => void): JournalResult {
     writeRecord(this.candidate.controlDirectory, `integration-target-${digest(commandId)}.json`, target);
-    writeRecord(this.candidate.controlDirectory, this.recordName(commandId), { commandId, changes, completed: false });
+    writeRecord(this.candidate.controlDirectory, this.recordName(commandId), { commandId, changes, completed: false, parents: changes.map(change => publicationParents(this.candidate.sourceRoot, change.relativePath)) });
     return this.reconcile({ commandId, ...(afterStep ? { afterStep } : {}) });
   }
   reconcile({ commandId, afterStep }: { readonly commandId: string; readonly afterStep?: (index: number) => void }): JournalResult {

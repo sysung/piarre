@@ -6,6 +6,7 @@ import { parseProviderConfiguration } from "../../../packages/core/src/inspectio
 import { resolveCheckExecutable } from "./candidate-check-runner.js";
 import { accountContextText } from "./codex-account-context.js";
 import { ExecutionCoordinator, ExecutionReviewCancelled } from "./execution-coordinator.js";
+import { nativeRecoveryDialogs, RecoveryUi, type RecoveryDialogs } from "./recovery-ui.js";
 import type { ExecutionMessage } from "./execution-actions.js";
 
 const escape = (value: string): string => value.replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character] ?? character);
@@ -30,9 +31,10 @@ function criterionText(value: string): readonly string[] {
 export class ExecutionUi {
   private preparing = false;
   private disposed = false;
+  private readonly recovery: RecoveryUi;
   private readonly reviewing = new Set<string>();
   constructor(private readonly coordinator: ExecutionCoordinator, private readonly snapshot: () => ProjectSnapshot,
-    private readonly showResult: (runId: string) => void) {}
+    private readonly showResult: (runId: string) => void, private readonly recoveryDialogs: RecoveryDialogs = nativeRecoveryDialogs) { this.recovery = new RecoveryUi(coordinator, () => this.current(), showResult, recoveryDialogs); }
 
   async handle(message: ExecutionMessage): Promise<void> {
     if (this.disposed || !vscode.workspace.isTrusted) return;
@@ -47,6 +49,8 @@ export class ExecutionUi {
         case "stop": await this.coordinator.stop({ runId: message.id }); return;
         case "reconcile": await this.coordinator.reconcile(); this.showResult(message.id); return;
         case "apply-accept": await this.apply(message.id); return;
+        case "recover": await this.recovery.resolve(message.id); return;
+        case "saved-versions": await this.recovery.saved(message.id); return;
         case "restore-source": await this.restore(message.id, "source"); return;
         case "restore-candidate": await this.restore(message.id, "candidate"); return;
         case "open-candidate": await vscode.commands.executeCommand("vscode.openFolder", vscode.Uri.file(this.coordinator.inspection({ runId: message.id }).root), { forceNewWindow: true }); return;
@@ -58,6 +62,10 @@ export class ExecutionUi {
       }
     } catch (error) {
       if (error instanceof ExecutionReviewCancelled) return;
+      if (this.current() && (message.action === "recover" || message.action === "saved-versions" || message.action === "restore-source" || message.action === "restore-candidate")) {
+        await this.recoveryDialogs.inspect("Recovery needs review", error instanceof Error ? error.message : "Recovery remains unknown; inspect recorded work.");
+        return;
+      }
       if (this.current()) await vscode.window.showWarningMessage(`Piarre could not complete this operation. ${error instanceof Error ? error.message : "Review the current work state and try again."}`);
     }
   }
@@ -144,13 +152,9 @@ export class ExecutionUi {
     const checkpointId = target === "candidate" ? run.grant.plan.baselineCheckpoint.checkpointId
       : run.workspace.kind === "integrated" ? `integration-before:${run.workspace.operationId}` : undefined;
     if (!checkpointId) throw new Error("No source checkpoint is recorded for this result.");
-    const preview = this.coordinator.previewRestore({ runId, target, checkpointId });
-    const label = target === "source" ? "Restore repository snapshot" : "Restore working copy";
-    const approved = await vscode.window.showWarningMessage(`${label}?`, { modal: true,
-      detail: `${preview.changes.map(change => `${change.kind}: ${change.relativePath} (permissions ${modeLabel(change.beforeMode)} → ${modeLabel(change.afterMode)})`).join("\n") || "No scoped changes"}\n\nNewer scoped bytes will be saved in another snapshot before replacement. Unrelated files remain outside this operation. Earlier result evidence becomes historical. External services and provider charges are not restored.\n\nCurrent manifest ${preview.currentManifestHash}\nTarget manifest ${preview.targetManifestHash}` }, label);
-    if (approved !== label || !this.current()) return;
-    this.coordinator.restore({ runId, target, checkpointId, expectedManifestHash: preview.currentManifestHash, targetManifestHash: preview.targetManifestHash, operationId: randomUUID() });
-    this.showResult(runId);
+    const version = run.savedVersions.find(version => version.checkpointId === checkpointId && version.target === target);
+    if (!version) throw new Error("The snapshot is not registered to this run.");
+    await this.recovery.review(runId, { kind: "snapshot", target, versionId: version.versionId });
   }
 
   renderDetails(runId: string): string {

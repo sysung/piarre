@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, linkSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, linkSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { parsePatchProposal } from "../../../../packages/core/src/execution-patch.js";
@@ -109,4 +109,16 @@ suite("Durable isolated candidate journals", () => {
     unlinkSync(path.join(candidate.root, "a.ts")); mkdirSync(path.join(candidate.root, "a.ts"));
     assert.throws(() => candidate.manifestHash());
   });
+  test("parent relocation after the final durable step cannot complete against a replacement root", () => {
+    const selected = candidate.files[0]; assert.ok(selected);
+    const change = parsePatchProposal({ files: candidate.files.map(file => file.baseline), value: { summary: "One file", operations: [{ fileId: selected.baseline.fileId, content: "changed" }] } });
+    const result = candidate.apply({ commandId: "move-at-completion", proposal: change, afterStep: () => {
+      renameSync(candidate.root, `${candidate.root}-moved`); mkdirSync(candidate.root);
+      writeFileSync(path.join(candidate.root, "a.ts"), "changed"); writeFileSync(path.join(candidate.root, "b.ts"), "delete me");
+    } });
+    assert.equal(result.kind, "partial");
+    assert.equal(readFileSync(path.join(candidate.root, "a.ts"), "utf8"), "changed");
+    assert.equal(candidate.reconcile({ commandId: "move-at-completion" }).kind, "partial");
+  });
+
 });

@@ -1,3 +1,4 @@
+import { publicationParents } from "./scoped-publication.js";
 import { createHash, randomUUID } from "node:crypto";
 import { chmodSync, constants, existsSync, closeSync, fstatSync, lstatSync, mkdirSync, mkdtempSync, openSync, readFileSync, realpathSync, writeFileSync, type Stats } from "node:fs";
 import path from "node:path";
@@ -155,7 +156,7 @@ export class CandidateWorkspace {
   }
   private begin(commandId: string, changes: readonly FileChange[], afterStep?: (index: number) => void): JournalResult {
     const filename = `journal-${digest(commandId)}.json`;
-    writeRecord(this.controlDirectory, filename, { commandId, changes, completed: false });
+    writeRecord(this.controlDirectory, filename, { commandId, changes, completed: false, parents: changes.map(change => publicationParents(this.root, change.relativePath)) });
     return this.reconcile({ commandId, afterStep });
   }
   reconcile({ commandId, afterStep }: { readonly commandId: string; readonly afterStep?: (index: number) => void }): JournalResult {

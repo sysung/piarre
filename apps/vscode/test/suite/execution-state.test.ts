@@ -216,4 +216,30 @@ suite("Durable execution authority and freshness", () => {
       action: { kind: "prepare-execution-plan", plan: { ...draft(), approved: true } } }));
     assert.deepEqual(repository.read(), before);
   });
+  test("reviewed recovery cannot erase an unknown local check process reservation", () => {
+    checking(); send({ kind: "mark-execution-unknown", runId: "run-1", reason: "Local process identity is uncertain" });
+    assert.throws(() => send({ kind: "begin-recovery", runId: "run-1", request: { previewId: "preview", projectRevision: repository.read().revision, selection: { kind: "journal", target: "candidate", operationId: "patch:run-1" }, bindingHash: hash, parentIdentityHash: hash, expectedManifestHash: hash, targetManifestHash: hash, intendedPaths: [], reviewedAt: 4000, ownerPid: process.pid, ownerId: "replacement-owner" } }));
+    assert.equal(repository.read().executionRuns[0]?.process.kind, "unknown");
+    assert.equal(repository.read().executionRuns.some(ownsExecutionLease), true);
+  });
+
+  test("keep-current recovery makes old passing evidence historical without an interval for another writer", () => {
+    checking(); send({ kind: "record-execution-check", runId: "run-1", evidence: evidence() });
+    send({ kind: "finish-execution", runId: "run-1", outcome: "needs-review", summary: "Passing scoped checks", manifestHash: hash });
+    const before = repository.read().executionRuns[0]; assert.ok(before && before.state.kind === "terminal"); const result = before.state.result;
+    send({ kind: "begin-workspace-operation", runId: "run-1", request: { kind: "integrate", resultId: result.resultId, resultRevision: result.recordedAtRevision, expectedManifestHash: hash, targetManifestHash: hash } });
+    send({ kind: "mark-workspace-unknown", runId: "run-1", reason: "Interrupted integration" });
+    const partial = repository.read().executionRuns[0]; assert.ok(partial && partial.workspace.kind === "unknown"); const originalOperationId = partial.workspace.operationId;
+    send({ kind: "begin-recovery", runId: "run-1", request: { previewId: "review-current", projectRevision: repository.read().revision, selection: { kind: "journal", target: "source", operationId: partial.workspace.operationId }, bindingHash: hash, parentIdentityHash: hash, expectedManifestHash: hash, targetManifestHash: hash, intendedPaths: [], reviewedAt: 4000, ownerPid: process.pid, ownerId: "successor" } });
+    const writing = repository.read().executionRuns[0]; assert.ok(writing);
+    assert.equal(ownsExecutionLease(writing), true); assert.equal(writing.reviewFreshness.kind, "stale"); assert.equal(writing.evidence[0]?.kind, "passed");
+    assert.throws(() => approve("another-writer"));
+    assert.throws(() => send({ kind: "finish-workspace-operation", runId: "run-1", operationId: originalOperationId, manifestHash: hash, observedAt: 4001 }));
+    const operation = writing.recoveries[0]; assert.ok(operation);
+    send({ kind: "finish-recovery", runId: "run-1", operationId: operation.operationId, manifestHash: hash, observedAt: 4002 });
+    const after = repository.read().executionRuns[0]; assert.ok(after);
+    assert.equal(ownsExecutionLease(after), false); assert.equal(after.reviewFreshness.kind, "stale"); assert.equal(after.evidence[0]?.kind, "passed");
+    assert.throws(() => send({ kind: "accept-execution-result", runId: "run-1", resultId: result.resultId, resultRevision: result.recordedAtRevision }));
+  });
+
 });
