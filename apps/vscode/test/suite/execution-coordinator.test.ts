@@ -7,14 +7,15 @@ import { ExecutionCoordinator } from "../../src/execution-coordinator.js";
 import { CandidateCheckRunner } from "../../src/candidate-check-runner.js";
 import type { CodexConversationClient } from "../../src/codex-conversation-client.js";
 import { SqliteProjectRepository } from "../../src/sqlite-project-repository.js";
-import { ownsExecutionLease } from "../../../../packages/core/src/index.js";
+import { currentKnowledge, planFreshness, ownsExecutionLease, type ProjectCommand } from "../../../../packages/core/src/index.js";
+import { renderExecutionResult } from "../../src/execution-view.js";
 import { GoalInterpreter } from "../../src/goal-interpreter.js";
 
 const nodeExecutable = process.env.PIARRE_TEST_NODE ?? process.execPath;
 type Client = Pick<CodexConversationClient, "connect" | "readExecutionContext" | "proposePatch" | "interrupt" | "dispose">;
 suite("Execution coordinator actual backend", () => {
   let directory: string; let source: string; let storage: string; let repository: SqliteProjectRepository; let taskId: string;
-  let requests: number; let dirty: boolean; let loseAcknowledgment: boolean;
+  let requests: number; let dirty: boolean; let loseAcknowledgment: boolean; let desiredWindow: "30" | "45";
   const createClient = (): Client => ({
     connect: () => Promise.resolve({ kind: "ready", authType: "unknown" }),
     readExecutionContext: () => Promise.resolve({ observedAt: new Date().toISOString(), model: { kind: "resolved-default", model: "fixture-model" }, usage: { kind: "unknown" }, taskForecast: { kind: "unknown" } }),
@@ -26,13 +27,13 @@ suite("Execution coordinator actual backend", () => {
       assert.ok(typeof prompt === "object" && prompt !== null && "files" in prompt && Array.isArray(prompt.files));
       const first: unknown = prompt.files[0]; assert.ok(typeof first === "object" && first !== null && "baseline" in first);
       const baseline = first.baseline; assert.ok(typeof baseline === "object" && baseline !== null && "fileId" in baseline && typeof baseline.fileId === "string");
-      return Promise.resolve({ status: "completed", threadId: "fixture-thread", turnId: "fixture-turn", output: { summary: "Change refund window to 45 days", operations: [{ fileId: baseline.fileId, content: "45\n" }] } });
+      return Promise.resolve({ status: "completed", threadId: "fixture-thread", turnId: "fixture-turn", output: { summary: `Change refund window to ${desiredWindow} days`, operations: [{ fileId: baseline.fileId, content: `${desiredWindow}\n` }] } });
     }, interrupt: () => Promise.resolve(), dispose: () => undefined,
   });
   const coordinator = () => new ExecutionCoordinator({ repository, storageDirectory: storage, createClient, publish: () => undefined, hasDirtyDocuments: () => dirty });
   const prepare = () => coordinator().prepare({ taskId, relativePaths: ["refund.txt"], objective: "Set refund window to 45 days", criteria: [{ criterionId: "days", text: "Window is 45 days" }], checks: [{ checkId: "value", argv: [nodeExecutable, "-e", "require('node:assert/strict').equal(require('node:fs').readFileSync('refund.txt','utf8'),'45\\n')"], criterionIds: ["days"] }] });
   setup(async () => {
-    requests = 0; dirty = false; loseAcknowledgment = false;
+    requests = 0; dirty = false; loseAcknowledgment = false; desiredWindow = "45";
     directory = mkdtempSync(path.join(tmpdir(), "piarre-coordinator-")); source = path.join(directory, "source"); storage = path.join(directory, "storage"); mkdirSync(source); mkdirSync(storage);
     writeFileSync(path.join(source, "refund.txt"), "30\n"); writeFileSync(path.join(source, "private.txt"), "private undisclosed");
     repository = new SqliteProjectRepository(path.join(directory, "project.sqlite")); const project = repository.open({ repositoryUri: pathToFileURL(source).href, name: "Fixture" });
@@ -40,6 +41,59 @@ suite("Execution coordinator actual backend", () => {
     const first = repository.read().tasks[0]; assert.ok(first); taskId = first.taskId;
   });
   teardown(() => { repository.close(); rmSync(directory, { recursive: true, force: true }); });
+  for (const acceptBeforeCorrection of [false, true]) {
+    test(`confirmed correction replaces ${acceptBeforeCorrection ? "accepted" : "unaccepted"} 30-day evidence through fresh 45-day approval`, async function () {
+      this.timeout(8000);
+      if ((await new CandidateCheckRunner().capability()).kind === "unsupported") { this.skip(); return; }
+      let sequence = 0;
+      const send = (action: ProjectCommand["action"]) => {
+        const snapshot = repository.read();
+        return repository.dispatch({ commandId: `correction-journey-${String(++sequence)}`, projectId: snapshot.projectId, expectedProjectRevision: snapshot.revision, action });
+      };
+      writeFileSync(path.join(source, "refund.txt"), "15\n");
+      let snapshot = repository.read();
+      send({ kind: "observe-knowledge", topic: "Refund window", category: "business", affectedTaskIds: [taskId], submitted: { projectId: snapshot.projectId, requestId: "rule-30", contextRevision: snapshot.revision, originalStatement: "Refunds are allowed for 30 days." } });
+      let knowledge = currentKnowledge(repository.read())[0]; assert.ok(knowledge);
+      send({ kind: "confirm-knowledge", target: { projectId: knowledge.projectId, knowledgeId: knowledge.knowledgeId, recordedAtRevision: knowledge.recordedAtRevision } });
+      knowledge = currentKnowledge(repository.read())[0]; assert.ok(knowledge); const originalKnowledgeRevision = knowledge.recordedAtRevision;
+      const control = coordinator();
+      const prepareRule = (days: "30" | "45") => control.prepare({ taskId, relativePaths: ["refund.txt"], objective: `Apply the confirmed ${days}-day refund rule`, criteria: [{ criterionId: `window-${days}`, text: `Refund window is ${days} days` }],
+        checks: [{ checkId: `check-${days}`, argv: [nodeExecutable, "-e", `require('node:assert/strict').equal(require('node:fs').readFileSync('refund.txt','utf8'),${JSON.stringify(`${days}\n`)})`], criterionIds: [`window-${days}`] }] });
+      desiredWindow = "30"; const before = await prepareRule("30");
+      const oldRun = await control.approveAndRun({ planId: before.plan.planId, planRevision: before.plan.recordedAtRevision, approvalId: "approve-rule-30" });
+      assert.equal(oldRun.state.kind, "terminal"); assert.equal(oldRun.state.result.outcome, "needs-review");
+      assert.equal(oldRun.evidence[0]?.kind, "passed"); assert.equal(oldRun.evidence[0].manifestHash, oldRun.state.result.manifestHash);
+      assert.equal(oldRun.grant.plan.knowledge[0]?.recordedAtRevision, originalKnowledgeRevision);
+      const oldReview = { runId: oldRun.runId, resultId: oldRun.state.result.resultId, resultRevision: oldRun.state.result.recordedAtRevision, operationId: "integrate-rule-30" };
+      if (acceptBeforeCorrection) await control.applyAndAccept(oldReview);
+      assert.equal(readFileSync(path.join(source, "refund.txt"), "utf8"), acceptBeforeCorrection ? "30\n" : "15\n");
+      assert.equal(planFreshness(repository.read(), before.plan), "current");
+      snapshot = repository.read();
+      send({ kind: "correct-knowledge", target: { projectId: knowledge.projectId, knowledgeId: knowledge.knowledgeId, recordedAtRevision: knowledge.recordedAtRevision }, submitted: { projectId: snapshot.projectId, requestId: "correct-to-45", contextRevision: snapshot.revision, originalStatement: "Refunds are allowed for 45 days." }, affectedTaskIds: [taskId] });
+      const corrected = currentKnowledge(repository.read())[0]; assert.ok(corrected); assert.equal(corrected.standing.kind, "confirmed"); assert.ok(corrected.recordedAtRevision > originalKnowledgeRevision);
+      assert.equal(planFreshness(repository.read(), before.plan), "stale");
+      const historical = renderExecutionResult(repository.read(), oldRun.runId);
+      assert.match(historical, /Historical evidence: Passed scoped checks/); assert.doesNotMatch(historical, /data-execution-action="apply-accept"/);
+      await assert.rejects(control.approveAndRun({ planId: before.plan.planId, planRevision: before.plan.recordedAtRevision, approvalId: "reuse-stale-approval" }));
+      if (!acceptBeforeCorrection) await assert.rejects(control.applyAndAccept(oldReview));
+      assert.equal(requests, 1);
+      desiredWindow = "45"; const after = await prepareRule("45");
+      assert.equal(after.plan.knowledge[0]?.recordedAtRevision, corrected.recordedAtRevision);
+      assert.equal(requests, 1, "Preparing the corrected plan cannot start generation");
+      const newRun = await control.approveAndRun({ planId: after.plan.planId, planRevision: after.plan.recordedAtRevision, approvalId: "approve-rule-45" });
+      assert.equal(newRun.state.kind, "terminal"); assert.equal(newRun.state.result.outcome, "needs-review"); assert.equal(requests, 2);
+      assert.notEqual(newRun.state.result.resultId, oldRun.state.result.resultId);
+      assert.deepEqual(newRun.evidence[0]?.criterionIds, ["window-45"]); assert.equal(newRun.evidence[0].kind, "passed");
+      assert.equal(readFileSync(path.join(source, "refund.txt"), "utf8"), acceptBeforeCorrection ? "30\n" : "15\n", "Fresh passing evidence alone does not apply changes");
+      await assert.rejects(control.applyAndAccept({ runId: newRun.runId, resultId: oldRun.state.result.resultId, resultRevision: oldRun.state.result.recordedAtRevision, operationId: "reuse-old-review" }));
+      const accepted = await control.applyAndAccept({ runId: newRun.runId, resultId: newRun.state.result.resultId, resultRevision: newRun.state.result.recordedAtRevision, operationId: "integrate-rule-45" });
+      assert.equal(accepted.acceptance.kind, "accepted"); assert.equal(readFileSync(path.join(source, "refund.txt"), "utf8"), "45\n");
+      if (acceptBeforeCorrection) await control.applyAndAccept(oldReview);
+      assert.equal(readFileSync(path.join(source, "refund.txt"), "utf8"), "45\n", "Replaying old review cannot restore obsolete behavior");
+      const durable = repository.read(); control.dispose(); repository.close(); repository = new SqliteProjectRepository(path.join(directory, "project.sqlite"));
+      assert.deepEqual(repository.read(), durable); assert.match(renderExecutionResult(repository.read(), oldRun.runId), /Historical evidence/);
+    });
+  }
   test("missing default model requires an explicit selection before persisting approval scope", async () => {
     const control = new ExecutionCoordinator({ repository, storageDirectory: storage, publish: () => undefined,
       createClient: () => ({ ...createClient(), readExecutionContext: () => Promise.resolve({ observedAt: new Date().toISOString(), model: { kind: "unknown" }, usage: { kind: "unknown" }, taskForecast: { kind: "unknown" } }) }) });
