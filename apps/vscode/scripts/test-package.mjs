@@ -4,8 +4,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import assert from "node:assert/strict";
 import { downloadAndUnzipVSCode, resolveCliArgsFromVSCodeExecutablePath, runTests } from "@vscode/test-electron";
-import { isolatedSettings } from "../test/profile-settings.mjs";
+import { assertGuiTestsAllowed, isolatedSettings } from "../test/profile-settings.mjs";
 import { vscodeVersion } from "../../../config/vscode-version.mjs";
+
+assertGuiTestsAllowed();
 
 const temporaryProfile = await mkdtemp(path.join(tmpdir(), "piarre-package-"));
 try {

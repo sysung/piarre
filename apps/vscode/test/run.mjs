@@ -4,8 +4,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { runTests, downloadAndUnzipVSCode } from "@vscode/test-electron";
-import { isolatedSettings } from "./profile-settings.mjs";
+import { assertGuiTestsAllowed, isolatedSettings } from "./profile-settings.mjs";
 import { vscodeVersion } from "../../../config/vscode-version.mjs";
+
+assertGuiTestsAllowed();
 
 const packageRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
