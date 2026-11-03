@@ -1,3 +1,4 @@
+import { forecastFixture, consentFixture } from "./forecast-fixture.js";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -97,10 +98,10 @@ suite("Source-backed project resumption", () => {
     send({ kind: "observe-knowledge", topic: "Refund policy", category: "business", submitted: statement("30 days"), affectedTaskIds: [task.taskId] });
     send({ kind: "confirm-knowledge", target: target() });
     const hash = "a".repeat(64);
-    const plan: ExecutionPlanDraft = { taskId: task.taskId, objective: "Refund window", criteria: [{ criterionId: "days", text: "30 days" }], knowledge: [target()], files: [{ kind: "absent", fileId: "refund", relativePath: "refund.ts" }], checks: [], candidateRoot: "/tmp/candidate", controlDirectory: "/tmp/control", captureHash: hash, baselineCheckpoint: { checkpointId: "before", manifestHash: hash }, sourceRoot: "/tmp/source", provider: { kind: "codex-readonly-patch", authType: "unknown", requestedModel: "fixture-model" }, accountContext: { observedAt: "2026-11-02T00:00:00.000Z", model: { kind: "unknown" }, usage: { kind: "unknown" }, taskForecast: { kind: "unknown" } }, durationMs: 1000, maxTokens: 100 };
+    const plan: ExecutionPlanDraft = { taskId: task.taskId, objective: "Refund window", criteria: [{ criterionId: "days", text: "30 days" }], knowledge: [target()], files: [{ kind: "absent", fileId: "refund", relativePath: "refund.ts" }], checks: [], candidateRoot: "/tmp/candidate", controlDirectory: "/tmp/control", captureHash: hash, baselineCheckpoint: { checkpointId: "before", manifestHash: hash }, sourceRoot: "/tmp/source", provider: { kind: "codex-readonly-patch", authType: "unknown", requestedModel: "fixture-model" }, accountContext: { observedAt: "2026-11-02T00:00:00.000Z", model: { kind: "unknown" }, usage: { kind: "unknown" } }, forecast: forecastFixture(), durationMs: 1000, maxTokens: 100 };
     send({ kind: "prepare-execution-plan", plan });
     const recorded = currentExecutionPlan(repository.read(), task.taskId); assert.ok(recorded);
-    send({ kind: "approve-execution", planId: recorded.planId, planRevision: recorded.recordedAtRevision, runId: "fixture-run", approvedAt: 1000, expiresAt: 1500, ownerPid: 12345, ownerId: "fixture-owner" });
+    send({ kind: "approve-execution", spendingConsent: consentFixture(recorded, "fixture-run"), planId: recorded.planId, planRevision: recorded.recordedAtRevision, runId: "fixture-run", approvedAt: 1000, expiresAt: 1500, ownerPid: 12345, ownerId: "fixture-owner" });
     send({ kind: "request-execution", runId: "fixture-run", requestedAt: 1100 });
     send({ kind: "mark-execution-unknown", runId: "fixture-run", reason: "Fixture lost acknowledgement" });
     const prior = repository.read();

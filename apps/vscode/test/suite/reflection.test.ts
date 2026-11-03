@@ -114,7 +114,7 @@ suite("Optional record-backed reflection", () => {
       candidateRoot: "/tmp/reflection-candidate", controlDirectory: "/tmp/reflection-control", captureHash: "a".repeat(64),
       baselineCheckpoint: { checkpointId: "before-run", manifestHash: "a".repeat(64) }, sourceRoot: "/tmp/reflection-source",
       provider: { kind: "codex-readonly-patch", authType: "unknown", requestedModel: "fixture-model" },
-      accountContext: { observedAt: "2026-11-02T00:00:00.000Z", model: { kind: "resolved-default", model: "fixture-model" }, usage: { kind: "unknown" }, taskForecast: { kind: "unknown" } },
+      forecast: { kind: "legacy-unknown" }, accountContext: { observedAt: "2026-11-02T00:00:00.000Z", model: { kind: "resolved-default", model: "fixture-model" }, usage: { kind: "unknown" } },
       durationMs: 120_000, maxTokens: 4000 };
     const source = { ...repository.read(), executionPlans: [plan] };
     const current = { ...source, executionPlans: [plan, { ...plan, planId: "new-plan", recordedAtRevision: 2 }] };
