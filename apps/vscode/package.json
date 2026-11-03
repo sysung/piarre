@@ -55,6 +55,21 @@
         "command": "piarre.deleteDiagnosticBundle",
         "title": "Piarre: Delete Diagnostic Bundle",
         "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "piarre.endSession",
+        "title": "Piarre: End Session (Optional Reflection)",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "piarre.reviewReflection",
+        "title": "Piarre: Review Reflection",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "piarre.explanationPreference",
+        "title": "Piarre: Explanation Preference",
+        "enablement": "isWorkspaceTrusted"
       }
     ],
     "configuration": {

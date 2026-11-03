@@ -1,5 +1,8 @@
 import { applyCoordinationEvent, type CoordinationAction, type CoordinationEvent, type CoordinationState } from "./coordination.js";
 export type { CoordinationAction, CoordinationGroup, Assignment, LinkedIdea } from "./coordination.js";
+import { applyReflectionEvent, type Reflection, type ReflectionAction, type ReflectionEvent, type ExplanationPreference, type ExpertisePreference } from "./reflection.js";
+export { renderReflection, reflectionArtifactPath, reflectionDrift } from "./reflection.js";
+export type { Reflection, ReflectionAction, ExplanationPreference, ExpertisePreference } from "./reflection.js";
 import { applyExecutionEvent, ownsExecutionLease, type ExecutionAction, type ExecutionEvent, type ExecutionPlan, type ExecutionRun } from "./execution.js";
 export { currentExecutionPlan, planFreshness, executionDependenciesReady, hasUncertainProvider, ownsExecutionLease } from "./execution.js";
 export type { ExecutionAction, ExecutionEvent, ExecutionPlan, ExecutionPlanDraft, ExecutionRun, ExecutionResult, ExecutionCheck, CheckEvidence } from "./execution.js";
@@ -26,6 +29,9 @@ export interface ProjectSnapshot {
   readonly executionPlans: readonly ExecutionPlan[];
   readonly executionRuns: readonly ExecutionRun[];
   readonly schedulingPaused: boolean;
+  readonly reflections: readonly Reflection[];
+  readonly explanationPreference: ExplanationPreference;
+  readonly expertisePreference: ExpertisePreference;
 }
 
 export interface ProposalRequirement {
@@ -89,13 +95,13 @@ export interface ProjectCommand {
   readonly commandId: string;
   readonly projectId: string;
   readonly expectedProjectRevision: number;
-  readonly action: CoordinationAction | ConversationAction | KnowledgeAction | ExecutionAction
+  readonly action: CoordinationAction | ConversationAction | KnowledgeAction | ExecutionAction | ReflectionAction
     | { readonly kind: "rename-project"; readonly name: string }
     | { readonly kind: "delete-proposal"; readonly groupId: string }
     | { readonly kind: "propose-tasks"; readonly draft: ProposalDraft };
 }
 
-export type ProjectEvent = CoordinationEvent | ConversationEvent | KnowledgeEvent | ExecutionEvent
+export type ProjectEvent = CoordinationEvent | ConversationEvent | KnowledgeEvent | ExecutionEvent | ReflectionEvent
   | {
       readonly kind: "project-created";
       readonly projectId: string;
@@ -138,6 +144,9 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
         executionPlans: [],
         executionRuns: [],
         schedulingPaused: false,
+        reflections: [],
+        explanationPreference: "default",
+        expertisePreference: "unspecified",
       };
       continue;
     }
@@ -145,6 +154,8 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
     switch (event.kind) {
       case "coordination-recorded":
         snapshot = applyCoordinationEvent(snapshot, event); break;
+      case "reflection-recorded":
+        snapshot = applyReflectionEvent(snapshot, event); break;
       case "execution-recorded":
         snapshot = applyExecutionEvent(snapshot, event); break;
       case "knowledge-observed":
@@ -215,6 +226,12 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
 export function decideProjectEvent(command: ProjectCommand): ProjectEvent {
   switch (command.action.kind) {
     case "coordinate": return { kind: "coordination-recorded", commandId: command.commandId, action: command.action };
+    case "offer-reflection":
+    case "correct-reflection":
+    case "resolve-reflection":
+    case "set-expertise-preference":
+    case "set-explanation-preference":
+      return { kind: "reflection-recorded", commandId: command.commandId, action: command.action };
     case "prepare-execution-plan":
     case "approve-execution":
     case "request-execution":

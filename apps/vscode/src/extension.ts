@@ -2,6 +2,7 @@ import { registerDiagnosticCommands } from "./diagnostic-commands.js";
 import { parseProviderConfiguration } from "../../../packages/core/src/inspection.js";
 import { CoordinationController } from "./coordination-controller.js";
 import { CoordinationUi } from "./coordination-ui.js";
+import { ReflectionController } from "./reflection-controller.js";
 import { ExecutionCoordinator } from "./execution-coordinator.js";
 import { ExecutionUi } from "./execution-ui.js";
 import { canonicalWorkspacePath } from "./workspace-path.js";
@@ -30,6 +31,7 @@ export function activate(context: vscode.ExtensionContext): void {
   let coordination: CoordinationController | undefined;
   let coordinationUi: CoordinationUi | undefined;
   let knowledge: KnowledgeController | undefined;
+  let reflection: ReflectionController | undefined;
   let execution: ExecutionUi | undefined;
   let executionPaths = new Set<string>();
   let refreshTimer: NodeJS.Timeout | undefined;
@@ -142,7 +144,7 @@ export function activate(context: vscode.ExtensionContext): void {
       execution?.dispose(); execution = undefined;
       fileWatcher?.dispose(); fileWatcher = undefined;
       coordination?.dispose(); coordination = undefined; coordinationUi = undefined;
-      conversation?.dispose(); knowledge?.dispose();
+      conversation?.dispose(); knowledge?.dispose(); reflection?.dispose();
       repository?.close();
       repository = next;
       view.setVisit(project.projectId, next.beginVisit(), revision => { next.recordVisitedRevision(project.projectId, revision); });
@@ -160,6 +162,8 @@ export function activate(context: vscode.ExtensionContext): void {
       fileWatcher.onDidChange(queueExecutionRefresh); fileWatcher.onDidCreate(queueExecutionRefresh); fileWatcher.onDidDelete(queueExecutionRefresh);
       await coordinator.reconcile();
       coordinator.refreshWorkspaceFreshness();
+      reflection = new ReflectionController(next, snapshot => { view.update(snapshot); }, () => { view.close(); });
+      if (project.reflections.some(item => item.status === "pending")) output.appendLine("Pending optional reflection recovered. Run Piarre: Review Reflection when ready. Work and agent controls remain available.");
       knowledge = new KnowledgeController(next, snapshot => { view.update(snapshot); }, (projectId, result) => { view.updateLookup(projectId, result); });
       coordination = new CoordinationController(next, snapshot => { view.update(snapshot); }, createClient);
       coordinationUi = new CoordinationUi(coordination, () => next.read(), groupId => { view.openProposal(groupId); });
@@ -200,6 +204,7 @@ export function activate(context: vscode.ExtensionContext): void {
         if (refreshTimer) clearTimeout(refreshTimer);
         fileWatcher?.dispose();
         execution?.dispose();
+        reflection?.dispose();
         knowledge?.dispose();
         coordination?.dispose(); coordination = undefined; coordinationUi = undefined;
         conversation?.dispose();
@@ -207,6 +212,9 @@ export function activate(context: vscode.ExtensionContext): void {
       },
     },
     vscode.commands.registerCommand("piarre.open", () => requestOpen(true)),
+    vscode.commands.registerCommand("piarre.endSession", async () => { if (isTrusted()) await reflection?.handle("end"); }),
+    vscode.commands.registerCommand("piarre.reviewReflection", async () => { if (isTrusted()) await reflection?.handle("review"); }),
+    vscode.commands.registerCommand("piarre.explanationPreference", async () => { if (isTrusted()) await reflection?.handle("preference"); }),
     vscode.commands.registerCommand("piarre.stopAll", async () => {
       if (!isTrusted()) return;
       const operation = execution?.handle({ kind: "execution", action: "pause-all" });
@@ -310,6 +318,7 @@ export function activate(context: vscode.ExtensionContext): void {
       if (refreshTimer) clearTimeout(refreshTimer); refreshTimer = undefined;
       fileWatcher?.dispose(); fileWatcher = undefined;
       execution?.dispose(); execution = undefined; executionPaths.clear(); stopWork.hide();
+      reflection?.dispose(); reflection = undefined;
       knowledge?.dispose(); knowledge = undefined;
       coordination?.dispose(); coordination = undefined; coordinationUi = undefined;
       conversation?.dispose(); conversation = undefined;
