@@ -2,7 +2,9 @@
 
 Recorded on 2026-11-02 from the product owner's design notes.
 
-These are hypotheses and deferred discovery topics. They are outside the PoC and have no implementation commitment, priority, estimate, or release milestone. P0 still has one supervised coding writer. Research may inform PoC observations without expanding its scope. A feature, a smaller variation, or no feature may be the outcome of each study.
+These are hypotheses and deferred discovery topics. They are outside the PoC and have no implementation commitment, priority, estimate, or release milestone. The current C release and its GitHub issues retain implementation authority. Research does not expand their scope. A feature, a smaller variation, or no feature may be the outcome of each study.
+
+Several research topics overlap the current C-release direction for visibility, memory, and control. This snapshot preserves the discussion and unvalidated variations; it does not defer requirements already accepted in current issues.
 
 ## Product intent
 
@@ -34,7 +36,7 @@ After availability returns, Piarre could triage messages into focused tasks defi
 
 When no focused skill fits, explore a generic model fallback. Ambiguous intent must return to the human before dependent execution. Provider availability, retry behavior, duplicate prevention, stale instructions, and whether processing resumes automatically or requires a user action remain open decisions. Queued messages do not themselves approve execution.
 
-This differs from B23's existing session agenda and triage design. Research how an inbox could feed that agenda without creating competing task state. Evaluate capture and recovery across restarts, routing accuracy, preserved intent, and the effort needed to resolve ambiguity.
+This differs from the historical B23 session agenda and triage design. Research how an inbox could feed that agenda without creating competing task state. Evaluate capture and recovery across restarts, routing accuracy, preserved intent, and the effort needed to resolve ambiguity.
 
 ## R04. Global and repository-specific skills
 
@@ -76,7 +78,7 @@ Use Harness^2 experiments to test routing accuracy, missed ambiguity, output pre
 
 ## R09. Reduce rubber-stamping and AI fatigue
 
-Investigate why developers accept changes without understanding their consequences. Piarre aims to make review informed without increasing interruptions until users ignore them. This extends the PRD's AI-fatigue objective and requires user testing.
+Investigate why developers accept changes without understanding their consequences. Piarre aims to make review informed without increasing interruptions until users ignore them. This extends the product's AI-fatigue objective and requires user testing.
 
 Compare review presentations using realistic changes with seeded material errors. Measure whether users explain the change, notice the errors, and choose an appropriate action. Also record unnecessary corrections, review time, interruptions, perceived workload, and token cost. Faster acceptance or fewer messages alone cannot establish improvement.
 
@@ -126,4 +128,4 @@ The following references preserve the owner's research trail. They are inspirati
 
 ## Promotion into delivery work
 
-These R-series entries are an unestimated discovery backlog, separate from the B-series implementation sequence. Before promotion, identify the user problem, compare simpler alternatives, record evidence, and define acceptance criteria and authorization boundaries. A promoted implementation story must update the implementation backlog and Project 8 through the existing publication process.
+These R-series entries are an unestimated discovery backlog, separate from the current C release. The B-series sequence discussed in the original notes has been superseded. Before promotion, identify the user problem, compare simpler alternatives, record evidence, and define acceptance criteria and authorization boundaries. A promoted implementation story must be tracked in Project 8 and its authoritative GitHub issues. Existing C-release overlap must be checked before treating a topic as deferred work.

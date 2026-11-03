@@ -28,6 +28,25 @@ async function inventory(root: string, relative = ""): Promise<readonly string[]
   return records;
 }
 
+async function waitForWorkTab(): Promise<void> {
+  const count = (): number => vscode.window.tabGroups.all
+    .flatMap((group) => group.tabs)
+    .filter((tab) => tab.label === "Piarre Work").length;
+  if (count() === 1) return;
+  await new Promise<void>((resolve, reject) => {
+    const listener = vscode.window.tabGroups.onDidChangeTabs(() => {
+      if (count() !== 1) return;
+      clearTimeout(timeout);
+      listener.dispose();
+      resolve();
+    });
+    const timeout = setTimeout(() => {
+      listener.dispose();
+      reject(new Error(`Expected one Piarre Work tab after opening; observed ${String(count())}`));
+    }, 5000);
+  });
+}
+
 suite("Piarre extension", () => {
   test("Extension Host supports transactional SQLite", () => {
     const database = new DatabaseSync(":memory:");
@@ -48,6 +67,7 @@ suite("Piarre extension", () => {
 
     assert.equal(extension.isActive, true);
     assert.equal(vscode.workspace.isTrusted, true);
+    await waitForWorkTab();
     const panels = vscode.window.tabGroups.all
       .flatMap((group) => group.tabs)
       .filter((tab) => tab.label === "Piarre Work");

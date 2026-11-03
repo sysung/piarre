@@ -4,19 +4,32 @@ on:
   pull_request:
   push:
     branches: [master]
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: Publish the tested VSIX as a GitHub Release (master only)
+        type: boolean
+        default: true
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   quality:
     runs-on: ubuntu-latest
+    outputs:
+      artifact-id: ${{ steps.package.outputs.artifact-id }}
     steps:
       - uses: actions/checkout@v5
+      - name: Check release branch
+        if: inputs.create_release && github.ref != 'refs/heads/master'
+        run: |
+          echo 'Releases must be built from master.' >&2
+          exit 1
       - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
@@ -24,15 +37,58 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      - run: node --test test/release-package.test.mjs
       - run: npm run build
       - run: npm run package
       - run: xvfb-run -a npm test
+      - run: xvfb-run -a npm run test:package --workspace apps/vscode
+      - name: Upload installable extension
+        id: package
+        uses: actions/upload-artifact@v5
+        with:
+          name: piarre-vsix-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            apps/vscode/dist-package/*.vsix
+            apps/vscode/dist-package/build-info.json
+            apps/vscode/dist-package/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 30
+      - name: Installation instructions
+        env:
+          ARTIFACT_URL: ${{ steps.package.outputs.artifact-url }}
+        run: |
+          echo "Download the [Piarre extension package]($ARTIFACT_URL), unzip it, then run **Extensions: Install from VSIX...** in VS Code and select the .vsix file." >> "$GITHUB_STEP_SUMMARY"
       - if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: b00-evidence
+          name: test-evidence-${{ github.run_attempt }}
           path: |
-            apps/vscode/dist-package/*.vsix
             apps/vscode/dist-package/contents.txt
             apps/vscode/dist-test/smoke.log
           retention-days: 7
+
+  release:
+    if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.create_release))
+    needs: quality
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: release-${{ github.sha }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/download-artifact@v5
+        with:
+          artifact-ids: ${{ needs.quality.outputs.artifact-id }}
+          path: package
+      - name: Publish verified extension package
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SOURCE_SHA: ${{ github.sha }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: node scripts/release-package.mjs package

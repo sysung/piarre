@@ -1,14 +1,17 @@
 import path from "node:path";
+import { readdirSync } from "node:fs";
 import Mocha from "mocha";
 
 export function run(): Promise<void> {
   const mocha = new Mocha({ color: true, ui: "tdd" });
   if (process.env.PIARRE_UNTRUSTED_TEST === "1") {
     mocha.addFile(path.resolve(__dirname, "untrusted.test.js"));
-  } else {
+  } else if (process.env.PIARRE_PACKAGE_TEST === "1") {
     mocha.addFile(path.resolve(__dirname, "activation.test.js"));
-    mocha.addFile(path.resolve(__dirname, "project.test.js"));
-    mocha.addFile(path.resolve(__dirname, "proposal.test.js"));
+  } else {
+    for (const name of readdirSync(__dirname).filter((name) => name.endsWith(".test.js") && name !== "untrusted.test.js").sort()) {
+      mocha.addFile(path.resolve(__dirname, name));
+    }
   }
 
   return new Promise((resolve, reject) => {

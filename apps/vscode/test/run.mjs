@@ -52,6 +52,7 @@ try {
       extensionsPath,
     ],
     version: vscodeVersion,
+    extensionTestsEnv: { PIARRE_TEST_NODE: process.execPath },
   });
   await writeFile(logPath, `${environment}\nResult: passed\n`, "utf8");
   const restrictedUserData = path.join(testRoot, "restricted-user-data");

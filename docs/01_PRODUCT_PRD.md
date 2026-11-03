@@ -1,524 +1,119 @@
-# Product design for Piarre
+# Piarre product requirements
 
-**Status:** Draft v0.2 proposal
-**Product:** Voice-first IDE for directing, observing, and verifying coding agents
-**First delivery target:** VS Code extension with an editor-neutral core
+Status: Product direction. Features below are requirements, not claims that they are implemented. GitHub issues and release evidence determine delivery status.
 
-This document describes the proposed product. It does not claim that the features exist. The v0.2 technical design, backlog, and evaluation plan define how each claim must earn current evidence.
+## Purpose and audience
 
-## 1. Product thesis
+Piarre is a centralized AI orchestrator inside VS Code. Its primary experience makes agent work visible: who owns each task, what is happening, what is blocked, what evidence exists, and what needs the user’s decision. Project context survives individual agent sessions.
 
-Piarre helps a developer supervise agent work as a project, not as a collection of chats.
+The first user is a developer who already uses coding agents. The first intended use is improving Piarre itself, with a separate development instance testing candidate changes against another project. Explanations should also be understandable to less technical users. Consequential code changes still require qualified review.
 
-The developer states an objective by voice or text. Piarre turns that objective into a reviewable work graph with requirements, tasks, dependencies, owners, approvals, budgets, and acceptance checks. Coding agents perform bounded work. Piarre keeps project state, applies deterministic execution rules, and attaches current evidence to each result.
+The business problem is AI fatigue. Users spend too much effort repeating context, reading long updates, coordinating agents, and checking unsupported claims. Piarre must reduce that burden while preserving control and review accuracy. Agent visibility, coordination, and trustworthy review are the priorities. Voice is deferred.
 
-Voice is a control method. Voice is not the whole interface. The screen remains the source of precision for plans, code, diffs, costs, approvals, and evidence.
+Opening Piarre should show where work stands without requiring a chat exchange: meaningful progress, upcoming work, unresolved decisions, and inspectable sources.
 
-### Product promise
+## Product principles
 
-A developer can say what must change, see how Piarre divided the work, redirect active work, and verify the result without reconstructing context from several agent chats.
+- Understand the user's business and current goal before recommending technical work. Consult recorded intent instead of asking the user to repeat it.
+- Lead with visible agent and task state. Users should not need to ask for routine status or reconstruct ownership from transcripts.
+- Answer the question asked. Give the useful answer first and detail only when needed. Supporting discussion must stay concise and relevant to the current task or decision.
+- Adapt wording and explanation depth to the user's expertise and feedback. Recognize confusion and simplify rather than repeating the same explanation at greater length.
+- Keep it simple. Every control, agent, abstraction, and notification must justify its cost to the user.
+- Make memory, assumptions, recommendations, and actions inspectable and correctable.
+- Models propose. Application code enforces authority and state. A convincing explanation is not verification.
+- Preserve manual work. Make failures and recovery limits visible.
+- Give factual updates at meaningful milestones, blockers, and transitions even when the user is silent. Keep routine logs available without narrating every command or interrupting unfinished thought.
+- Apply relevant Poteto and pstack practices, including independent review and root-cause analysis, when they help. Do not load every skill or invoke a council for every request.
+- Deliver one coherent candidate for concentrated human feedback. Keep internal implementation and automated verification incremental.
 
-### Positioning
+## Agent visibility and project inspection
 
-> Piarre is a voice-first IDE for directing, observing, and verifying teams of coding agents.
+The primary surface is an agent and work overview with direct controls. For each managed or explicitly attached agent, show its identity and role, provider or session, assigned task and scope, latest observed activity, progress or blocker, pending decision, and available controls. Link outputs, checks, and results to the responsible assignment and relevant revisions. Group parallel work under its parent objective so ownership remains understandable.
 
-Codex and other providers supply workers. Piarre owns the project model, the supervision experience, and the rules that govern execution.
+Separate agent connection or session state from task, run, verification, and acceptance state. Show last observation and uncertainty when a session disconnects or cannot be inspected. Coverage must be explicit: Piarre cannot imply that it observes unsupported or unattached sessions in another application. Available controls reflect observed adapter capabilities.
 
-## 2. Problem
+Keep the selected [Design B, Session brief](https://www.figma.com/design/I7CeHDqFJEvoEdmslfKrNp?node-id=7-2) structure: a compact project brief above the work area and contextual inspection. The current direction replaces conversation as the primary region with agent activity, task ownership, and the next decisions. Supporting details open on demand. Narrow panes stack these regions in reading order. Use VS Code theme and font settings rather than the prototype’s fixed palette. The historical Figma conversation-first arrangement is not the current priority.
 
-Agent tools can write code, but developers still coordinate the work manually. They repeat project context, inspect several conversations, resolve overlapping changes, check unsupported completion claims, and reconstruct decisions after interruptions.
+Tasks, plans, memory, artifacts, decisions, activity, and council work share canonical records. The brief, agent overview, and inspector reflect the same current state. Keep stop and scheduling controls accessible while inspecting supporting records. Preserve keyboard focus and any unsent input during updates. A planning-only or disconnected view must remain honest about unavailable agents, execution, and evidence.
 
-Piarre tests the following product hypothesis:
+Typed instructions and focused discussion are supporting tools. Users can create or revise work, clarify consequential intent, and inspect a proposed interpretation without making extended conversation the main workflow. Direct task, memory, approval, and stop controls bypass model interpretation. Broad dialogue quality, think-aloud interaction, and voice are not prerequisites for the agent-visibility candidate.
 
-> A persistent work graph, controlled through voice and a visual IDE, reduces the effort required to supervise bounded agent work without reducing developer control.
+Voice input, speech output, background listening, and voice-specific interaction tuning are deferred. No microphone controls, speech services, or voice memory targets are required for this release. Existing typed discussion may remain available without dominating the workspace.
 
-This hypothesis remains unverified. The product must compare Piarre with the developer's current workflow before it claims a productivity advantage.
+## Translation and shared understanding
 
-### Objective: reduce AI fatigue
+Piarre bridges differences in terminology, expertise, assumptions, and background knowledge between people and coding agents. Translation preserves meaning and connects technical findings to the user's goal. It does not assume that every model needs terse input or every person needs a longer answer.
 
-Piarre aims to reduce the mental effort of keeping up with AI-generated work. Developers should spend less attention reading agent output, reconstructing progress, checking repeated claims, and deciding which updates matter to their project.
+An AI-facing layer provides explicit goals, constraints, relevant knowledge, sources, uncertainty, and action state. A human-facing translation layer explains what those records mean, why they matter, and what decision is needed. Both refer to the same records. Users can inspect the original evidence and correct an interpretation. Neither representation is hidden model reasoning.
 
-Piarre must provide useful updates when they change what the developer needs to know or do. Routine execution details belong in an inspectable Activity history. The default experience prioritizes decisions, actionable blockers, material changes to scope or risk, failures that affect the outcome, and results ready for review.
+Human explanations start with the useful answer and offer additional context, definitions, examples, and technical detail as needed. Adapt depth to the user's knowledge and feedback. Preserve material caveats, quantities, negation, and distinctions between proposed, observed, verified, and accepted work. A simpler explanation must not imply stronger evidence or broader approval.
 
-The product must:
+Translation also works from human intent toward agent instructions. Preserve the original statement alongside its proposed interpretation. Investigate observable facts and ask focused questions when materially different interpretations would change scope or acceptance. A paraphrase or fluent reply does not establish user agreement, confirm knowledge, or authorize work.
 
-- Stay quiet when authorized work continues without a meaningful change. Deduplicate repeated updates and batch related non-urgent changes.
-- Lead each necessary update with what changed, its effect on the project, and any action required from the user.
-- Present a concise review summary with the changed scope, current check results, unresolved uncertainty, and links to exact diffs or evidence. Reveal detailed logs on demand.
-- Run authorized automated checks and report their observed results so the user does not have to repeat routine validation or interpret unsupported completion claims.
-- Keep outstanding decisions and review items visible until resolved, without repeatedly interrupting the user about unchanged items.
-- Let the user request more detail or a progress update. Keep essential approvals, material failures, and uncertainty visible even when updates are reduced.
+## Memory and the Recommendation view
 
-Fewer messages alone do not establish success. Reduced reading and interruption must not hide defects, weaken review, or transfer unrecognized risk to the developer. AI-fatigue reduction is a product objective to validate, not a current capability claim.
+Project memory contains business knowledge, technical decisions, requirements, preferences, observations, and unresolved assumptions. Users can inspect sources, confirmation state, changes, and affected work.
 
-The proposed long-term objective also includes preserving the developer's understanding of agent-produced work. The [post-PoC HCI research continuation](05_RESEARCH_BACKLOG.md#continuation-preserve-understanding-throughout-delegation) explores collaborative correction of intent, evidence-backed explanations, informed review, and later maintenance. These studies do not add PoC features or release gates.
+Important recommendations offer a Recommendation view showing supporting records, assumptions, alternatives, contradictions, and proposed versus completed actions. This is an explanation backed by evidence, not access to hidden model reasoning.
 
-## 3. Audience
+The user wants automatic observation capture and approval of memory changes. The proposed boundary is automatic capture as unconfirmed observations, with approval before replacing confirmed knowledge, promoting inferences to requirements, or resolving contradictions. This policy still needs explicit resolution before dependent behavior ships.
 
-### Primary audience
+Corrections must update durable records and identify affected plans or evidence. Missing, invalid, disputed, and stale knowledge remain distinct. Repeated behavior alone does not establish a permanent preference. Fast lookup is required; a particular index structure is not a product requirement.
 
-The first user is an experienced solo developer or technical founder who:
+Project lookup must connect business knowledge and technical decisions to code symbols, modules, infrastructure declarations, requirements, and verification evidence. It should answer both where behavior is implemented and why a decision was made. Code alone does not establish business rationale, and an infrastructure declaration does not prove the deployed state.
 
-- already uses coding agents.
-- can review code, diffs, and test results.
-- works in one local repository at a time.
-- delegates multi-step work but wants explicit control.
-- values voice when planning, navigating, or supervising work.
-- wants to switch between voice, keyboard, and mouse without losing state.
+Evaluate a knowledge graph alongside exact search, semantic retrieval, and compiler-derived code indexes. Relationships must retain sources, revisions, extraction method, and confirmation state. Model-inferred links remain distinguishable from source-derived or confirmed links. Retrieval must expose stale indexes, incomplete coverage, contradictions, and unsupported answers rather than presenting plausible matches as facts.
 
-### Secondary audience
+Choose storage and retrieval methods through representative lookup and change-impact evaluations. A dedicated graph database is a candidate, not a committed dependency. Retrieval indexes must not become competing authorities for project knowledge, approvals, or evidence.
 
-- Engineers handling migrations, investigations, and maintenance work with several dependent tasks.
-- Technical leads supervising bounded agent work inside their own workspace.
-- Developers who need a local or provider-neutral control layer for privacy, cost, or reliability.
-- Developers with motor or repetitive-strain constraints who benefit from voice control but still need a complete keyboard path.
+## Work and user authority
 
-### Early anti-personas
+Piarre turns broad intent into reviewable goals, requirements, plans, dependencies, tasks, and acceptance checks. AI triage can recommend priorities and defer work with visible, reversible changes. Triage does not authorize execution.
 
-Piarre is not designed first for:
+Piarre may challenge requested features and recommend deleting unnecessary scope. Humans approve changes to product direction. Routine steps can proceed inside an approved scope without asking for every subtask.
 
-- people who cannot assess generated code or acceptance criteria.
-- users seeking unattended production deployment.
-- teams that need shared cloud collaboration and access control.
-- users who expect guaranteed offline operation on any device.
-- developers who want voice-driven character-by-character editing.
-- users who want an agent to approve its own risky actions.
+Paid operations and potentially damaging actions require applicable approval and transparency, including cost uncertainty, data sharing, failure consequences, and a recovery plan. Approval granularity remains open; no blanket spending permission is inferred. Unsupported hard cost caps must not be promised.
 
-## 4. Jobs to be done
+One coding writer is the initial boundary. Results need current checks and user review. Checkpoints let users preview and restore supported earlier state while preserving newer work. Restoration does not imply reversal of external services or provider charges.
 
-A developer hires Piarre to:
+## Parallel ideas, council, and preparation
 
-- turn a spoken goal into a plan with acceptance criteria.
-- assign approved work without repeating project context.
-- see what is ready, running, blocked, awaiting approval, or awaiting review.
-- change a requirement without losing unrelated progress.
-- ask why a decision was made and receive its recorded basis.
-- stop speech, one task, or all work without confusing those actions.
-- resume a project after an editor restart or provider failure.
-- compare worker claims with current diffs, checks, and observations.
-- choose a local or hosted model without changing the project model.
-- reuse a successful work pattern without copying prompts between chats.
+A new idea can become a linked thread with a parent, scoped context, and return point. Capturing an idea does not automatically schedule paid work. Findings cannot silently alter the original plan.
 
-## 5. Differentiation
-
-Piarre does not try to be a stronger coding model. It coordinates models and makes their work inspectable.
-
-| General agent chat | Piarre |
-|---|---|
-| A conversation or task is the main object. | The project and work graph are the main objects. |
-| One provider defines the experience. | Provider adapters implement one capability contract. |
-| The model decides how to proceed. | Models propose actions. Deterministic code authorizes and applies them. |
-| Status lives in messages. | Status lives in versioned tasks, runs, approvals, and evidence. |
-| The user reconstructs dependencies. | Piarre stores and displays dependencies. |
-| Completion is a worker response. | Completion requires current evidence and developer acceptance. |
-| Voice behaves like spoken chat or dictation. | Voice directs visible project work. |
-
-The product earns its place only if persistent supervision is better than using separate agent chats. Voice alone is not a defensible difference.
-
-## 6. Product principles
-
-1. **The project outlives the conversation.** Ending a voice session does not erase requirements, decisions, tasks, approvals, or evidence.
-2. **Voice controls intent. The screen carries precision.** Speak goals and navigation. Inspect exact plans, code, diffs, budgets, and evidence visually.
-3. **Speech stays brief and interruptible.** Piarre reports the state change or blocker. The UI holds the details.
-4. **Models propose. Code decides.** Deterministic code owns authorization, task transitions, dependency state, budgets, and stale-result rejection.
-5. **A completion claim needs current evidence.** A finished run can still require verification and review.
-6. **Manual work is first-class.** Piarre detects conflicts and never silently overwrites user changes.
-7. **Uncertainty is visible.** Unsupported controls, unknown run state, estimated cost, and stale evidence receive distinct labels.
-8. **Voice is optional.** Every essential action has a keyboard, mouse, or typed-command path.
-9. **Interrupt only for decisions.** Piarre stays quiet during authorized work unless the user asks, work completes, or a decision blocks progress.
-10. **Start narrow.** Prove one supervised writer before adding concurrent writers.
-11. **Protect developer attention.** Send updates that affect project decisions or outcomes. Keep routine detail available on demand and consolidate review evidence.
-
-## 7. Product model
-
-The following objects define the product:
-
-| Object | Purpose |
-|---|---|
-| `Project` | Persistent workspace, policy, provider configuration, and history. |
-| `Goal` | Desired outcome and acceptance criteria. |
-| `Requirement` | Versioned constraint with provenance and confirmation status. |
-| `Plan` | Versioned proposal that connects requirements to tasks. |
-| `Task` | Bounded work with dependencies, scope, owner, and acceptance checks. |
-| `Worker` | Configured agent provider and its verified capabilities. |
-| `Run` | One worker attempt for a task and plan version. |
-| `Approval` | Authorization for a concrete action, scope, revision, and duration. |
-| `Budget` | Authorized limits, reservations, observed usage, and uncertainty. |
-| `Decision` | Choice, rationale, alternatives, source, and affected work. |
-| `Evidence` | Diff, command result, preview observation, or artifact tied to a revision. |
-| `Workflow` | Reusable task structure with inputs, permissions, and acceptance checks. |
-| `Session` | Temporary voice or typed interaction context. |
-
-Task state and run state remain separate. A worker can finish a run while the task remains **Needs verification** or **Needs review**.
-
-### Task states
-
-- **Proposed** means the task belongs to an unapproved plan.
-- **Ready** means dependencies and approvals allow execution.
-- **Running** means a worker has an active run.
-- **Blocked** means an external fact or dependency prevents progress.
-- **Needs approval** means the next action exceeds current authorization.
-- **Needs verification** means the run finished but required checks remain.
-- **Needs review** means evidence is current and the developer must inspect the result.
-- **Accepted** means the developer accepted the verified result.
-- **Cancelled** means Piarre stopped future work and reconciled partial state.
-
-Failed and interrupted runs remain visible inside the task history. They do not replace the task.
-
-## 8. Information architecture
-
-The primary navigation contains:
-
-- **Work** shows the goal, plan, tasks, dependencies, owners, and current state.
-- **Review** collects plans, approvals, diffs, previews, verification, and acceptance decisions.
-- **Decisions** shows recorded choices, assumptions, alternatives, and affected tasks.
-- **Activity** shows an event-backed history of worker and user actions.
-- **Settings** controls providers, voice, privacy, policies, budgets, and accessibility.
-
-Conversation history appears in a collapsible panel. It supports the work graph but does not replace it.
-
-### Primary layout
-
-```text
-+----------------------------------------------------------------------------+
-| Piarre / Portfolio       Voice off       Budget $5        [Stop all work]  |
-+---------------+-----------------------------------+------------------------+
-| Work          | Goal                              | Build homepage         |
-| Review     1  | Publishable local portfolio       | Worker: Codex          |
-| Decisions     | Plan v3             [Review plan] | State: Running         |
-| Activity      |                                   |                        |
-| Settings      |  [Accepted] Inspect workspace     | Scope                  |
-|               |       |                           | src/pages              |
-|               |  [Running] Build homepage        | src/styles             |
-|               |       |                           |                        |
-|               |  [Blocked] Verify layout         | [Changes] [Evidence]   |
-|               |  Waiting for homepage            | [Activity]             |
-|               |                                   |                        |
-|               |  [Needs approval] Add package    | [Stop task]            |
-+---------------+-----------------------------------+------------------------+
-| [Start voice]  [Type a command...]                       [Conversation]    |
-+----------------------------------------------------------------------------+
-```
-
-The middle column uses a dependency-aware task list first. A free-form node canvas can come later if testing proves that it improves navigation. Small projects must remain understandable without graph manipulation.
-
-### Task inspector
-
-The selected task shows:
-
-- the desired outcome and acceptance checks.
-- the current owner and verified capabilities.
-- the approved file, command, network, and cost scope.
-- dependencies and affected tasks.
-- active and previous runs.
-- current changes and conflicts.
-- evidence freshness.
-- available controls, based on provider capabilities.
-
-Do not display **Pause** unless the worker proves safe suspension. Display **Stop task** when the only supported behavior is interruption and reconciliation.
-
-## 9. Voice interaction
-
-### Interaction loop
-
-1. Piarre captures speech only during an explicit session.
-2. The voice interpreter produces a transcript and a structured proposal.
-3. Piarre resolves references against the visible selection and recent interaction.
-4. Deterministic policy validates the target, scope, permission, budget, and plan version.
-5. Piarre either applies the action, requests a review, or asks one blocking question.
-6. Piarre reports the observed state and updates the screen.
-
-### Example commands
-
-- "Add a task to test password reset."
-- "What is blocking checkout?"
-- "Show the homepage diff."
-- "Ask Codex to implement the approved homepage task."
-- "Make dark mode the default."
-- "Give the research task to the local model."
-- "Stop talking."
-- "Stop the homepage task."
-- "Stop all work."
-- "What still needs verification?"
-
-### Reference resolution
-
-Phrases such as "that task" first refer to the visible selection. Piarre can use recent interaction when the selected item does not resolve the phrase. If two targets remain plausible, Piarre asks which target the user means.
-
-Piarre never guesses the target of a destructive action.
-
-### Spoken status
-
-Spoken status must match observed state:
-
-- Say "Stop requested" before a worker confirms interruption.
-- Say "Stopped. Two files changed" only after Piarre reconciles the run and workspace.
-- Say "The build passed. Layout still needs review" when command evidence exists but visual review does not.
-- Say "I cannot verify that yet" when evidence is missing or stale.
-
-### Separate controls
-
-- **Mute microphone** stops audio capture.
-- **Stop speaking** stops Piarre audio output.
-- **Stop task** interrupts one worker and reconciles partial changes.
-- **Stop all work** stops speech, prevents new scheduling, requests interruption, and reconciles active runs.
-
-Barge-in stops Piarre speech. It does not stop coding unless the utterance contains a validated work-control action.
-
-### Voice modes
-
-- **Continuous session** uses voice activity detection after the user explicitly starts the session.
-- **Push to talk** supports shared offices, noisy rooms, and users who prefer tighter control.
-- **Typed command** provides an equivalent path for every command.
-- **Focus mode** speaks only when the user asks, a decision blocks work, or approved work completes.
-
-## 10. Proposed features
-
-All features in this section are proposals.
-
-### P0 supervised worker
-
-P0 proves the supervision loop with one active coding writer:
-
-- explicit voice-session start, mute, push-to-talk, and end.
-- typed fallback and keyboard access.
-- visible transcript with partial and final states.
-- a persistent project, goal, requirements, plan, task, and decision model.
-- plan proposal, versioning, review, and approval.
-- one coding worker with start, status, steer, stop, and capability detection.
-- trusted-workspace and operation-scope enforcement.
-- one active writer in the workspace.
-- dependency-aware task state.
-- diff, changed-file, command, test, and preview evidence.
-- explicit **Needs verification**, **Needs review**, and **Accepted** gates.
-- mid-build requirement changes with stale-plan protection.
-- manual-edit conflict detection.
-- restart replay and uncertain-run reconciliation.
-- basic budget configuration and observed usage reporting.
-- local export, retention, redaction, and verified deletion.
-- one built-in workflow called **Build and verify a local website**.
+A bounded council supports independent read-only investigation or review. Users can inspect purpose, provider, state, available actions and traces, findings, disagreements, and costs. Agreement among agents does not prove correctness. Multiple writers require separate isolation and integration evidence.
 
-### P1 supervised team
+Piarre can prepare disposable drafts or retrieve context from submitted instructions. Explicitly streamed input is a later opt-in capability. Changed intent cancels or supersedes preparation. Guessed intent cannot authorize spending, confirmed-memory changes, workspace edits, or external actions. Unsent keystroke monitoring is not implied.
 
-P1 adds workers only after P0 preserves state and evidence reliably:
+## Reflection and adaptation
 
-- one parallel read-only research worker.
-- two isolated coding workers using separate worktrees or equivalent boundaries.
-- dependency scheduling and worker availability.
-- provider capability comparison and explicit routing.
-- conflict prediction before assignment.
-- an integration-review task before changes enter the primary workspace.
-- per-worker and per-task budgets.
-- reusable workflow templates.
-- independent verification by a different worker.
-- comparison of competing plans or implementations.
+Offer a brief optional reflection at session close, based on observed successes, friction, and user feedback. Users can decline and close immediately. Reflection proposes improvements rather than silently changing memory, policy, prompts, or code.
 
-### Later candidates
+Optional onboarding can ask about work, experience, and explanation preferences. Users can skip it and correct the profile later. Adaptation must not hide material risks or assume that the user's needs never change.
 
-[Post-PoC product research backlog](05_RESEARCH_BACKLOG.md) records deferred ideas about visible agent sessions, grounded conversation, an inbox during credit limits, global and repository skills, optional skill self-improvement, skill-stage diagrams, evolving memory, verifiable task routing, and informed review. These are hypotheses to investigate, not additions to P0 or commitments to P1. The long-term direction is a product form of p-stack that adapts to developer workflows. Token savings and reduced AI fatigue require evidence.
+Self-optimization toward smaller models is a future capability requiring measured quality comparisons, approval, versioned evaluations, and rollback.
 
-- team collaboration and shared project history.
-- remote workers and organization policy.
-- richer local models and offline bundles.
-- workflow authoring UI.
-- project-level knowledge retrieval.
-- a desktop application outside VS Code.
-- optional wake phrase.
-- mobile supervision.
-- deployment workflows with separate safety review.
+## Models and business constraints
 
-## 11. Golden path
+Prioritize supported agent connections, visible orchestration, grounded state, and controllable spending. Use existing coding accounts through explicit supported integrations. Local conversational-model selection, speech services, and the former 6–8 GB voice-system target are deferred; they do not gate this candidate. Stronger-model consultation still requires applicable spending and data-sharing approval.
 
-1. The developer opens a trusted workspace.
-2. Piarre shows the connected worker, verified capabilities, execution boundary, and estimated cost behavior.
-3. The developer selects an operation policy and an initial budget.
-4. The developer starts voice or types a goal.
-5. Piarre proposes requirements, tasks, dependencies, and acceptance checks.
-6. The developer reviews the work graph and approves the plan and scope.
-7. Piarre starts the ready task and shows its run, changes, and current evidence.
-8. The developer asks why Piarre selected the stack. Piarre answers from the recorded decision without interrupting work.
-9. The developer changes a requirement. Piarre marks affected work, creates a new plan version, and preserves unrelated progress.
-10. The worker finishes. Piarre runs approved checks and attaches results to the current revision.
-11. The developer reviews the diff and preview, then accepts or redirects the task.
-12. After an editor restart, Piarre restores project state and reconciles uncertain runs with the workspace.
+Cost estimates follow the user's actual billing route. API-token usage shows estimated dollar charges. Claude Code or Codex subscription usage shows estimated token use and five-hour or weekly allowance consumption where applicable. Use observed calibration or provider estimates for percentages; tokens alone do not establish subscription quotas. Show unknown estimates explicitly, separate current usage from predicted task consumption, and disclose extra-usage charges.
 
-## 12. Onboarding
+Connected coding accounts may supply workers through supported integrations. They are not automatically free, unlimited, or permitted for arbitrary credential reuse. Provider eligibility and prices need current verification. The revenue model and realistic per-session costs remain unresolved.
 
-Onboarding must produce a small success before it asks the user to configure a team.
+Use research papers and engineering practice to select experiments, then test actual recall, agent-state accuracy, control responsiveness, resource use, and failure behavior. No particular model is selected here.
 
-1. Explain that Piarre supervises agent work and does not replace code review.
-2. Ask the user to choose a local workspace.
-3. Show the first worker's capabilities and missing controls.
-4. Explain which data the voice and coding providers receive.
-5. Offer a safe starter task that changes one small area.
-6. Show the plan, approval scope, run, evidence, and review in one guided flow.
-7. Introduce budgets, additional workers, and workflows only after the first accepted task.
+## Testing experience and success
 
-Do not require voice. Do not require a local model. Do not ask the user to design roles or workflows before they see the core loop.
+Daily work uses a stable release. Candidate testing uses a separate environment with independent state. CI packaging alone does not authorize production promotion.
 
-## 13. Local and hosted models
+User tests can link optional screen recordings with logs, agent activity, submitted instructions, relevant revisions, checks, and annotations. Capture, retention, export, and remote analysis are separate choices. Recordings show the experience; synchronized diagnostics help explain failures.
 
-Piarre separates the voice interpreter from coding workers.
+The first integrated candidate should demonstrate an agent overview, task ownership, meaningful progress and blockers, pending decisions, sourced resumption, Recommendation, corrected memory, triage, approved execution, bounded agent coordination, checkpoint recovery, and result review. Linked ideas and reflection are supporting features. Voice, broad conversational polish, and local conversational-model tuning are deferred. Multiwriter execution, an IDE fork, shared cloud collaboration, autonomous deployment, and background listening are outside the initial scope.
 
-A small local model can classify commands, resolve references, and draft structured action proposals. Deterministic code validates every proposal. Local speech recognition and synthesis can keep the conversation path on the device.
+Test whether users can identify agent ownership, activity, blockers, required decisions, and evidence without asking for status. Compare supervision time, reading burden, repeated context, interruptions, corrections, missed defects, and accepted results with the user's existing workflow. A first feedback round establishes improvement targets rather than proof of productivity. Rough edges may become follow-up work; unauthorized actions, silent data loss, and false verification block release.
 
-A hosted model can handle complex planning or speech when the user configures it. Coding workers remain separate. A local voice model does not make a hosted coding worker free or private.
+Evaluate translation by whether users understand consequences and choose appropriately, with source meaning and uncertainty preserved. Evaluate retrieval with known answers and unanswerable questions, including renamed code, changed decisions, conflicting sources, and stale infrastructure information. Measure evidence support, missed dependencies, freshness, latency, and indexing cost. Fluent explanations and a connected graph do not establish correctness.
 
-### Provider policy
+## Research direction
 
-- Show which provider receives audio, transcripts, code, and tool output.
-- Never send local-only content to a hosted provider without an explicit configuration change.
-- Label local and hosted execution in the activity log and evidence.
-- Parse every provider response at the adapter boundary.
-- Advertise a capability only after its adapter passes behavior checks.
-- Route uncertainty to clarification or an approved fallback. Do not silently change providers.
-
-The first local-model experiment should compare a constrained low-memory model with a stronger small model on Piarre commands. It must measure command accuracy, ambiguity handling, latency, memory, and invalid-action rate before local inference becomes a supported dependency.
-
-## 14. Trust and safety
-
-### Authorization
-
-An approval binds to the concrete action, scope, plan version, workspace revision, and duration. A material scope change invalidates the affected approval. A model cannot expand its own authority.
-
-Voice alone cannot authorize destructive actions. The user confirms those actions in a visual control that names the exact target and consequence.
-
-### Untrusted inputs
-
-Treat repository text, worker messages, provider responses, tool output, and transcripts as untrusted inputs. They can inform proposals but cannot grant permission or change policy.
-
-### Budgets
-
-Stop new scheduling when an enforceable budget boundary is reached. Distinguish measured usage, provider estimates, and Piarre estimates. Do not advertise a hard cost cap unless the provider and execution controls can enforce it.
-
-### Concurrent work
-
-P0 permits one active writer. P1 isolates writers before running them concurrently. Piarre integrates results through an explicit review step. Two workers never write the same working tree concurrently.
-
-### Cancellation and recovery
-
-Cancellation stops future work. It does not imply rollback. Piarre preserves partial changes for inspection and reconciles owned processes and files.
-
-After a restart or provider failure, Piarre marks uncertain runs **Status unknown** until reconciliation. It never repeats an external action only because an acknowledgment is missing.
-
-### Evidence freshness
-
-Evidence belongs to a workspace revision and plan version. A relevant code change marks earlier evidence stale. Piarre separates **Run finished**, **Checks passed**, **Needs review**, and **Accepted**.
-
-## 15. Privacy and accessibility
-
-### Privacy
-
-- Keep microphone state persistent and obvious.
-- Capture audio only during an explicit session.
-- Store raw audio only with explicit opt-in.
-- Keep secrets out of transcripts, exports, and evidence.
-- Separate local project history, provider retention, and optional telemetry.
-- Explain that local deletion does not delete provider-held data.
-- Provide export, retention, redaction, and verified local deletion.
-
-### Accessibility
-
-- Support keyboard navigation for every action.
-- Provide visible transcripts and captions for Piarre speech.
-- Expose task and run state to screen readers.
-- Do not encode status through color alone.
-- Support adjustable speech rate, speech output, and reduced motion.
-- Let the user review and correct a transcript before a consequential action.
-- Preserve a complete typed workflow for users who cannot or do not want to speak.
-
-## 16. Success metrics
-
-### Primary outcome
-
-Measure accepted, verified tasks per hour of active developer supervision. Compare Piarre with the same developer's current agent workflow.
-
-Also compare perceived mental workload, time spent reading updates and assembling review evidence, and avoidable interruptions per accepted task. Use comparable tasks and record review accuracy, missed material failures, and defects after acceptance alongside attention measures. A quieter interface that causes missed decisions or worse review does not meet the AI-fatigue objective. Establish a baseline before setting reduction targets.
-
-### Supporting measures
-
-- time spent supervising each accepted task.
-- task completion and acceptance rate.
-- correction time after a requirement change.
-- number and duration of blocking approvals.
-- stale-result rejection rate.
-- restart and provider-failure recovery accuracy.
-- manual-edit conflict detection.
-- cost per accepted task.
-- command-routing accuracy.
-- speech-end to visible acknowledgment latency.
-- speech-end to first audible response latency.
-- interruption-to-silence latency.
-- voice usage compared with typed-command usage.
-
-Voice and typed interaction require separate measurement. A faster voice acknowledgment does not prove that the full task workflow is faster.
-
-### Release safety gates
-
-- Zero unauthorized destructive operations in the release suite.
-- Zero silent losses of manual edits.
-- Zero accepted tasks that rely only on evidence from a superseded revision.
-- Every supported stop control has observed reconciliation behavior.
-- Every advertised provider capability has a passing adapter test.
-
-Numeric targets remain proposals until baseline sessions establish realistic distributions.
-
-## 17. Staged delivery
-
-| Stage | Product claim | Exit condition |
-|---|---|---|
-| Foundation | Piarre has an honest durable control loop. | A typed command can propose, approve, run, verify, review, and recover one bounded task. |
-| P0 supervised worker | One developer can direct and verify one coding worker through a durable project model. | The website workflow completes repeatedly with plan approval, evidence, steering, review, restart recovery, and no unauthorized operation. |
-| P1 supervised team | One developer can supervise isolated workers without losing unrelated work or current evidence. | A read-only worker and two isolated coding workers pass scheduling, conflict, integration, cancellation, budget, and evidence tests. |
-| Later product | Piarre supports broader providers, workflows, and collaboration. | Each expansion has its own capability, privacy, safety, and usability gates. |
-
-The retired A00 spike supplied bounded historical observations only. It did not prove speech recognition, local orchestration quality, provider behavior, or multi-agent execution. Current claims must pass the B-series release gates.
-
-## 18. Non-goals for P0
-
-- autonomous production deployment.
-- shared cloud workspaces.
-- multi-user collaboration.
-- continuous background listening.
-- a native wake phrase.
-- a standalone IDE fork.
-- arbitrary simultaneous writers.
-- a generalized project knowledge graph.
-- workflow authoring.
-- guaranteed offline operation.
-- replacement of human code review.
-- voice-driven character-level code editing.
-
-## 19. Principal risks
-
-| Risk | Product response |
-|---|---|
-| Voice resolves the wrong target. | Prefer the visible selection, show consequential proposals, and clarify ambiguity. |
-| The UI shows false confidence. | Derive status from persisted events and reconciliation. Label unknown and stale state. |
-| A provider lacks a claimed control. | Capability-detect controls and remove unsupported actions from the UI. |
-| Approval prompts overwhelm the user. | Bind approvals to clear scopes and interrupt only when authority must expand. |
-| Cost reporting is incomplete. | Separate measured usage from estimates and avoid unsupported hard-cap claims. |
-| Evidence becomes stale. | Bind evidence to revisions and invalidate it after relevant changes. |
-| Parallel workers overwrite changes. | Keep one P0 writer. Isolate P1 writers and integrate through review. |
-| A small local model selects unsafe actions. | Treat output as a proposal and validate it through deterministic policy. |
-| Voice is unusable in the user's environment. | Keep push-to-talk, typed commands, keyboard controls, and visual status equivalent. |
-| Piarre becomes another chat panel. | Keep **Work** as the default view and treat conversation as supporting context. |
-
-## 20. Open product decisions
-
-The following decisions need prototypes or measured trials:
-
-- Whether the VS Code extension remains the long-term product or validates a separate desktop IDE.
-- Whether a dependency-aware list is enough or a node graph improves supervision.
-- Which operations qualify for standing approval.
-- Which provider supplies the first coding worker and which controls it can enforce.
-- Which providers support enforceable budgets rather than estimates.
-- Whether task acceptance always requires a developer.
-- Whether concurrent implementation beats sequential implementation plus independent verification for the first P1 workflow.
-- Which local-model size meets command accuracy and latency requirements on supported hardware.
-- Which languages and accents the first local voice path supports.
-- Which recurring workflow should follow **Build and verify a local website**.
-
-## 21. Delivery note
-
-The v0.2 backlog contains 23 B-series stories. Its arithmetic planning totals are 184 focused hours for P0 and 84 focused hours for P1. These are estimates, not measured throughput or delivery promises. Re-estimate after the recovery, supervised-writer, and supervised-team gates produce current evidence.
+Piarre aims to preserve the developer's understanding of delegated work through collaborative intent correction, evidence-backed explanations, informed review, and support for later maintenance. The [product and HCI research snapshot](../.artifacts/research/2026-11-02-product-hci-backlog.md) records experiments for these aims, grounded conversation, inbox triage, scoped skills, optional skill evolution, workflow diagrams, and evolving memory. Its unvalidated variations do not expand the current release or override accepted requirements. Token savings and reduced AI fatigue require evidence.

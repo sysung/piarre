@@ -15,8 +15,9 @@
     "lint": "eslint .",
     "package": "npm run package --workspace apps/vscode",
     "test": "npm run test:contract && npm run test:smoke --workspace apps/vscode",
-    "test:contract": "node --test test/scaffold-contract.test.mjs test/editor-boundary.test.mjs",
-    "typecheck": "tsc -b --pretty false"
+    "test:contract": "node --test test/scaffold-contract.test.mjs test/editor-boundary.test.mjs test/repository-root.test.mjs",
+    "typecheck": "tsc -b --pretty false",
+    "test:acceptance": "node scripts/accept-candidate.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

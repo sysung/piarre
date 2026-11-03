@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Piarre · Design B interactive prototype</title>
+<style>
+:root{color-scheme:light;--paper:#f5f3ed;--surface:#fffefa;--ink:#292d29;--muted:#62665d;--line:#d7d8cd;--border:#929c8c;--brand:#315b46;--soft:#e8eee6;--warning:#79551b;--warning-bg:#f1e9d8;--focus:#285f9d}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,input,textarea,select{font:inherit}button{min-height:38px;padding:8px 14px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);cursor:pointer;font-weight:600;transition:background-color .12s}button:hover{background:var(--soft)}button:active{background:#dce6d9}button:disabled{opacity:.55;cursor:default}.primary{color:var(--surface);background:var(--brand);border-color:var(--brand)}.primary:hover{background:#244431}.text{border:0;background:transparent;padding:6px 0;color:var(--brand);text-decoration:underline;text-underline-offset:4px;font-size:13px}.text:hover{background:transparent;color:#244431}a{color:var(--brand);text-underline-offset:4px}:focus-visible{outline:3px solid var(--focus);outline-offset:3px}button:focus-visible{position:relative;z-index:1}[hidden]{display:none!important}
+.header{min-height:66px;padding:14px 36px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--line);background:var(--surface)}.logo{width:29px;height:29px;background:var(--brand);color:var(--surface);display:grid;place-items:center;border-radius:7px;font-size:19px;font-weight:750}.brand{font-size:17px}.project{margin-left:20px;padding-left:24px;border-left:1px solid var(--line)}.grow{flex:1}.tag{font-size:12px;border:1px solid var(--border);border-radius:4px;padding:3px 8px;display:inline-block}.small,.muted{color:var(--muted)}.small{font-size:12px}.eyebrow{font-size:12px;letter-spacing:.06em;color:var(--muted);font-weight:650}.brief{padding:26px 36px;border-bottom:1px solid var(--line)}h1{font-size:29px;line-height:1.3;margin:6px 0 20px;letter-spacing:-.6px;font-weight:600}.recap{display:grid;grid-template-columns:1fr 1.3fr 1fr;gap:28px;margin:0}.recap dt{font-size:13px;font-weight:650}.recap dd{margin:5px 0 0;color:var(--muted);font-size:13px}.shell{display:grid;grid-template-columns:minmax(0,.86fr) minmax(0,1.3fr);max-width:1600px;margin:auto}.conversation{padding:26px 32px 30px 36px;border-right:1px solid var(--line);min-width:0}.desk{padding:26px 36px;min-width:0}.section-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:26px}h2{font-size:17px;line-height:1.4;margin:0;font-weight:650}h3{font-size:23px;line-height:1.3;letter-spacing:-.4px;margin:10px 0 12px}h4{font-size:14px;margin:0 0 9px}p{margin:8px 0 13px}.message{margin-bottom:25px;max-width:60ch}.speaker{font-size:12px;font-weight:650;margin-bottom:9px}.user{background:#efeee7;border-radius:6px;padding:14px 16px}.message p{margin:0 0 9px}.avatar{display:inline-grid;place-items:center;width:22px;height:22px;border:1px solid var(--line);border-radius:4px;background:var(--surface);color:var(--brand);margin-right:8px}.proposal{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:17px 18px;margin:19px 0 25px}.row{display:flex;align-items:center;justify-content:space-between;gap:14px}.status{font-size:12px;color:var(--warning);background:var(--warning-bg);border-radius:4px;padding:4px 9px;white-space:normal}.proposal p{font-size:13px;color:var(--muted);margin:8px 0}.proposal .text{padding:0}.composer label,label.field{display:block;font-size:12px;font-weight:650;margin-bottom:8px}textarea,input[type=text]{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:12px;color:var(--ink)}textarea{min-height:92px;resize:vertical}input[type=checkbox]{width:18px;height:18px;accent-color:var(--brand);flex-shrink:0}.composer-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:10px}.footer{margin-top:24px;border-top:1px solid var(--line);padding-top:15px;font-size:11px;color:var(--muted)}.tabs{display:flex;gap:25px;border-bottom:1px solid var(--line);margin-bottom:24px;flex-wrap:wrap}.tabs button{border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;padding:0 0 12px;font-size:13px;color:var(--muted)}.tabs button[aria-pressed=true]{border-bottom-color:var(--brand);color:var(--brand)}.scope{margin:18px 0;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:0 18px}.scope>div{display:grid;grid-template-columns:125px minmax(0,1fr);gap:18px;padding:13px 0;border-bottom:1px solid var(--line);font-size:13px}.scope>div:last-child{border-bottom:0}.scope dt{color:var(--muted)}.scope dd{margin:0;overflow-wrap:anywhere}.criteria{list-style:disc;padding-left:20px;font-size:13px}.criteria li{margin:8px 0}.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:16px 0}.notice{border:1px solid #ab956e;border-radius:6px;padding:13px 15px;background:#f3eddf;font-size:13px;margin:16px 0}.recommendation-card{border-bottom:1px solid var(--line);padding:15px 0}.recommendation-card p{font-size:13px}.recommendation-card:first-of-type{padding-top:0}details{margin:14px 0}summary{cursor:pointer;padding:8px 0;font-size:13px;font-weight:600;min-height:36px}code,pre{font:12px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace}code{overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--surface);border:1px solid var(--line);padding:13px;border-radius:6px}.evidence{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px}.evidence th,.evidence td{text-align:left;border-bottom:1px solid var(--line);padding:10px 6px;vertical-align:top;overflow-wrap:anywhere}.evidence th{font-weight:600}.ack{display:flex;gap:10px;align-items:flex-start;font-size:13px;margin:18px 0}.history{padding-left:20px;font-size:13px}.history li{margin:10px 0}.runbar{position:sticky;top:0;z-index:4;background:var(--soft);border-bottom:1px solid var(--border);padding:12px 36px;display:flex;justify-content:space-between;gap:18px;align-items:center;flex-wrap:wrap}.runbar p{margin:0;font-size:13px}.runbar .actions{margin:0}.runbar button{min-height:34px;font-size:13px}.demobar{max-width:1528px;margin:0 auto 24px;padding:0 36px}.demobar>details{border-top:1px solid var(--line);padding-top:13px}.demobar p{max-width:90ch}.demobar .actions{margin:10px 0}.demobar button{font-size:12px;min-height:34px}.live{font-size:13px;color:var(--brand);min-height:24px;margin-top:16px}.skip{position:absolute;top:-100px;left:16px;background:var(--surface);padding:8px;z-index:10}.skip:focus{top:8px}.empty{padding:26px 0}.empty p{max-width:55ch}.source-excerpt{font-size:13px}.capsule{display:inline-block;padding:2px 7px;background:var(--soft);border-radius:4px;font-size:12px}.plan-delta{font-size:13px}.flow-links{display:flex;gap:14px;flex-wrap:wrap}.subtle-line{border-top:1px solid var(--line);padding-top:18px;margin-top:22px}
+@media(max-width:1050px){.header,.brief{padding-left:24px;padding-right:24px}.conversation,.desk{padding:24px}.scope>div{grid-template-columns:105px minmax(0,1fr);gap:12px}.tabs{gap:18px}.demobar{padding:0 24px}}
+@media(max-width:760px){.shell{display:block}.conversation{border-right:0;border-bottom:1px solid var(--line)}.recap{grid-template-columns:minmax(0,1fr);gap:14px}.header,.brief{padding:18px}.project{margin-left:0;padding-left:12px}.conversation,.desk{padding:24px 18px}.runbar{padding:12px 18px}.demobar{padding:0 18px}.row{align-items:flex-start}.evidence{font-size:12px}.evidence th,.evidence td{padding:10px 4px}.tag{font-size:11px}.tabs{gap:17px}h1{font-size:26px}}
+@media(max-width:400px){.header{gap:10px}.project{border:0;padding:0}.scope>div{grid-template-columns:minmax(0,1fr);gap:5px}.composer-foot{align-items:flex-end}.composer-foot .small{max-width:165px}.tabs{gap:14px}.tabs button{font-size:12px}.runbar .actions{gap:6px}.runbar button{padding:7px 10px}.row{flex-wrap:wrap}.evidence .evidence-id{display:none}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<a class="skip" href="#reply">Skip to conversation</a>
+<header class="header"><span class="logo" aria-hidden="true">p</span><strong class="brand">Piarre</strong><span class="project">piarre <span class="small">/ development</span></span><span class="grow"></span><span class="tag">Design B · Local prototype</span></header>
+<div id="runbar" class="runbar" aria-label="Run controls" hidden></div>
+<section class="brief" aria-label="Session brief"><div class="eyebrow">Session brief <span class="muted"> / sample session</span></div><h1>Pick up where you left off.</h1><dl class="recap"><div><dt>Where you left off</dt><dd id="recap-done"></dd></div><div><dt>Next decision</dt><dd id="recap-next"></dd></div><div><dt>Still open</dt><dd id="recap-open"></dd></div></dl></section>
+<main class="shell">
+<section class="conversation" aria-label="Conversation"><div class="section-head"><h2>Today’s conversation</h2><span class="small">Sample project</span></div><div id="messages" role="log" aria-label="Conversation messages" aria-live="polite"></div><div id="proposal-card"></div><form id="chat" class="composer"><label for="reply">Continue the conversation</label><textarea id="reply" maxlength="2000" placeholder="Ask a question or change the direction…"></textarea><div class="composer-foot"><span class="small">Discussion never starts work.<br>Ctrl or ⌘ + Enter to send</span><button type="submit">Send reply</button></div></form><div class="footer">This is a design prototype. Replies are scripted; work, checks, billing, and memory changes are simulated in this page. Reloading resets the sample.</div></section>
+<aside class="desk" aria-label="Inspection desk"><nav class="tabs" aria-label="Inspect project"><button data-view="work" aria-pressed="true">Work to decide</button><button data-view="recommendation" aria-pressed="false">Recommendation</button><button data-view="memory" aria-pressed="false">Project memory</button></nav><section id="panel" aria-label="Selected project record"></section><p id="feedback" class="live" role="status" aria-live="polite"></p></aside>
+</main>
+<footer class="demobar"><details id="demo-tools"><summary>Try another moment in the prototype</summary><p class="small">These controls advance sample observations. They never call a provider, read files, spend money, or change a real project.</p><div id="demo-actions" class="actions"></div><div class="flow-links"><a href="https://www.figma.com/design/I7CeHDqFJEvoEdmslfKrNp?node-id=7-2" target="_blank" rel="noreferrer">View Design B in Figma</a><button class="text" data-action="reset">Reset sample</button><button class="text" data-action="empty">Explore empty project</button></div></details></footer>
+<script>
+const $ = id => document.getElementById(id);
+const esc = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const initial = () => ({
+  view: 'work', empty: false, sequence: 0, workspaceRevision: 7,
+  plan: { version: 4, stale: false, change: '', feedback: '', memoryRevision: 1 },
+  run: { kind: 'idle' }, approval: null, result: null, reviewedResultId: null, acceptedResultId: null,
+  schedulingBlocked: false,
+  memory: [{ revision: 1, value: 'Keep the first recap to 3 points.', state: 'Inferred', source: 'Sample session S-12 · message M-2' }],
+  correctionDraft: 'Use up to 5 points for the first recap. Add detail when reviewing work.',
+  reviewDraft: '', messages: [
+    { who: 'You', text: 'Where did we leave off? I want a short recap before starting anything.' },
+    { who: 'Piarre', text: 'The sample project restores its saved context. The next piece is a short recap of completed work, the next step, and unresolved decisions. I suggest keeping the first reply brief, with sources available on demand.' }
+  ]
+});
+let s = initial();
+const memory = () => s.memory[s.memory.length - 1];
+const reserved = () => ['running','stopping','unknown'].includes(s.run.kind);
+const criteria = () => [
+  { id: 'C-1', text: 'Show completed work, next step, and open decisions.' },
+  { id: 'C-2', text: 'Link each claim to its current supporting record.' },
+  { id: 'C-3', text: memory().value },
+  { id: 'C-4', text: 'Preserve conversation input and keyboard focus during updates.' },
+  ...(s.plan.feedback ? [{ id: 'C-5', text: s.plan.feedback }] : [])
+];
+const currentResult = () => s.result && !s.plan.stale && s.result.planVersion === s.plan.version && s.result.memoryRevision === memory().revision && s.result.workspaceRevision === s.workspaceRevision;
+function taskState() {
+  if (s.run.kind === 'unknown') return 'Unknown · reconcile first';
+  if (s.run.kind === 'stopping') return 'Stop pending';
+  if (s.run.kind === 'running') return 'Running';
+  if (s.plan.stale) return 'Plan needs review';
+  if (currentResult()) {
+    if (s.result.checks.some(c => c.outcome !== 'Sample passed')) return 'Needs verification';
+    return s.acceptedResultId === s.result.id ? 'Accepted' : 'Needs review';
+  }
+  if (s.result) return 'Evidence stale';
+  if (s.run.kind === 'stopped') return 'Needs verification';
+  return 'Needs approval';
+}
+function say(text) { $('feedback').textContent = text; }
+function focusPanel() { $('pane-title')?.focus(); }
+function changeView(view) { s.view = view; render(); focusPanel(); }
+function actionButton(action, label, primary = false, disabled = false) {
+  return `<button data-action="${action}" ${primary ? 'class="primary"' : ''} ${disabled ? 'disabled' : ''}>${label}</button>`;
+}
+function recordHeader(title) { return `<h3 id="pane-title" tabindex="-1">${title}</h3>`; }
+function criterionList(items) { return `<h4>Acceptance criteria</h4><p class="small">Evaluated after the run. These are expected outcomes, not pre-run consent boxes.</p><ul class="criteria">${items.map(c => `<li>${esc(c.text)}</li>`).join('')}</ul>`; }
+function scope() {
+  return `<dl class="scope"><div><dt>Allowed files</dt><dd><code>apps/vscode/src/work-view.ts</code><br><code>apps/vscode/test/suite/project.test.ts</code></dd></div><div><dt>Bound to</dt><dd>Task T-24 · Plan ${s.plan.version} · sample workspace w${s.workspaceRevision}<br><span class="small">Memory K-12 revision ${s.plan.memoryRevision}. Material changes require new approval.</span></dd></div><div><dt>Worker & limits</dt><dd>Codex · 1 coding writer · 1 attempt<br><span class="small">10 minutes. No new scheduling after this limit. This prototype does not measure runtime.</span></dd></div><div><dt>Usage & sharing</dt><dd>Subscription route · forecast unknown<br><span class="small">Task text and the 2 allowed files would go to Codex. No extra usage, external actions, or deployment authorized.</span></dd></div></dl>`;
+}
+function historicalResult() {
+  if (!s.result || currentResult()) return '';
+  return `<details><summary>Inspect historical result ${esc(s.result.id)}</summary><p class="small">Plan ${s.result.planVersion} · memory r${s.result.memoryRevision} · workspace w${s.result.workspaceRevision}. This evidence does not verify the current plan or files.</p></details>`;
+}
+function workPanel() {
+  if (s.empty) return `<div class="empty">${recordHeader('Start with the outcome you want')}<p>Use the conversation to think through an idea. Nothing will run until you review a concrete proposal.</p><div class="actions">${actionButton('create-proposal','Create sample proposal',true)}</div><p class="small">This starts the prepared demo task. It does not interpret your message or create real work.</p></div>`;
+  let html = `<div class="row"><span class="eyebrow">Task T-24 / Plan ${s.plan.version}</span><span class="status" id="task-status">${taskState()}</span></div>${recordHeader('Add a source-linked session brief')}<p class="muted">Help a returning user see what changed and choose the next step.</p>`;
+  if (reserved()) {
+    html += `<p class="notice">${s.run.kind === 'running' ? 'One sample writer is active. No current verification result exists.' : s.run.kind === 'stopping' ? 'Stop requested. Worker exit and disk inspection are not yet confirmed. Partial edits stay preserved.' : 'The worker connection was lost. Worker and disk state remain unknown. Replacement execution and memory changes are blocked.'}</p><dl class="scope"><div><dt>Run</dt><dd>${esc(s.run.id)} · ${s.run.kind}</dd></div><div><dt>Authority</dt><dd>${esc(s.approval.id)} · Plan ${s.approval.planVersion} · base workspace w${s.approval.workspaceRevision}</dd></div><div><dt>Files & limits</dt><dd>The 2 approved files · 1 attempt · 10 minutes<br><span class="small">No extra usage or external actions authorized. Usage observation is unavailable in this demo.</span></dd></div></dl>`;
+    if (s.run.kind !== 'running') {
+      html += `<div class="actions">${actionButton('inspect-run','Inspect worker and disk',true)}</div>`;
+      if (s.run.inspected) html += `<div class="notice"><h4>Sample inspection result</h4><p>The sample worker has exited. Two partial file edits remain. They have not been verified or accepted.</p>${actionButton('confirm-inspection','Use sample inspection result',true)}</div>`;
+    }
+    return html + historicalResult();
+  }
+  if (s.plan.stale) {
+    html += `<p class="notice">The previous approval and relevant evidence cannot be reused. Review the changed requirement before another run.</p><div class="plan-delta"><h4>What changed</h4><p>${esc(s.plan.change)}</p><p>Current memory K-12 r${memory().revision}: ${esc(memory().value)}</p></div>${scope()}${criterionList(criteria())}<div class="actions">${actionButton('adopt-plan','Use revised proposal',true)}</div><p class="small">Choosing the proposal does not approve execution.</p>`;
+    return html + historicalResult();
+  }
+  if (currentResult()) {
+    const passed = s.result.checks.every(c => c.outcome === 'Sample passed');
+    html += `<p class="notice">Run finished. ${passed ? 'The sample checks passed. Human review and acceptance are separate.' : 'A sample check failed. Acceptance is blocked until fresh verification.'}</p><p class="small">Result ${esc(s.result.id)} · Plan ${s.result.planVersion} · memory r${s.result.memoryRevision} · workspace w${s.result.workspaceRevision}</p><table class="evidence"><thead><tr><th>Approved criterion</th><th class="evidence-id">Evidence</th><th>Outcome</th></tr></thead><tbody>${s.result.checks.map(c => `<tr><td>${esc(c.text)}</td><td class="evidence-id">${esc(s.result.id)} / ${c.id}</td><td>${c.outcome}</td></tr>`).join('')}</tbody></table><details id="result-diff" open><summary>Inspect sample changes</summary><pre>- return latestTranscript;\n+ return { completed, nextStep, openDecisions };\n+ linkCurrentProjectRecords(summary);\n\nResponse preference: ${esc(s.result.checks.find(c => c.id === 'C-3').text)}\n\nIllustrative diff and outcomes only. No code was executed.</pre></details>`;
+    if (s.acceptedResultId === s.result.id) return html + `<p class="notice">You accepted ${esc(s.result.id)} in this prototype. No further task has started.</p><div class="actions">${actionButton('new-proposal','Prepare a new proposal')}</div>`;
+    html += `<label class="ack"><input id="result-reviewed" type="checkbox" ${s.reviewedResultId === s.result.id ? 'checked' : ''} ${!passed ? 'disabled' : ''}><span>I reviewed these sample changes and the checks for ${esc(s.result.id)}.</span></label><div class="actions">${actionButton('accept','Accept reviewed result',true,!passed || s.reviewedResultId !== s.result.id)}${!passed ? actionButton('verify','Simulate fresh checks',false,s.schedulingBlocked) : ''}</div><details><summary>Request a change instead</summary><label class="field" for="review-note">What needs to change?</label><textarea id="review-note" maxlength="500">${esc(s.reviewDraft)}</textarea><div class="actions">${actionButton('request-changes','Request changes')}</div></details>`;
+    return html;
+  }
+  if (s.run.kind === 'stopped' || s.result) {
+    return html + `<p class="notice">${s.result ? 'Manual changes made the prior evidence stale. Review the preserved changes before fresh checks.' : 'Worker exit and disk state are confirmed. Two partial edits remain; they have no current verification.'}</p><details open><summary>Inspect preserved work</summary><p class="small">Sample view changes and focused tests are retained. No rollback was performed. Manual edits are never overwritten by this demo.</p></details><div class="actions">${actionButton('verify','Simulate fresh checks',true,s.schedulingBlocked)}</div>` + historicalResult();
+  }
+  return html + scope() + criterionList(criteria()) + `<div class="subtle-line"><p class="small">A stop preserves partial edits. Provider failure may leave work requiring inspection. Approval covers this task only; no hard subscription cap or rollback is promised.</p><div class="actions">${actionButton('approve','Approve & start sample task',true,s.schedulingBlocked)}${actionButton('recommendation','Inspect recommendation')}</div></div>`;
+}
+function recommendationPanel() {
+  if (s.empty) return recordHeader('No recommendation yet') + '<p>Explore the sample proposal to see its sources, assumptions, and alternatives.</p>';
+  return `<span class="eyebrow">Recommendation / Task T-24 / Plan ${s.plan.version}</span>${recordHeader('Why this next step?')}<p class="muted">Supporting records, assumptions, and alternatives.</p><div class="recommendation-card"><h4>Confirmed sample intent</h4><p>Reduce repeated context and reading burden. Resume with accomplishments, upcoming work, and unresolved decisions.</p><details><summary>Inspect supporting source</summary><p class="small">docs/01_PRODUCT_PRD.md · Purpose and audience · source snapshot <code>69ae7c1aee46</code></p><p class="source-excerpt">“Users should be able to ask where they left off and receive brief accomplishments, upcoming work, and unresolved decisions with inspectable sources.”</p><p class="small">Project requirement excerpt included in this self-contained prototype.</p></details></div><div class="recommendation-card"><h4>${memory().state === 'Inferred' ? 'Unconfirmed assumption' : 'Confirmed sample correction'} · K-12 r${memory().revision}</h4><p>${esc(memory().value)}</p><p class="small">${esc(memory().source)}. Current plan references r${s.plan.memoryRevision}.</p>${actionButton('memory','Inspect or correct memory')}</div><div class="recommendation-card"><h4>Alternative considered</h4><p>A full activity feed provides detail but adds reading. Keep records available on demand and lead with the next useful decision.</p></div><div class="recommendation-card"><h4>Proposal, work, and evidence</h4><p>${reserved() ? 'The writer is active or uncertain. Its reservation is independent of this view; use the persistent run controls.' : s.result ? 'A sample result exists. Its evidence applies only to its recorded plan, memory, and workspace revision.' : 'The next change is a proposal. No sample writer has started.'}</p><details><summary>Inspect the authority contract</summary><p class="small">docs/02_TECHNICAL_DESIGN.md · Execution and approval · source snapshot <code>af651aab080d</code></p><p class="source-excerpt">“Task state differs from run state. A finished run can leave a task needing verification or review.”</p></details></div>`;
+}
+function memoryPanel() {
+  if (s.empty) return recordHeader('No project memory yet') + '<p>Project knowledge and its sources will be inspectable here. Explore a sample proposal to try the correction flow.</p>';
+  return `<span class="eyebrow">Project memory / K-12</span>${recordHeader('Resumption detail')}<span class="capsule">${memory().state} · revision ${memory().revision}</span><p>${esc(memory().value)}</p><p class="small">Source: ${esc(memory().source)}</p><p class="notice">Proposed memory policy. Automatic capture is off. This prototype explores approval before changing confirmed knowledge; the product policy still needs resolution.</p><label class="field" for="correction">Proposed replacement</label><textarea id="correction" maxlength="500">${esc(s.correctionDraft)}</textarea><div class="recommendation-card"><h4>Impact preview</h4><p>Creates K-12 revision ${memory().revision + 1}. Task T-24’s plan, approval, and relevant evidence become stale. Unrelated restoration evidence stays current. No workspace edit is authorized.</p></div><div class="actions">${actionButton('correct-memory','Approve correction',true,reserved() || s.empty)}</div>${reserved() ? '<p class="notice">Stop and reconcile the writer first. Changing memory cannot release an active or unknown writer.</p>' : ''}<details><summary>Inspect revision history</summary><ol class="history">${[...s.memory].reverse().map(m => `<li><strong>Revision ${m.revision} · ${m.state}</strong><br>${esc(m.value)}<br><span class="small">${esc(m.source)}</span></li>`).join('')}</ol></details>`;
+}
+function renderRunbar() {
+  const shown = reserved() || s.schedulingBlocked;
+  $('runbar').hidden = !shown;
+  if (!shown) return;
+  const label = s.run.kind === 'running' ? 'Sample writer active' : s.run.kind === 'stopping' ? 'Stop pending · writer still reserved' : s.run.kind === 'unknown' ? 'Unknown · writer reservation held' : 'No active writer';
+  $('runbar').innerHTML = `<div><strong>${label}</strong><p>${s.schedulingBlocked ? 'Stop all is blocking new scheduling.' : 'Run controls stay available while inspecting this project.'}</p></div><div class="actions">${s.run.kind === 'running' ? actionButton('stop-task','Stop task') + actionButton('stop-all','Stop all') : ''}${['stopping','unknown'].includes(s.run.kind) ? actionButton('inspect-run','Inspect run') : ''}${s.schedulingBlocked && !reserved() ? actionButton('resume-scheduling','Allow new scheduling') : ''}</div>`;
+}
+let renderedMessages = 0;
+function renderMessages(reset = false) {
+  if (reset) { $('messages').replaceChildren(); renderedMessages = 0; }
+  for (const m of s.messages.slice(renderedMessages)) {
+    const item = document.createElement('div');
+    item.innerHTML = `<article class="message ${m.who === 'You' ? 'user' : ''}"><div class="speaker">${m.who === 'Piarre' ? '<span class="avatar" aria-hidden="true">p</span>' : ''}${m.who}</div><p>${esc(m.text).replace(/\n/g,'<br>')}</p></article>`;
+    $('messages').append(item.firstElementChild);
+  }
+  renderedMessages = s.messages.length;
+}
+function render() {
+  const failed = currentResult() && s.result.checks.some(c => c.outcome !== 'Sample passed');
+  $('recap-done').textContent = s.empty ? 'No sample project work yet.' : failed ? `Sample result ${s.result.id} has a failed check.` : s.result && !currentResult() ? 'Earlier evidence no longer verifies the current plan or files.' : currentResult() ? `Sample result ${s.result.id} is ${s.acceptedResultId === s.result.id ? 'accepted' : 'awaiting a decision'}.` : 'Saved context is available. The session brief remains a proposal.';
+  $('recap-next').textContent = s.empty ? 'Describe an outcome, then explore a sample proposal.' : reserved() ? s.run.kind === 'running' ? 'Observe the sample run, or stop it.' : 'Reconcile worker and disk state before more work.' : s.plan.stale ? 'Review the changed plan before approving work.' : failed ? 'Inspect the failed criterion, then obtain fresh checks.' : currentResult() ? s.acceptedResultId === s.result.id ? 'Accepted. Choose the next task when ready.' : 'Inspect the result and decide whether it meets the plan.' : s.run.kind === 'stopped' || s.result ? 'Review preserved work and obtain fresh checks.' : 'Review the bounded resumption task.';
+  $('recap-open').textContent = s.empty ? 'No project questions are recorded.' : failed ? 'A failed check blocks acceptance.' : s.schedulingBlocked ? 'New scheduling is blocked by Stop all.' : memory().state === 'Inferred' ? 'The preferred first-reply length is unconfirmed.' : `Response preference confirmed at K-12 r${memory().revision}.`;
+  $('proposal-card').innerHTML = s.empty ? '' : `<div class="proposal"><div class="row"><strong>Resumption brief</strong><span class="status">${taskState()}</span></div><p>Task T-24 · Plan ${s.plan.version} · sample workspace w${s.workspaceRevision}</p><button class="text" data-action="work">Inspect current task →</button></div>`;
+  document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === s.view));
+  $('panel').innerHTML = s.view === 'recommendation' ? recommendationPanel() : s.view === 'memory' ? memoryPanel() : workPanel();
+  renderRunbar();
+  $('demo-actions').innerHTML = [
+    actionButton('finish','Finish sample run',false,s.run.kind !== 'running'),
+    actionButton('disconnect','Simulate disconnect',false,s.run.kind !== 'running'),
+    actionButton('fail','Simulate a failed check',false,s.run.kind !== 'running'),
+    actionButton('manual-edit','Simulate manual edit',false,reserved() || !s.result),
+    actionButton('work','Inspect task')
+  ].join('');
+}
+function approve() {
+  if (reserved() || s.schedulingBlocked || s.plan.stale || s.empty || currentResult() || s.run.kind !== 'idle') return;
+  const snapshot = criteria().map(c => ({...c}));
+  s.approval = { id: `A-${++s.sequence}`, planVersion: s.plan.version, memoryRevision: memory().revision, workspaceRevision: s.workspaceRevision, criteria: snapshot };
+  s.run = { kind: 'running', id: `R-${++s.sequence}` };
+  s.result = null; s.reviewedResultId = null; s.acceptedResultId = null;
+  say('Sample approval recorded. One simulated writer started. Nothing outside this page changed.');
+}
+function produceResult(failed = false) {
+  if (s.schedulingBlocked && s.run.kind !== 'running') return;
+  if (!s.approval || s.plan.stale || !['running','stopped','finished'].includes(s.run.kind) || s.approval.planVersion !== s.plan.version || s.approval.memoryRevision !== memory().revision) return;
+  if (s.run.kind === 'running') s.workspaceRevision++;
+  s.run = { kind: 'finished', id: s.run.id };
+  s.result = { id: `E-${++s.sequence}`, planVersion: s.plan.version, memoryRevision: memory().revision, workspaceRevision: s.workspaceRevision,
+    checks: s.approval.criteria.map((c,i) => ({...c,outcome: failed && i === 2 ? 'Sample failed' : 'Sample passed'})) };
+  s.reviewedResultId = null; s.acceptedResultId = null; s.view = 'work';
+  say(failed ? 'A sample acceptance check failed. Acceptance is blocked.' : 'Sample checks finished. Review this result separately before acceptance.');
+}
+function doAction(action) {
+  if (['work','recommendation','memory'].includes(action)) { changeView(action); return; }
+  if (action === 'reset' || action === 'empty') { s = initial(); s.empty = action === 'empty'; if (s.empty) s.messages = [{who:'Piarre',text:'Start with an outcome you want to explore. This empty-project example contains no completed work.'}]; $('reply').value = ''; renderMessages(true); say('Sample reset. No real project was changed.'); }
+  else if (action === 'create-proposal') { s.empty = false; s.view = 'work'; say('The prepared sample proposal is ready to inspect. No work has started.'); }
+  else if (action === 'approve') approve();
+  else if (action === 'stop-task' || action === 'stop-all') {
+    if (s.run.kind !== 'running') return;
+    if (action === 'stop-all') s.schedulingBlocked = true;
+    s.run = {...s.run,kind:'stopping',inspected:false};
+    say('Stop requested. Worker exit and disk state are not yet confirmed.');
+  }
+  else if (action === 'disconnect') { if (s.run.kind !== 'running') return; s.run = {...s.run,kind:'unknown',inspected:false}; s.view='work'; say('Sample connection lost. The writer remains reserved until reconciliation.'); }
+  else if (action === 'inspect-run') { if (!['stopping','unknown'].includes(s.run.kind)) return; s.run = {...s.run,inspected:true}; s.view='work'; say('Sample worker and disk observations are ready to inspect.'); }
+  else if (action === 'confirm-inspection') { if (!['stopping','unknown'].includes(s.run.kind) || !s.run.inspected) return; s.workspaceRevision++; s.run={kind:'stopped',id:s.run.id}; s.result=null; s.reviewedResultId=null; s.acceptedResultId=null; say('Sample exit confirmed. Partial edits preserved; verification is still required.'); }
+  else if (action === 'resume-scheduling') { if (reserved()) return; s.schedulingBlocked=false; say('New scheduling allowed. No task started.'); }
+  else if (action === 'finish' || action === 'fail' || action === 'verify') { produceResult(action === 'fail'); }
+  else if (action === 'accept') { if (!currentResult() || s.reviewedResultId !== s.result.id || s.result.checks.some(c=>c.outcome !== 'Sample passed')) return; s.acceptedResultId=s.result.id; say(`Sample result ${s.result.id} accepted. No next task started.`); }
+  else if (action === 'correct-memory') {
+    if (reserved() || s.empty) return;
+    const value = s.correctionDraft.trim();
+    if (!value) { say('Enter a replacement before approving the correction.'); $('correction').focus(); return; }
+    if (value === memory().value && memory().state === 'Confirmed') { say('This correction is already confirmed. Change the text to propose another revision.'); return; }
+    s.memory.push({revision:memory().revision+1,value,state:'Confirmed',source:`Sample correction in S-12 · action ${++s.sequence}`});
+    s.plan={version:s.plan.version+1,stale:true,change:`Replace the response preference with “${value}”.`,feedback:s.plan.feedback,memoryRevision:memory().revision};
+    s.approval=null; s.run={kind:'idle'}; s.reviewedResultId=null; s.acceptedResultId=null; s.view='work';
+    say(`K-12 revision ${memory().revision} saved in the sample. Affected plan, approval, and evidence are stale.`);
+  }
+  else if (action === 'adopt-plan') { if (!s.plan.stale || reserved()) return; s.plan.stale=false; s.result=null; s.approval=null; s.run={kind:'idle'}; s.reviewedResultId=null; s.acceptedResultId=null; say('Revised proposal selected. Execution still needs fresh approval.'); }
+  else if (action === 'request-changes') {
+    if (!currentResult() || reserved()) return;
+    if (!s.reviewDraft.trim()) { say('Describe the change you want before requesting it.'); $('review-note').focus(); return; }
+    s.plan={...s.plan,version:s.plan.version+1,stale:true,change:s.reviewDraft.trim(),feedback:s.reviewDraft.trim()}; s.approval=null; s.run={kind:'idle'}; s.reviewedResultId=null; s.acceptedResultId=null;
+    say('Change request saved in the sample. Review the revised proposal before another run.');
+  }
+  else if (action === 'manual-edit') { if (reserved() || !s.result) return; s.workspaceRevision++; s.reviewedResultId=null; s.acceptedResultId=null; s.view='work'; say('Sample manual edit preserved. Prior evidence is now stale.'); }
+  else if (action === 'new-proposal') { if (reserved()) return; s.plan={...s.plan,version:s.plan.version+1,stale:false,change:'',feedback:''};s.run={kind:'idle'};s.approval=null;s.result=null;s.reviewedResultId=null;s.acceptedResultId=null;say('A fresh sample proposal is ready. No next run was approved.'); }
+  else return;
+  render(); focusPanel();
+}
+document.addEventListener('click',event=>{
+  const button=event.target.closest('button[data-action],button[data-view]');
+  if (!button || button.disabled) return;
+  if (button.dataset.view) changeView(button.dataset.view); else doAction(button.dataset.action);
+});
+document.addEventListener('input',event=>{
+  if (event.target.id==='correction') s.correctionDraft=event.target.value;
+  if (event.target.id==='review-note') s.reviewDraft=event.target.value;
+});
+document.addEventListener('change',event=>{
+  if(event.target.id!=='result-reviewed'||!currentResult())return;
+  s.reviewedResultId=event.target.checked?s.result.id:null;
+  const button=document.querySelector('[data-action="accept"]');
+  if(button)button.disabled=s.reviewedResultId!==s.result.id||s.result.checks.some(c=>c.outcome!=='Sample passed');
+});
+$('chat').addEventListener('submit',event=>{
+  event.preventDefault();const text=$('reply').value.trim();
+  if(!text){say('Write a message before sending.');$('reply').focus();return;}
+  s.messages.push({who:'You',text});
+  const reply=/\b(approve|run|start|stop)\b/i.test(text)?'That stays a discussion message. Use the task controls to approve or stop sample work.':/\b(why|recommendation|source)\b/i.test(text)?'Open Recommendation to inspect the supporting record, assumption, and alternative. Your conversation stays here.':`The current sample task is ${taskState().toLowerCase()}. We can revise the direction before any new approval.`;
+  s.messages.push({who:'Piarre',text:reply});renderMessages();$('reply').value='';$('reply').focus();say('Message added locally. No execution was authorized.');
+});
+$('reply').addEventListener('keydown',event=>{if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)&&!event.isComposing){event.preventDefault();$('chat').requestSubmit();}});
+renderMessages();render();
+</script>
+</body>
+</html>

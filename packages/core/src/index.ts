@@ -1,10 +1,22 @@
+import { applyKnowledgeEvent, knowledgeEvent, type KnowledgeAction, type KnowledgeEvent, type RecordedKnowledge, type KnowledgeImpact } from "./knowledge.js";
+export { currentKnowledge, knowledgeConflicts } from "./knowledge.js";
+export type { RecordedKnowledge, KnowledgeImpact, KnowledgeAction, KnowledgeEvent } from "./knowledge.js";
+export { parseProposalOutput, parseProjectEvent, validateProjectCommand } from "./contracts.js";
+export { parseSubmittedStatement, parseInterpretationOutput, parseKnowledgeCorrection } from "./context.js";
+export type { SubmittedStatement, KnowledgeSource, SourcedText, Interpretation, KnowledgeVersion, KnowledgeEntry, KnowledgeCorrection } from "./context.js";
+import { applyConversationEvent, conversationEvent, type ConversationAction, type ConversationEvent, type ConversationTurn } from "./conversation.js";
+export type { ConversationAction, ConversationEvent, ConversationTurn, ConversationSource } from "./conversation.js";
+
 export interface ProjectSnapshot {
   readonly projectId: string;
   readonly repositoryUri: string;
   readonly name: string;
   readonly revision: number;
-  readonly proposals: readonly ProposalGroup[];
+  readonly proposals: readonly RecordedProposalGroup[];
   readonly tasks: readonly ProposedTask[];
+  readonly conversation: readonly ConversationTurn[];
+  readonly knowledge: readonly RecordedKnowledge[];
+  readonly knowledgeImpacts: readonly KnowledgeImpact[];
 }
 
 export interface ProposalRequirement {
@@ -52,6 +64,10 @@ export interface ProposalGroup {
   readonly taskIds: readonly string[];
 }
 
+export interface RecordedProposalGroup extends ProposalGroup {
+  readonly recordedAtRevision: number;
+}
+
 export interface ProposedTask extends Omit<ProposalTaskDraft, "key" | "dependsOn"> {
   readonly taskId: string;
   readonly groupId: string;
@@ -64,18 +80,20 @@ export interface ProjectCommand {
   readonly commandId: string;
   readonly projectId: string;
   readonly expectedProjectRevision: number;
-  readonly action:
+  readonly action: ConversationAction | KnowledgeAction
     | { readonly kind: "rename-project"; readonly name: string }
+    | { readonly kind: "delete-proposal"; readonly groupId: string }
     | { readonly kind: "propose-tasks"; readonly draft: ProposalDraft };
 }
 
-export type ProjectEvent =
+export type ProjectEvent = ConversationEvent | KnowledgeEvent
   | {
       readonly kind: "project-created";
       readonly projectId: string;
       readonly repositoryUri: string;
       readonly name: string;
     }
+  | { readonly kind: "proposal-deleted"; readonly groupId: string }
   | { readonly kind: "project-renamed"; readonly name: string }
   | {
       readonly kind: "proposal-created";
@@ -104,11 +122,24 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
         revision: 1,
         proposals: [],
         tasks: [],
+        conversation: [],
+        knowledge: [],
+        knowledgeImpacts: [],
       };
       continue;
     }
     if (!snapshot) throw new Error("Invalid project history: missing creation");
     switch (event.kind) {
+      case "knowledge-observed":
+      case "knowledge-confirmed":
+      case "knowledge-corrected":
+        snapshot = applyKnowledgeEvent(snapshot, event);
+        break;
+      case "conversation-started":
+      case "conversation-replied":
+      case "conversation-ended":
+        snapshot = applyConversationEvent(snapshot, event);
+        break;
       case "project-renamed":
         snapshot = {
           ...snapshot,
@@ -116,6 +147,13 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
           revision: snapshot.revision + 1,
         };
         break;
+      case "proposal-deleted": {
+        if (!snapshot.proposals.some(proposal => proposal.groupId === event.groupId)) throw new Error("Invalid project history: unknown proposal deletion");
+        snapshot = { ...snapshot, revision: snapshot.revision + 1,
+          proposals: snapshot.proposals.filter(proposal => proposal.groupId !== event.groupId),
+          tasks: snapshot.tasks.filter(task => task.groupId !== event.groupId) };
+        break;
+      }
       case "proposal-created": {
         const knownGroups = new Set(snapshot.proposals.map(({ groupId }) => groupId));
         const knownTasks = new Set(snapshot.tasks.map(({ taskId }) => taskId));
@@ -140,7 +178,7 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
         snapshot = {
           ...snapshot,
           revision: snapshot.revision + 1,
-          proposals: [...snapshot.proposals, event.group],
+          proposals: [...snapshot.proposals, { ...event.group, recordedAtRevision: snapshot.revision + 1 }],
           tasks: [...snapshot.tasks, ...event.tasks],
         };
         break;
@@ -157,8 +195,18 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
 
 export function decideProjectEvent(command: ProjectCommand): ProjectEvent {
   switch (command.action.kind) {
+    case "observe-knowledge":
+    case "confirm-knowledge":
+    case "correct-knowledge":
+      return knowledgeEvent(command.action, command.commandId);
+    case "begin-conversation":
+    case "record-conversation-reply":
+    case "end-conversation":
+      return conversationEvent(command.action);
     case "rename-project":
       return { kind: "project-renamed", name: command.action.name };
+    case "delete-proposal":
+      return { kind: "proposal-deleted", groupId: command.action.groupId };
     case "propose-tasks": {
       const encodedCommandId = encodeURIComponent(command.commandId);
       const groupId = `proposal:${encodedCommandId}`;

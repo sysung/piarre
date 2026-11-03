@@ -1,7 +1,7 @@
 {
   "name": "piarre",
   "displayName": "Piarre",
-  "description": "Voice-first control plane for coding agents.",
+  "description": "Centralized orchestration and visibility for coding agents.",
   "version": "0.0.1",
   "private": true,
   "publisher": "sysung",
@@ -36,7 +36,186 @@
         "title": "Piarre: Propose Task",
         "enablement": "isWorkspaceTrusted"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Piarre",
+      "properties": {
+        "piarre.providers": {
+          "type": "array",
+          "default": [],
+          "description": "Requested provider identifiers only. Connections and model calls are not implemented; these settings do not authorize spending or data sharing. Do not enter credentials.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "role",
+              "provider",
+              "model"
+            ],
+            "properties": {
+              "role": {
+                "type": "string",
+                "enum": [
+                  "conversation",
+                  "coding",
+                  "speech-input",
+                  "speech-output"
+                ]
+              },
+              "provider": {
+                "type": "string",
+                "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._/-]{0,127}$"
+              },
+              "model": {
+                "type": "string",
+                "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._/-]{0,127}$"
+              },
+              "billing": {
+                "description": "Plan used for estimates only; this does not detect your authenticated billing route or connect the provider. API rates are user supplied. Subscription samples are past usage measurements, not official token quotas.",
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "kind"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "const": "unknown"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "name",
+                      "inputUsdPerMillion",
+                      "outputUsdPerMillion"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "const": "api"
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                      },
+                      "inputUsdPerMillion": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "outputUsdPerMillion": {
+                        "type": "number",
+                        "minimum": 0
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "name"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "const": "subscription"
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                      },
+                      "samples": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "model",
+                            "window",
+                            "tokensUsed",
+                            "usedPercentagePoints"
+                          ],
+                          "properties": {
+                            "model": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 128
+                            },
+                            "window": {
+                              "enum": [
+                                "five-hour",
+                                "weekly"
+                              ]
+                            },
+                            "tokensUsed": {
+                              "type": "integer",
+                              "minimum": 1
+                            },
+                            "usedPercentagePoints": {
+                              "type": "number",
+                              "exclusiveMinimum": 0,
+                              "maximum": 100
+                            },
+                            "provider": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 128,
+                              "description": "Provider identifier when the sample was recorded. Must match the selected provider."
+                            },
+                            "plan": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 100,
+                              "description": "Subscription plan name when recorded. Must match billing.name."
+                            }
+                          },
+                          "oneOf": [
+                            {
+                              "required": [
+                                "provider",
+                                "plan"
+                              ]
+                            },
+                            {
+                              "not": {
+                                "anyOf": [
+                                  {
+                                    "required": [
+                                      "provider"
+                                    ]
+                                  },
+                                  {
+                                    "required": [
+                                      "plan"
+                                    ]
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        "description": "Measurements are bound to their original provider, plan and model. Legacy samples without provider/plan remain unbound and cannot estimate a percentage."
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "piarre.codexExecutable": {
+          "type": "string",
+          "default": "codex",
+          "scope": "machine",
+          "description": "Codex CLI executable used for an explicit connection. Sign in through the CLI first. No shell arguments or credentials."
+        }
+      }
+    }
   },
   "capabilities": {
     "untrustedWorkspaces": {
@@ -53,6 +232,7 @@
     "build:watch": "node esbuild.mjs --watch",
     "package": "node scripts/package.mjs",
     "test:compile": "node esbuild.test.mjs",
-    "test:smoke": "npm run build && npm run test:compile && node test/run.mjs"
+    "test:smoke": "npm run build && npm run test:compile && node test/run.mjs",
+    "test:package": "node scripts/test-package.mjs"
   }
 }

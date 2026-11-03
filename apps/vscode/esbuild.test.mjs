@@ -1,15 +1,13 @@
 import { build } from "esbuild";
+import { readdir, rm } from "node:fs/promises";
+
+const entries = (await readdir("test/suite")).filter((name) => name === "index.ts" || name.endsWith(".test.ts"));
+await rm("dist-test/suite", { recursive: true, force: true });
 
 await build({
   bundle: true,
   external: ["vscode", "mocha"],
-  entryPoints: [
-    "test/suite/activation.test.ts",
-    "test/suite/index.ts",
-    "test/suite/project.test.ts",
-    "test/suite/proposal.test.ts",
-    "test/suite/untrusted.test.ts",
-  ],
+  entryPoints: entries.map((name) => `test/suite/${name}`),
   format: "cjs",
   logLevel: "info",
   outbase: "test/suite",

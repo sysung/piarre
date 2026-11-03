@@ -1,3 +1,4 @@
+import { parseProposalOutput } from "../../../../packages/core/src/contracts.js";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -8,8 +9,7 @@ import type {
   ProjectCommand,
   ProposalDraft,
 } from "../../../../packages/core/src/index.js";
-import { GoalInterpreter } from "../../src/goal-interpreter.js";
-import { renderWorkView } from "../../src/work-view.js";
+import { renderInspection, renderWorkView } from "../../src/work-view.js";
 
 suite("Durable projects", () => {
   let directory: string;
@@ -133,7 +133,7 @@ suite("Durable projects", () => {
   });
   test("persists one complete unapproved proposal with stable task identities", async () => {
     const initial = repository.open(identity);
-    const interpreter = new GoalInterpreter(() => ({
+    const interpreter = ((goal: string) => Promise.resolve().then(() => parseProposalOutput(goal, ({
       tasks: [
         {
           key: "pricing-page",
@@ -160,8 +160,8 @@ suite("Durable projects", () => {
           dependsOn: [],
         },
       ],
-    }));
-    const draft = await interpreter.propose("Add a pricing page");
+    }))));
+    const draft = await interpreter("Add a pricing page");
 
     const result = repository.dispatch({
       commandId: "proposal-one",
@@ -174,6 +174,7 @@ suite("Durable projects", () => {
     assert.deepEqual(result.snapshot.proposals, [
       {
         groupId: "proposal:proposal-one",
+        recordedAtRevision: 2,
         goal: "Add a pricing page",
         source: "deterministic-draft",
         taskIds: ["task:proposal-one:pricing-page"],
@@ -208,7 +209,7 @@ suite("Durable projects", () => {
         dependsOn: [],
       },
     ]);
-    const html = renderWorkView(result.snapshot);
+    const html = renderInspection(result.snapshot, undefined, result.snapshot.proposals[0]?.groupId);
     assert.ok(html.includes("Add a pricing page"));
     assert.ok(html.includes("Show the available plans."));
     assert.ok(html.includes("src/pages/pricing.tsx"));
@@ -226,7 +227,7 @@ suite("Durable projects", () => {
   });
   test("duplicate proposal returns its historical receipt after rename", async () => {
     const initial = repository.open(identity);
-    const interpreter = new GoalInterpreter(() => ({
+    const interpreter = ((goal: string) => Promise.resolve().then(() => parseProposalOutput(goal, ({
       tasks: [
         {
           key: "task",
@@ -248,14 +249,14 @@ suite("Durable projects", () => {
           dependsOn: [],
         },
       ],
-    }));
+    }))));
     const command = {
       commandId: "proposal-one",
       projectId: initial.projectId,
       expectedProjectRevision: initial.revision,
       action: {
         kind: "propose-tasks",
-        draft: await interpreter.propose("Preserve the goal"),
+        draft: await interpreter("Preserve the goal"),
       },
     } satisfies ProjectCommand;
     const first = repository.dispatch(command);

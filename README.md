@@ -1,12 +1,20 @@
 # Piarre
 
-Piarre is a proposed voice-first IDE for directing, observing, and verifying coding agents.
+Piarre is a centralized AI orchestrator for seeing, directing, and verifying agent work. Agent visibility is the primary product direction; typed discussion is a supporting tool and voice is deferred.
 
-The implementation plan lives in [GitHub Project 8](https://github.com/users/sysung/projects/8/views/1) and the [backlog document](docs/03_IMPLEMENTATION_BACKLOG.md).
+The implementation backlog lives in [GitHub Project 8](https://github.com/users/sysung/projects/8/views/1).
 
-The [product design](docs/01_PRODUCT_PRD.md) describes the audience, product model, proposed features, voice interaction, primary UI, trust boundaries, and staged path from one supervised worker to an isolated agent team.
+The [product requirements](docs/01_PRODUCT_PRD.md) describe the business problem, design principles, and intended experience.
 
-The [design package](docs/00_README.md) links the current product and delivery documents. Planning material describes proposals, not implemented capabilities.
+The [documentation index](docs/00_README.md) links the four lasting project documents. Requirements describe intended behavior, not implemented capabilities.
+
+## Install a package
+
+Open [GitHub Releases](https://github.com/sysung/piarre/releases), choose the build for the source commit you want, and download its `.vsix` asset. In VS Code, run **Extensions: Install from VSIX...** and select the file. Reload VS Code, open a trusted Git repository, and run **Piarre: Open**. The package requires VS Code 1.144.0 or later.
+
+Every successful master push publishes the exact tested VSIX, `build-info.json`, and `SHA256SUMS` as a regular GitHub Release. Tags use `build-<full-source-sha>`; no separate release branch or daily schedule is maintained. The VSIX keeps the extension manifest version, so compare source commits and checksums when choosing between builds with the same version. Concurrent builds do not automatically replace GitHub's Latest designation.
+
+PR and master builds also retain the existing **piarre-vsix** Actions artifacts for 30 days. Downloading those artifacts requires signing in and unzipping them. Maintainers can run CI manually on master with **create_release** enabled, which is the default. Disable it for a checks-only manual run. Failed quality or installed-package tests block release. A retry can recover an incomplete upload; an already published build is left unchanged. Releases are staged as drafts only while assets upload, then published automatically. This workflow never publishes to the VS Code Marketplace or installs into daily use, and a package does not establish integrated-product readiness.
 
 ## Develop the extension
 
@@ -24,3 +32,9 @@ On headless Linux, run the smoke test with `xvfb-run -a npm test`.
 To launch the extension manually, open this repository in VS Code, select **Run Piarre Extension**, and press F5. In the Extension Development Host, open the Command Palette and run **Piarre: Open**.
 
 Open and trust a local Git repository in the development host. Piarre shows its Work tab with the project name, ID, and revision. **Piarre: Rename Project** changes the name. Reloading the window restores the project from its event log. Project data is stored in VS Code extension storage, outside the repository.
+
+The Work panel also accepts a typed goal. **Review goal** prepares a deterministic draft without saving it. **Save proposal** records it; no coding work starts. Editing or discarding a preview invalidates it. Unsent text stays in the panel and is lost when the panel closes.
+
+Saved goals appear newest first as compact cards. Choose **Open proposal** to inspect one in a reusable VS Code pane beside Work. Opening a saved proposal does not save, approve, or run anything.
+
+Use **Delete goal** on a saved card or **Delete goal and proposal** in its detail pane to remove that goal and its proposed tasks after confirmation. Repository files and prior project history are retained.
