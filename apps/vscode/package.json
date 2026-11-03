@@ -483,7 +483,8 @@
   },
   "files": [
     "dist/extension.js",
-    "README.md"
+    "README.md",
+    "native/scoped-publication.py"
   ],
   "scripts": {
     "build": "node esbuild.mjs",

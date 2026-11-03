@@ -232,6 +232,10 @@ export function decideProjectEvent(command: ProjectCommand): ProjectEvent {
     case "set-expertise-preference":
     case "set-explanation-preference":
       return { kind: "reflection-recorded", commandId: command.commandId, action: command.action };
+    case "register-retained-version":
+    case "begin-recovery":
+    case "finish-recovery":
+    case "mark-recovery-unknown":
     case "prepare-execution-plan":
     case "approve-execution":
     case "request-execution":

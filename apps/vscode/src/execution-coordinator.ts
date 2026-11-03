@@ -9,11 +9,15 @@ import { type ProviderConfiguration } from "../../../packages/core/src/inspectio
 import type { CodexExecutionContext } from "../../../packages/core/src/provider-account-context.js";
 import { parsePatchProposal } from "../../../packages/core/src/execution-patch.js";
 import { CandidateWorkspace } from "./candidate-workspace.js";
-import { digest } from "./candidate-journal.js";
+import { digest, imageHash } from "./candidate-journal.js";
 import { WorkspaceIntegration } from "./workspace-integration.js";
 import { CandidateCheckRunner, inspectCheckControl, type CandidateCheckResult } from "./candidate-check-runner.js";
 import type { CodexConversationClient } from "./codex-conversation-client.js";
 import type { SqliteProjectRepository } from "./sqlite-project-repository.js";
+
+import { activeRecovery, supersededOperation, type RecoverySelection } from "../../../packages/core/src/recovery.js";
+import { captureRetainedVersion, inspectRetainedInodes, inspectVersion, prepareRecoveryFiles, previewRecoveryFiles, replayRecoveryFiles, type RecoveryPreview } from "./recovery-files.js";
+import { checkEscrowLayout } from "./scoped-publication.js";
 
 type Client = Pick<CodexConversationClient, "connect" | "readExecutionContext" | "proposePatch" | "interrupt" | "dispose">;
 type Runner = Pick<CandidateCheckRunner, "capability" | "run" | "interrupt">;
@@ -34,6 +38,7 @@ export class ExecutionCoordinator {
   private readonly ownerId = randomUUID();
   private readonly reviewingPlans = new Set<string>();
   private readonly prepared = new Map<string, { client: Client; authType: "chatgpt" | "apiKey" | "unknown"; expiresAt: number; timer: NodeJS.Timeout }>();
+  private readonly recoveryPreviews = new Map<string, RecoveryPreview>();
   private readonly active = new Map<string, { client: Client; runner: Runner; stopped: boolean }>();
   constructor(private readonly options: Options) {}
   private isDisposed(): boolean { return this.disposedSnapshot !== undefined; }
@@ -98,6 +103,8 @@ export class ExecutionCoordinator {
       const project = this.snapshot();
       const candidate = CandidateWorkspace.capture({ repositoryRoot: fileURLToPath(project.repositoryUri), relativePaths: input.relativePaths, storageDirectory: this.options.storageDirectory });
       this.clean(candidate);
+      checkEscrowLayout(candidate.sourceRoot, candidate.controlDirectory, candidate.files.map(file => file.baseline.relativePath));
+      checkEscrowLayout(candidate.root, candidate.controlDirectory, candidate.files.map(file => file.baseline.relativePath));
       const baselineCheckpoint = candidate.checkpoint({ checkpointId: "before-run" });
       const linked = currentKnowledge(project).filter(entry => entry.affectedTaskIds.includes(input.taskId));
       const knowledge = linked.map(entry => ({ projectId: entry.projectId, knowledgeId: entry.knowledgeId, recordedAtRevision: entry.recordedAtRevision }));
@@ -277,9 +284,16 @@ export class ExecutionCoordinator {
     if (this.disposedSnapshot) return;
     for (const initial of this.snapshot().executionRuns) {
       if (this.active.has(initial.runId)) continue;
+      const recoveryOwner = activeRecovery(initial);
+      const ownerPid = recoveryOwner?.ownerPid ?? initial.ownerPid;
+      const ownerId = recoveryOwner?.ownerId ?? initial.ownerId;
       let ownerAlive = true;
-      try { process.kill(initial.ownerPid, 0); } catch (error) { if (error instanceof Error && "code" in error && error.code === "ESRCH") ownerAlive = false; }
-      if (ownerAlive && initial.ownerId !== this.ownerId && !(initial.ownerPid === process.pid && disposedOwners.has(initial.ownerId))) continue;
+      try { process.kill(ownerPid, 0); } catch (error) { if (error instanceof Error && "code" in error && error.code === "ESRCH") ownerAlive = false; }
+      if (ownerAlive && ownerId !== this.ownerId && !(ownerPid === process.pid && disposedOwners.has(ownerId))) continue;
+      if (recoveryOwner) {
+        try { this.completeRecovery(initial.runId, recoveryOwner.operationId); } catch { /* The durable unknown successor retains ownership. */ }
+        continue;
+      }
       if (initial.workspace.kind === "writing" || initial.workspace.kind === "unknown") {
         this.clean();
         const candidate = this.candidateForRun(initial.runId); this.clean(candidate);
@@ -306,7 +320,7 @@ export class ExecutionCoordinator {
         if (!approved) continue;
         const evidence = this.evidence(approved, process.nonce, inspection.result, candidate.manifestHash(), false);
         this.dispatch({ kind: "reconcile-execution-process", runId, nonce: process.nonce, reason: "Observed terminal nonce-correlated check receipt after restart.", evidence });
-      } else if (existsSync(path.join(candidate.controlDirectory, `journal-${digest(`patch:${runId}`)}.json`))) {
+      } else if (!supersededOperation(run, `patch:${runId}`) && existsSync(path.join(candidate.controlDirectory, `journal-${digest(`patch:${runId}`)}.json`))) {
         this.clean(candidate);
         const journal = candidate.reconcile({ commandId: `patch:${runId}` });
         if (journal.kind !== "changed" && journal.kind !== "current") continue;
@@ -366,4 +380,76 @@ export class ExecutionCoordinator {
     } catch (error) { this.dispatch({ kind: "mark-workspace-unknown", runId: input.runId, reason: error instanceof Error ? error.message : "Restore completion unknown." }); throw error; }
     return this.run(input.runId);
   }
+  savedVersions(runId: string) {
+    const run = this.run(runId);
+    return { versions: run.savedVersions.map(version => inspectVersion(run, version)), retained: inspectRetainedInodes(run) };
+  }
+  captureRetained(runId: string, entryKey: string): RecoverySelection {
+    this.clean(); const commandId = randomUUID();
+    const captured = captureRetainedVersion(this.run(runId), entryKey, commandId);
+    this.dispatch({ kind: "register-retained-version", runId, target: captured.entry.target, originOperationId: captured.entry.operationId, relativePath: captured.entry.relativePath, manifestHash: captured.manifestHash, observedAt: Date.now() }, commandId);
+    return { kind: "snapshot", target: captured.entry.target, versionId: `retained:${commandId}` };
+  }
+  recoverySelection(runId: string): RecoverySelection {
+    const run = this.run(runId); const recovery = activeRecovery(run);
+    if (recovery) return { kind: "journal", target: recovery.selection.target, operationId: recovery.operationId };
+    if (run.workspace.kind === "writing" || run.workspace.kind === "unknown") return { kind: "journal", target: run.workspace.request.kind === "restore" ? run.workspace.request.target : "source", operationId: run.workspace.operationId };
+    if (run.state.kind === "unknown" && !supersededOperation(run, `patch:${runId}`)) return { kind: "journal", target: "candidate", operationId: `patch:${runId}` };
+    throw new Error("No unresolved journal is recorded for this run.");
+  }
+  private recoveryBlockers(run: ExecutionRun): readonly string[] {
+    const blockers: string[] = [];
+    if (run.process.kind !== "none") blockers.push("A local check process still has unknown or active ownership. Recovery cannot stop it or assume termination.");
+    if (hasUncertainProvider(run)) blockers.push("Provider activity remains unconfirmed. Resolve that reservation separately; recovery does not stop provider work.");
+    if (this.active.has(run.runId)) blockers.push("This execution owner is still active.");
+    if (this.options.hasDirtyDocuments?.(run.grant.plan.files.flatMap(file => [path.join(run.grant.plan.sourceRoot, file.relativePath), path.join(run.grant.plan.candidateRoot, file.relativePath)]))) blockers.push("Unsaved scoped editor buffers block recovery. Piarre will not save or discard them.");
+    if (this.snapshot().executionRuns.some(other => other.runId !== run.runId && (other.state.kind !== "terminal" || other.workspace.kind === "writing" || other.workspace.kind === "unknown" || activeRecovery(other)))) blockers.push("Another run retains writer ownership.");
+    const recovery = activeRecovery(run);
+    const ownerId = recovery?.ownerId ?? run.ownerId; const ownerPid = recovery?.ownerPid ?? run.ownerPid;
+    if ((recovery || run.state.kind !== "terminal" || run.workspace.kind === "writing" || run.workspace.kind === "unknown") && ownerId !== this.ownerId && !(ownerPid === process.pid && disposedOwners.has(ownerId))) {
+      let alive = true; try { process.kill(ownerPid, 0); } catch (error) { if (error instanceof Error && "code" in error && error.code === "ESRCH") alive = false; }
+      if (alive) blockers.push("A foreign live or uncertain owner may still write. Its PID is not permission to stop it.");
+    }
+    return blockers;
+  }
+  previewRecovery(input: { readonly runId: string; readonly selection: RecoverySelection }): RecoveryPreview {
+    this.clean();
+    const preview = previewRecoveryFiles(this.run(input.runId), input.selection, this.snapshot().revision, this.recoveryBlockers(this.run(input.runId)));
+    this.recoveryPreviews.set(preview.previewId, preview);
+    return preview;
+  }
+  cancelRecovery(previewId: string): void { this.recoveryPreviews.delete(previewId); }
+  recover(input: { readonly previewId: string; readonly intendedPaths: readonly string[]; readonly operationId: string }): ExecutionRun {
+    const existing = this.snapshot().executionRuns.find(run => run.recoveries.some(record => record.operationId === input.operationId));
+    if (existing) {
+      const record = existing.recoveries.find(record => record.operationId === input.operationId);
+      if (record?.previewId !== input.previewId || JSON.stringify(record.intendedPaths) !== JSON.stringify(input.intendedPaths)) throw new Error("Recovery command differs from its reviewed choices.");
+      return existing;
+    }
+    this.clean(); const preview = this.recoveryPreviews.get(input.previewId);
+    if (!preview) throw new Error("Recovery preview expired or was cancelled.");
+    const run = this.run(preview.runId);
+    const refreshed = previewRecoveryFiles(run, preview.selection, this.snapshot().revision, this.recoveryBlockers(run));
+    if (refreshed.blockers.length) throw new Error(refreshed.blockers.join("\n"));
+    if (preview.projectRevision !== refreshed.projectRevision || preview.bindingHash !== refreshed.bindingHash || preview.currentManifestHash !== refreshed.currentManifestHash || preview.intendedManifestHash !== refreshed.intendedManifestHash) throw new Error("Recovery preview is stale. Review current files again.");
+    if (new Set(input.intendedPaths).size !== input.intendedPaths.length || input.intendedPaths.some(relative => !preview.current.some(image => image.relativePath === relative))) throw new Error("Recovery choices are outside the reviewed scope.");
+    const target = prepareRecoveryFiles(run, preview, input.intendedPaths, input.operationId);
+    this.dispatch({ kind: "begin-recovery", runId: run.runId, request: { previewId: preview.previewId, projectRevision: preview.projectRevision, selection: preview.selection, bindingHash: preview.bindingHash, parentIdentityHash: digest(JSON.stringify(preview.parentIdentities)), expectedManifestHash: preview.currentManifestHash, targetManifestHash: imageHash(target), intendedPaths: input.intendedPaths, reviewedAt: Date.now(), ownerId: this.ownerId, ownerPid: process.pid } }, input.operationId);
+    this.recoveryPreviews.delete(input.previewId);
+    this.completeRecovery(run.runId, input.operationId);
+    return this.run(run.runId);
+  }
+  private completeRecovery(runId: string, operationId: string): void {
+    const run = this.run(runId);
+    try {
+      const blockers = this.recoveryBlockers(run); if (blockers.length) throw new Error(blockers.join("\n"));
+      const result = replayRecoveryFiles(run, operationId);
+      if (result.kind !== "changed" && result.kind !== "current") throw new Error("reason" in result ? result.reason : "Recovery completion unknown.");
+      this.dispatch({ kind: "finish-recovery", runId, operationId, manifestHash: result.manifestHash, observedAt: Date.now() });
+    } catch (error) {
+      this.dispatch({ kind: "mark-recovery-unknown", runId, operationId, reason: error instanceof Error ? error.message : "Recovery completion unknown; reservation retained." });
+      throw error;
+    }
+  }
+
 }
