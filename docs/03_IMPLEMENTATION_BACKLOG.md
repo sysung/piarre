@@ -11,3 +11,7 @@ The C release replaces the old B delivery sequence. Superseded issues remain tra
 The selected [Design B session brief](https://www.figma.com/design/I7CeHDqFJEvoEdmslfKrNp?node-id=7-2) enters implementation through [C02’s workspace slice](https://github.com/sysung/piarre/issues/64), under [C02](https://github.com/sysung/piarre/issues/53). C03 owns sourced resumption and memory, C04 owns execution and outcome review, and C08 owns integrated validation. The linked issues retain the changing acceptance details. “Design B” names the chosen UI direction and does not reactivate the retired B delivery sequence.
 
 The [agent-visibility design revision](https://github.com/sysung/piarre/issues/75) makes the agent/work overview the primary experience and defers voice. Typed discussion remains a supporting tool. The current issues and acceptance scenarios follow that priority; historical conversation-first plans are retained as history.
+
+The [user design principles](04_USER_DESIGN_PRINCIPLES.md) describe design goals and unvalidated alternatives. Promote validated work through Project 8 and its issues, checking overlap with existing scope first. These principles do not change delivery priorities or estimates.
+
+[Controlled knowledge retrieval comparisons (#79)](https://github.com/sysung/piarre/issues/79) evaluate competing methods against the existing baseline before promoting additional retrieval complexity. This is discovery work, not a new release gate.
