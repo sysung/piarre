@@ -72,7 +72,9 @@ export class ProjectRetrieval {
     try {
       const before = fstatSync(descriptor);
       if (!before.isFile() || before.size > MAX_FILE_BYTES) throw new Error("Source is not a supported bounded file.");
-      const text = readFileSync(descriptor, "utf8");
+      const bytes = readFileSync(descriptor);
+      const text = bytes.toString("utf8");
+      if (!Buffer.from(text, "utf8").equals(bytes)) throw new Error("Unsupported source encoding.");
       const after = fstatSync(descriptor);
       if (before.mtimeMs !== after.mtimeMs || before.size !== after.size || before.mode !== after.mode || before.ino !== after.ino || before.dev !== after.dev || before.ctimeMs !== after.ctimeMs || !realpathSync(absolute).startsWith(this.root + path.sep)) throw new Error("Source changed during retrieval.");
       if (text.includes("\u0000") || /^(?:<<<<<<< |=======\s*$|>>>>>>> )/m.test(text)) throw new Error("Binary or conflicted source is excluded.");

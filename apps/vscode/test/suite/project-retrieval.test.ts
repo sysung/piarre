@@ -48,6 +48,13 @@ suite("Grounded project retrieval", () => {
     assert.equal(search("refundWindowDays").kind, "stale");
   });
 
+  test("unsupported encodings cannot masquerade as exact source bytes", () => {
+    writeFileSync(path.join(root, "invalid.ts"), Buffer.from([0xff, 0xfe]));
+    const coverage = index.rebuild();
+    assert.ok(coverage.issues.some(issue => issue.includes("invalid.ts")));
+    assert.equal(search("�").kind, "no-match");
+  });
+
   test("no matching source is distinct from invalid query and wrong project", () => {
     assert.equal(search("unrecorded frobnication").kind, "no-match");
     assert.equal(search(" ").kind, "error");
