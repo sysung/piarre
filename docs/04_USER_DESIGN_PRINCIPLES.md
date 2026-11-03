@@ -16,6 +16,8 @@ Displaying progress should not require always-on model activity. Explore renderi
 
 Coordination, summaries, and context delivery can still consume tokens. Measure calls, usage, and task quality before claiming savings. Keep the simpler interaction when additional agent communication increases cost or reading burden without improving supervision.
 
+Anthropic's [tool-design guidance](https://www.anthropic.com/research/writing-tools-for-agents) suggests bounded, relevant responses with filtering, pagination, and optional detail. For Piarre, test concise agent-facing results while retaining inspectable evidence. Never truncate away material uncertainty, failures, or information needed for the next action. Compare task success and total tokens, not response length alone.
+
 ## P03. Ground natural conversation in shared work
 
 Piarre should communicate naturally and refer accurately to prior work, decisions, and corrections. Useful continuity requires inspectable records and honest uncertainty. Human-sounding language alone does not establish reliable memory.
@@ -34,11 +36,15 @@ Route concrete tasks to focused `SKILL.md` procedures with necessary context, ex
 
 A skill file does not prove reliability or make a smaller model sufficient. Compare generic, global, and repository-specific procedures on repeatable tasks. Measure quality and token use. A generic model may formulate a proposal when no focused skill fits; ambiguous intent still requires human clarification before dependent execution. Repository skills remain subject to trust and authorization boundaries.
 
+Focused skills also need usable tools. Anthropic recommends distinct purposes, clear names and schemas, helpful errors, and workflow-oriented operations rather than exposing every API endpoint. For Piarre, compare a small task-relevant tool set with a broad catalog. Any combined operation must preserve approval boundaries and disclose partial failures. A skill describes a procedure; a tool executes an operation. Evaluate both together. [Source](https://www.anthropic.com/research/writing-tools-for-agents).
+
 ## P06. Make adaptation optional and demonstrable
 
 Piarre should adapt to the developer without silently changing the rules they rely on. Explore a setting for proposing or automatically updating skills through Harness^2. Automatic application requires explicit opt-in for a defined scope; whether it is appropriate remains open.
 
 Skill changes need a reviewable diff, reason, evaluation evidence, version history, and restoration path. Test the corrected failure and held-out cases, including regressions across repositories. Changes cannot expand authority or bypass clarification of ambiguous intent.
+
+Extend adaptation experiments to tool descriptions and response formats. Anthropic recommends realistic tasks, verifiable outcomes, held-out cases, and tracking errors, calls, latency, and tokens. Piarre should accept valid alternative strategies rather than require one exact tool sequence. These evaluations inform proposed changes; they do not authorize automatic deployment. [Source](https://www.anthropic.com/research/writing-tools-for-agents).
 
 ## P07. Make planned steps and actual execution distinguishable
 
@@ -51,6 +57,12 @@ Models can propose actions while deterministic code owns authorization and execu
 Piarre should retrieve prior experiments, technical contracts, business decisions, and user preferences with their sources and validity intact. Distinguish historical evidence, tentative conclusions, current decisions, superseded decisions, and authoritative constraints. Age alone does not decide authority.
 
 Knowledge graphs, text search, vector retrieval, and other retrieval-augmented generation methods are alternatives to test. No database structure is mandated here. Investigate corrections, conflicting records, user-authorized changes, and which records remain authoritative until explicitly revised. Measure grounding, freshness, cost, and the user's ability to understand why a record informed an answer.
+
+Anthropic's [Contextual Retrieval](https://www.anthropic.com/research/contextual-retrieval) adds short, chunk-specific context before embedding and lexical indexing. It combines semantic retrieval with BM25 exact-term matching and explores reranking. This is a concrete candidate for Piarre's memory experiments, not a requirement for a knowledge graph.
+
+For example, an isolated "one writer" statement needs its repository, release, source revision, and decision status to be interpreted correctly. Those fields are a proposed Piarre extension. Keep source text and generated explanatory context distinguishable. Generated context cannot confirm a decision or turn historical guidance into current authority. Rebuild affected derived context and indexes when sources change.
+
+Compare plain text search, ordinary hybrid retrieval, contextualized hybrid retrieval, and optional reranking on the same questions. Include exact code identifiers, similarly named projects, superseded decisions, contradictions, and unanswerable questions. Measure retrieval recall and grounded answer correctness separately, alongside indexing cost, update cost, query latency, and prompt tokens. Anthropic's reported gains are specific to its evaluation; Piarre must establish its own results.
 
 ## P09. Turn requests into verifiable outcomes and repair misunderstandings
 
@@ -78,7 +90,7 @@ Delegation should preserve enough understanding for a developer to direct, revie
 
 Evaluate the full collaboration. Start with imperfect intent, form a verifiable proposal, execute within authority, accept a correction, review, and return after an interruption. After a delay, ask the developer to explain the change and make a related modification or diagnose a seeded failure. Compare correctness, assistance needed, total effort, and cost with the existing workflow. Faster initial delivery does not establish improvement if later maintenance becomes harder.
 
-## Inspiration and source limits
+## Inspirational Sources
 
 The following references preserve the owner's research trail. They are inspiration, not proof of Piarre's benefits or implementation requirements.
 
@@ -87,3 +99,6 @@ The following references preserve the owner's research trail. They are inspirati
 - [The End of Software Engineering, arXiv 2606.05608v1](https://arxiv.org/html/2606.05608v1) discusses agent memory, coordination, human oversight, and skill evolution. The owner associates skill diagrams, knowledge graphs, and rubber-stamping with their reading and discussion of this paper. The fetched HTML did not establish those specific attributions or the phrase "Deterministic-Stochastic Boundary Architecture". Retain these as the owner's research leads pending a precise source, rather than verified paper claims.
 - [Owner's Gemini discussion](https://share.gemini.google/iDLzyQdkc3bV) provides the stated background for the HCI concerns. It was inaccessible on 2026-11-02, and its contents were not independently reviewed.
 - [Continuation conversation](https://share.gemini.google/jzNCPNajfGba), titled "Essential AI and Engineering Principles", was accessible in the browser on 2026-11-02. It supplies the HCI discussion summarized above. "Deterministic-Stochastic Boundary Architecture" and "rubber-stamping" appear in Gemini's responses there. This establishes their presence in the conversation, not their attribution to the arXiv paper or the validity of Gemini's general claims. The linked earlier conversation within that page was not reviewed.
+
+- [Writing effective tools for agents, Anthropic](https://www.anthropic.com/research/writing-tools-for-agents). Informs P02, P05, and P06.
+- [Introducing Contextual Retrieval, Anthropic](https://www.anthropic.com/research/contextual-retrieval). Informs P08.
