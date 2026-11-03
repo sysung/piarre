@@ -60,7 +60,7 @@ suite("Piarre extension", () => {
     }
   });
   test("activates by executing Piarre: Open", async () => {
-    const extension = vscode.extensions.getExtension("sysung.piarre");
+    const extension = vscode.extensions.getExtension(process.env.PIARRE_PACKAGE_ID ?? "sysung.piarre");
 
     assert.ok(extension, "Piarre extension must be installed in the test host");
     await vscode.commands.executeCommand("piarre.open");

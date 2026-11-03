@@ -1,3 +1,4 @@
+import { registerDiagnosticCommands } from "./diagnostic-commands.js";
 import { parseProviderConfiguration } from "../../../packages/core/src/inspection.js";
 import { ExecutionCoordinator } from "./execution-coordinator.js";
 import { ExecutionUi } from "./execution-ui.js";
@@ -180,6 +181,7 @@ export function activate(context: vscode.ExtensionContext): void {
     return opening;
   };
   context.subscriptions.push(
+    registerDiagnosticCommands(context, () => repository),
     view,
     output,
     stopWork,

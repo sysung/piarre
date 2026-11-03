@@ -47,6 +47,7 @@ test("the extension exposes the Piarre: Open activation seam", async () => {
       title: "Piarre: Stop All Work",
       enablement: "isWorkspaceTrusted",
     },
+    ...[ ["createDiagnosticBundle", "Create Diagnostic Bundle"], ["exportDiagnosticBundle", "Export Diagnostic Bundle"], ["deleteDiagnosticBundle", "Delete Diagnostic Bundle"] ].map(([command, title]) => ({ command: `piarre.${command}`, title: `Piarre: ${title}`, enablement: "isWorkspaceTrusted" })),
   ]);
 });
 
@@ -67,6 +68,6 @@ test("docs contains only the four lasting project documents", async () => {
     "00_README.md",
     "01_PRODUCT_PRD.md",
     "02_TECHNICAL_DESIGN.md",
-    "04_USER_DESIGN_PRINCIPLES.md",
+    "03_USER_DESIGN_PRINCIPLES.md",
   ], "Keep lasting content in the four docs files. Put temporary plans, evidence, and history in .artifacts; track work in GitHub issues.");
 });
