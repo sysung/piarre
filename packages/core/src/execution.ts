@@ -1,4 +1,5 @@
 import { consentMatches, type ExecutionForecast, type SpendingConsent } from "./execution-forecast.js";
+import { activeRecovery, supersededOperation, unresolvedRecoveryOperation, type RecoveryAction, type RecoveryRecord, type SavedVersion } from "./recovery.js";
 import type { CodexExecutionContext } from "./provider-account-context.js";
 import type { KnowledgeVersion } from "./context.js";
 import { currentKnowledge, knowledgeConflicts } from "./knowledge.js";
@@ -84,6 +85,8 @@ export type WorkspaceState =
   | { readonly kind: "restored"; readonly operationId: string; readonly request: Extract<WorkspaceRequest, { readonly kind: "restore" }>; readonly manifestHash: string; readonly observedAt: number };
 export interface ExecutionRun {
   readonly runId: string;
+  readonly recoveries: readonly RecoveryRecord[];
+  readonly savedVersions: readonly SavedVersion[];
   readonly ownerPid: number;
   readonly ownerId: string;
   readonly grant: ExecutionGrant;
@@ -98,7 +101,7 @@ export interface ExecutionRun {
   readonly reviewFreshness: { readonly kind: "current" } | { readonly kind: "stale"; readonly reason: string };
   readonly acceptance: { readonly kind: "unreviewed" } | { readonly kind: "accepted"; readonly resultId: string; readonly resultRevision: number; readonly commandId: string };
 }
-export type ExecutionAction =
+export type ExecutionAction = RecoveryAction
   | { readonly kind: "prepare-execution-plan"; readonly plan: ExecutionPlanDraft }
   | { readonly kind: "approve-execution"; readonly planId: string; readonly planRevision: number; readonly runId: string; readonly approvedAt: number; readonly expiresAt: number; readonly ownerPid: number; readonly ownerId: string; readonly spendingConsent?: SpendingConsent }
   | { readonly kind: "request-execution"; readonly runId: string; readonly requestedAt: number }
@@ -168,7 +171,7 @@ export function executionDependenciesReady(project: ProjectSnapshot, taskId: str
   return visit(taskId);
 }
 export function hasUncertainProvider(run: ExecutionRun): boolean { return (run.providerTurn.kind === "thread" || run.providerTurn.kind === "turn") && run.providerOutcome.kind === "unobserved"; }
-export function ownsExecutionLease(run: ExecutionRun): boolean { return run.state.kind !== "terminal" || run.workspace.kind === "writing" || run.workspace.kind === "unknown"; }
+export function ownsExecutionLease(run: ExecutionRun): boolean { return activeRecovery(run) !== undefined || run.state.kind !== "terminal" || run.workspace.kind === "writing" || run.workspace.kind === "unknown"; }
 export function currentExecutionPlan(project: ProjectSnapshot, taskId: string): ExecutionPlan | undefined {
   return project.executionPlans.filter(plan => plan.taskId === taskId).at(-1);
 }
@@ -191,7 +194,7 @@ export function applyExecutionEvent(project: ProjectSnapshot, event: ExecutionEv
     if (action.spendingConsent?.kind !== "legacy-unconfirmed" && !consentMatches(action.spendingConsent, plan, action.runId, action.approvedAt)) invalid();
     const task = project.tasks.find(item => item.taskId === plan.taskId);
     if (!task || !executionDependenciesReady(project, task.taskId)) invalid();
-    const run: ExecutionRun = { runId: action.runId, ownerPid: action.ownerPid, ownerId: action.ownerId, grant: { approvalId: event.commandId, plan, spendingConsent: action.spendingConsent, approvedAt: action.approvedAt,
+    const run: ExecutionRun = { runId: action.runId, recoveries: [], savedVersions: [{ versionId: `baseline:${action.runId}`, target: "candidate", purpose: "baseline", checkpointId: plan.baselineCheckpoint.checkpointId, operationId: event.commandId, manifestHash: plan.baselineCheckpoint.manifestHash, captureHash: plan.captureHash, createdAt: action.approvedAt }], ownerPid: action.ownerPid, ownerId: action.ownerId, grant: { approvalId: event.commandId, plan, spendingConsent: action.spendingConsent, approvedAt: action.approvedAt,
       expiresAt: action.expiresAt, deadlineAt: action.approvedAt + plan.durationMs }, state: { kind: "reserved" },
       providerTurn: { kind: "not-requested" }, providerOutcome: { kind: "unobserved" }, providerObservation: { kind: "unobserved" }, process: { kind: "none" }, evidence: [], accountObservations: [], workspace: { kind: "not-integrated" }, reviewFreshness: { kind: "current" }, acceptance: { kind: "unreviewed" } };
     return { ...project, revision, executionRuns: [...project.executionRuns, run] };
@@ -265,27 +268,69 @@ export function applyExecutionEvent(project: ProjectSnapshot, event: ExecutionEv
         outcome: action.outcome, manifestHash: action.manifestHash, checks: run.evidence };
       next = { ...run, state: { kind: "terminal", result }, acceptance: { kind: "unreviewed" } }; break;
     }
+    case "register-retained-version": {
+      const origin = action.originOperationId;
+      if (!run.grant.plan.files.some(file => file.relativePath === action.relativePath) || !(origin === `patch:${run.runId}` && action.target === "candidate") && !run.savedVersions.some(version => version.operationId === origin && version.target === action.target) && !run.recoveries.some(record => record.operationId === origin && record.selection.target === action.target)) invalid();
+      next = { ...run, savedVersions: [...run.savedVersions, { versionId: `retained:${event.commandId}`, target: action.target, purpose: "retained-entry", checkpointId: event.commandId, operationId: origin, manifestHash: action.manifestHash, captureHash: run.grant.plan.captureHash, createdAt: action.observedAt }] }; break;
+    }
+    case "begin-recovery": {
+      const request = action.request;
+      if (request.projectRevision !== project.revision || run.process.kind !== "none" || hasUncertainProvider(run) || project.executionRuns.some(other => other.runId !== run.runId && ownsExecutionLease(other))) invalid();
+      if (run.state.kind !== "terminal" && run.state.kind !== "unknown") invalid();
+      if (new Set(request.intendedPaths).size !== request.intendedPaths.length || request.intendedPaths.some(relative => !run.grant.plan.files.some(file => file.relativePath === relative))) invalid();
+      const prior = activeRecovery(run);
+      if (request.selection.kind === "journal") {
+        const operationId = request.selection.operationId;
+        if (supersededOperation(run, operationId) || (operationId === `patch:${run.runId}` && run.state.kind !== "unknown")) invalid();
+        if (prior ? prior.operationId !== operationId || prior.selection.target !== request.selection.target :
+          request.selection.target === "source" ? (run.workspace.kind !== "writing" && run.workspace.kind !== "unknown") || run.workspace.operationId !== operationId || (run.workspace.request.kind === "restore" && run.workspace.request.target !== "source") :
+          operationId !== `patch:${run.runId}` && ((run.workspace.kind !== "writing" && run.workspace.kind !== "unknown") || run.workspace.operationId !== operationId || run.workspace.request.kind !== "restore" || run.workspace.request.target !== "candidate")) invalid();
+      } else {
+        const selection = request.selection;
+        if ((unresolvedRecoveryOperation(run)?.target !== undefined && unresolvedRecoveryOperation(run)?.target !== selection.target) || !run.savedVersions.some(version => version.versionId === selection.versionId && version.target === selection.target && version.captureHash === run.grant.plan.captureHash)) invalid();
+      }
+      if (request.intendedPaths.length === 0 && request.expectedManifestHash !== request.targetManifestHash) invalid();
+      const supersedes = request.selection.kind === "journal" ? request.selection.operationId : unresolvedRecoveryOperation(run)?.operationId ?? null;
+      const recovery: RecoveryRecord = { ...request, operationId: event.commandId, supersedes, state: { kind: "writing" } };
+      next = { ...run, recoveries: [...run.recoveries.map(record => record === prior ? { ...record, state: { kind: "superseded", successorId: event.commandId } as const } : record), recovery],
+        savedVersions: [...run.savedVersions, { versionId: `preserved:${event.commandId}`, target: request.selection.target, purpose: "preserved-before-recovery", checkpointId: `recovery:${event.commandId}`, operationId: event.commandId, manifestHash: request.expectedManifestHash, captureHash: run.grant.plan.captureHash, createdAt: request.reviewedAt }],
+        acceptance: { kind: "unreviewed" }, reviewFreshness: { kind: "stale", reason: "Reviewed recovery invalidates all earlier checks and acceptance" } }; break;
+    }
+    case "finish-recovery": {
+      const recovery = activeRecovery(run);
+      if (!recovery || recovery.operationId !== action.operationId || recovery.targetManifestHash !== action.manifestHash) invalid();
+      const reason = "Reviewed recovery completed. Earlier checks and acceptance remain historical.";
+      next = { ...run, recoveries: run.recoveries.map(record => record === recovery ? { ...record, state: { kind: "completed", observedAt: action.observedAt } } : record),
+        workspace: { kind: "stale", operationId: recovery.operationId, manifestHash: action.manifestHash, reason },
+        state: run.state.kind === "terminal" ? run.state : { kind: "terminal", result: { resultId: `result:${event.commandId}`, recordedAtRevision: revision, summary: reason, outcome: "unknown", manifestHash: action.manifestHash, checks: run.evidence } },
+        reviewFreshness: { kind: "stale", reason }, acceptance: { kind: "unreviewed" } }; break;
+    }
+    case "mark-recovery-unknown": {
+      const recovery = activeRecovery(run); if (!recovery || recovery.operationId !== action.operationId) invalid();
+      next = { ...run, recoveries: run.recoveries.map(record => record === recovery ? { ...record, state: { kind: "unknown", reason: action.reason } } : record) }; break;
+    }
     case "begin-workspace-operation": {
-      if (run.state.kind !== "terminal" || run.process.kind !== "none" || run.workspace.kind === "writing" || run.workspace.kind === "unknown" || project.schedulingPaused || project.executionRuns.some(other => other.runId !== run.runId && ownsExecutionLease(other))) invalid();
+      if (activeRecovery(run) || run.state.kind !== "terminal" || run.process.kind !== "none" || run.workspace.kind === "writing" || run.workspace.kind === "unknown" || project.schedulingPaused || project.executionRuns.some(other => other.runId !== run.runId && ownsExecutionLease(other))) invalid();
       if (action.request.kind === "integrate" && (run.state.result.outcome !== "needs-review" || run.reviewFreshness.kind !== "current" || (planFreshness(project, run.grant.plan) !== "current" || !executionDependenciesReady(project, run.grant.plan.taskId)) || run.workspace.kind !== "not-integrated" || action.request.resultId !== run.state.result.resultId || action.request.resultRevision !== run.state.result.recordedAtRevision || action.request.targetManifestHash !== run.state.result.manifestHash)) invalid();
-      next = { ...run, workspace: { kind: "writing", operationId: event.commandId, request: action.request }, acceptance: { kind: "unreviewed" },
+      next = { ...run, savedVersions: [...run.savedVersions, { versionId: `before:${event.commandId}`, target: action.request.kind === "integrate" ? "source" : action.request.target,
+        purpose: action.request.kind === "integrate" ? "before-integration" : "preserved-before-restore", checkpointId: action.request.kind === "integrate" ? `integration-before:${event.commandId}` : action.request.target === "source" ? `integration-preserved:${event.commandId}` : `preserved:${event.commandId}`, operationId: event.commandId, manifestHash: action.request.expectedManifestHash, captureHash: run.grant.plan.captureHash, createdAt: null }], workspace: { kind: "writing", operationId: event.commandId, request: action.request }, acceptance: { kind: "unreviewed" },
         reviewFreshness: action.request.kind === "restore" ? { kind: "stale", reason: "Checkpoint restore invalidates earlier result evidence" } : run.reviewFreshness }; break;
     }
     case "finish-workspace-operation":
-      if ((run.workspace.kind !== "writing" && run.workspace.kind !== "unknown") || run.workspace.operationId !== action.operationId || run.workspace.request.targetManifestHash !== action.manifestHash) invalid();
+      if (activeRecovery(run) || supersededOperation(run, action.operationId) || (run.workspace.kind !== "writing" && run.workspace.kind !== "unknown") || run.workspace.operationId !== action.operationId || run.workspace.request.targetManifestHash !== action.manifestHash) invalid();
       next = { ...run, workspace: run.workspace.request.kind === "integrate" ? { kind: "integrated", operationId: action.operationId, manifestHash: action.manifestHash, observedAt: action.observedAt }
         : { kind: "restored", operationId: action.operationId, request: run.workspace.request, manifestHash: action.manifestHash, observedAt: action.observedAt } }; break;
     case "mark-workspace-unknown":
       if (run.workspace.kind !== "writing" && run.workspace.kind !== "unknown") invalid();
       next = { ...run, workspace: { kind: "unknown", operationId: run.workspace.operationId, request: run.workspace.request, reason: action.reason }, acceptance: { kind: "unreviewed" } }; break;
     case "abandon-workspace-operation":
-      if (run.state.kind !== "terminal" || run.process.kind !== "none" || (run.workspace.kind !== "writing" && run.workspace.kind !== "unknown") || run.workspace.operationId !== action.operationId) invalid();
+      if (activeRecovery(run) || supersededOperation(run, action.operationId) || run.state.kind !== "terminal" || run.process.kind !== "none" || (run.workspace.kind !== "writing" && run.workspace.kind !== "unknown") || run.workspace.operationId !== action.operationId) invalid();
       next = { ...run, workspace: { kind: "stale", operationId: action.operationId, manifestHash: action.observedManifestHash, reason: action.reason },
         acceptance: { kind: "unreviewed" }, reviewFreshness: { kind: "stale", reason: action.reason } }; break;
     case "invalidate-execution-workspace":
       next = { ...run, reviewFreshness: { kind: "stale", reason: action.reason }, acceptance: { kind: "unreviewed" } }; break;
     case "accept-execution-result":
-      if (run.workspace.kind !== "integrated" || run.reviewFreshness.kind !== "current" || run.workspace.manifestHash !== (run.state.kind === "terminal" ? run.state.result.manifestHash : "") || run.state.kind !== "terminal" || run.state.result.outcome !== "needs-review" || run.state.result.resultId !== action.resultId || run.state.result.recordedAtRevision !== action.resultRevision || (planFreshness(project, run.grant.plan) !== "current" || !executionDependenciesReady(project, run.grant.plan.taskId)) || run.acceptance.kind !== "unreviewed") invalid();
+      if (activeRecovery(run) || run.workspace.kind !== "integrated" || run.reviewFreshness.kind !== "current" || run.workspace.manifestHash !== (run.state.kind === "terminal" ? run.state.result.manifestHash : "") || run.state.kind !== "terminal" || run.state.result.outcome !== "needs-review" || run.state.result.resultId !== action.resultId || run.state.result.recordedAtRevision !== action.resultRevision || (planFreshness(project, run.grant.plan) !== "current" || !executionDependenciesReady(project, run.grant.plan.taskId)) || run.acceptance.kind !== "unreviewed") invalid();
       next = { ...run, acceptance: { kind: "accepted", resultId: action.resultId, resultRevision: action.resultRevision, commandId: event.commandId } }; break;
     default: { const exhaustive: never = action; throw new Error(`Invalid execution action: ${String(exhaustive)}`); }
   }

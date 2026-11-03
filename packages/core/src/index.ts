@@ -208,6 +208,10 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
 
 export function decideProjectEvent(command: ProjectCommand): ProjectEvent {
   switch (command.action.kind) {
+    case "register-retained-version":
+    case "begin-recovery":
+    case "finish-recovery":
+    case "mark-recovery-unknown":
     case "prepare-execution-plan":
     case "approve-execution":
     case "request-execution":

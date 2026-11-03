@@ -1,10 +1,11 @@
 import { createHash, randomUUID } from "node:crypto";
-import { closeSync, constants, fchmodSync, fstatSync, fsyncSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
+import { closeSync, constants, existsSync, fstatSync, fsyncSync, lstatSync, openSync, readFileSync, realpathSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { publicationParents, publishScopedChange, type ParentIdentity } from "./scoped-publication.js";
 
 export interface FileImage { readonly relativePath: string; readonly content: string | null; readonly mode: number | null }
 export interface FileChange { readonly relativePath: string; readonly before: string | null; readonly after: string | null; readonly beforeMode: number | null; readonly afterMode: number | null }
-export interface Journal { readonly commandId: string; readonly changes: readonly FileChange[]; readonly completed: boolean }
+export interface Journal { readonly commandId: string; readonly changes: readonly FileChange[]; readonly completed: boolean; readonly parents?: readonly (readonly ParentIdentity[])[] }
 export type JournalResult = { readonly kind: "current" | "changed"; readonly manifestHash: string }
   | { readonly kind: "partial" | "conflict"; readonly paths: readonly string[]; readonly reason: string };
 export const digest = (value: string | Uint8Array): string => createHash("sha256").update(value).digest("hex");
@@ -90,6 +91,7 @@ export function parseImages(value: unknown): readonly FileImage[] {
   if (!Array.isArray(value) || value.length < 1 || value.length > 20) throw new Error("Invalid checkpoint");
   return value.map((item: unknown) => {
     if (typeof item !== "object" || item === null || !("relativePath" in item) || typeof item.relativePath !== "string" || !("content" in item) || (item.content !== null && typeof item.content !== "string")) throw new Error("Invalid checkpoint entry");
+    if (item.content !== null && (Buffer.byteLength(item.content) > 256_000 || item.content.includes("\0"))) throw new Error("Unsupported bounded text image");
     return { relativePath: item.relativePath, content: item.content, mode: parseFileMode("mode" in item ? item.mode : undefined, item.content) };
   });
 }
@@ -97,41 +99,57 @@ export function parseJournal(value: unknown): Journal {
   if (typeof value !== "object" || value === null || !("commandId" in value) || typeof value.commandId !== "string" || !("completed" in value) || typeof value.completed !== "boolean" || !("changes" in value) || !Array.isArray(value.changes)) throw new Error("Invalid candidate journal");
   const changes = value.changes.map((item: unknown): FileChange => {
     if (typeof item !== "object" || item === null || !("relativePath" in item) || typeof item.relativePath !== "string" || !("before" in item) || (typeof item.before !== "string" && item.before !== null) || !("after" in item) || (typeof item.after !== "string" && item.after !== null)) throw new Error("Invalid journal step");
+    if ([item.before, item.after].some(content => content !== null && (Buffer.byteLength(content) > 256_000 || content.includes("\0")))) throw new Error("Unsupported bounded journal text");
     return { relativePath: item.relativePath, before: item.before, after: item.after, beforeMode: parseFileMode("beforeMode" in item ? item.beforeMode : undefined, item.before), afterMode: parseFileMode("afterMode" in item ? item.afterMode : undefined, item.after) };
   });
   if (changes.length > 20 || new Set(changes.map(change => change.relativePath)).size !== changes.length) throw new Error("Invalid journal scope");
-  return { commandId: value.commandId, completed: value.completed, changes };
+  let parents: readonly (readonly ParentIdentity[])[] | undefined;
+  if ("parents" in value) {
+    if (!Array.isArray(value.parents) || value.parents.length !== changes.length) throw new Error("Invalid journal parent identities");
+    parents = value.parents.map((entries: unknown): readonly ParentIdentity[] => {
+      if (!Array.isArray(entries)) throw new Error("Invalid parent identities");
+      return entries.map((entry: unknown): ParentIdentity => { if (entry === null) return null; if (!Array.isArray(entry) || entry.length !== 2 || !entry.every(value => typeof value === "number" && Number.isSafeInteger(value) && value >= 0)) throw new Error("Invalid directory identity"); return [Number(entry[0]), Number(entry[1])]; });
+    });
+  }
+  return { commandId: value.commandId, completed: value.completed, changes, ...(parents ? { parents } : {}) };
+}
+function assertJournalParents(root: string, control: string, filename: string, journal: Journal): void {
+  for (const [index, change] of journal.changes.entries()) {
+    const expected = journal.parents?.[index];
+    if (!expected) throw new Error("Legacy journal lacks reviewed directory identities; use reviewed recovery.");
+    const actual = publicationParents(root, change.relativePath);
+    if (JSON.stringify(expected) === JSON.stringify(actual)) continue;
+    const directory = path.join(control, `escrow-${digest(`${filename}:${String(index)}`)}`);
+    const intent = readRecord(directory, "intent.json");
+    if (typeof intent !== "object" || intent === null || !("parents" in intent) || !Array.isArray(intent.parents)) throw new Error("Publication parent identity unavailable.");
+    const established: readonly unknown[] = intent.parents;
+    if (JSON.stringify(expected.map((entry, offset) => entry ?? established[offset])) !== JSON.stringify(actual)) throw new Error("Publication parent relocated; replacement parent untouched.");
+  }
 }
 export function replayJournal({ root, controlDirectory, filename, journal, snapshot, afterStep }: {
   readonly root: string; readonly controlDirectory: string; readonly filename: string; readonly journal: Journal;
   readonly snapshot: () => readonly FileImage[]; readonly afterStep?: (index: number) => void;
 }): JournalResult {
-  if (journal.completed) return { kind: "current", manifestHash: imageHash(snapshot()) };
+  if (existsSync(path.join(controlDirectory, `superseded-${digest(journal.commandId)}.json`))) return { kind: "conflict", paths: [], reason: "This journal has a reviewed successor and cannot replay." };
   let changed = false;
   try {
+    assertJournalParents(root, controlDirectory, filename, journal);
+    if (journal.completed) return { kind: "current", manifestHash: imageHash(snapshot()) };
     for (const [index, change] of journal.changes.entries()) {
-      const current = readImage(root, change.relativePath);
-      if (current.content === change.after && current.mode === change.afterMode) continue;
-      if (current.content !== change.before || current.mode !== change.beforeMode) return { kind: "conflict", paths: [change.relativePath], reason: "Current bytes diverged from the journal before and after images" };
-      const target = safePath(root, change.relativePath);
-      if (change.after === null) unlinkSync(target);
-      else {
-        mkdirSync(path.dirname(target), { recursive: true });
-        safePath(root, change.relativePath);
-        const temporary = path.join(path.dirname(target), `.piarre-${randomUUID()}`);
-        const fd = openSync(temporary, "wx", 0o600);
-        try {
-          if (change.afterMode === null) throw new Error("Missing target file permissions");
-          writeFileSync(fd, change.after); fchmodSync(fd, change.afterMode); fsyncSync(fd);
-        } finally { closeSync(fd); }
-        // Recheck immediately before rename. This is not an atomic CAS against external editors.
-        const observed = readImage(root, change.relativePath);
-        if (observed.content !== change.before || observed.mode !== change.beforeMode) { unlinkSync(temporary); return { kind: "conflict", paths: [change.relativePath], reason: "Candidate changed immediately before replacement" }; }
-        renameSync(temporary, target);
+      const hasIntent = existsSync(path.join(controlDirectory, `escrow-${digest(`${filename}:${String(index)}`)}`, "intent.json"));
+      if (!hasIntent) {
+        const current = readImage(root, change.relativePath);
+        if (current.content === change.after && current.mode === change.afterMode) continue;
+        if (current.content !== change.before || current.mode !== change.beforeMode) return { kind: "conflict", paths: [change.relativePath], reason: "Current bytes diverged from the journal before and after images" };
       }
-      syncDirectory(path.dirname(target)); changed = true; afterStep?.(index);
+      const parents = journal.parents?.[index];
+      if (!parents) throw new Error("Legacy journal lacks reviewed directory identities; use reviewed recovery.");
+      publishScopedChange(root, controlDirectory, digest(`${filename}:${String(index)}`), change, parents);
+      changed = true; afterStep?.(index);
     }
+    assertJournalParents(root, controlDirectory, filename, journal);
     writeRecord(controlDirectory, filename, { ...journal, completed: true });
+    assertJournalParents(root, controlDirectory, filename, journal);
     return { kind: changed ? "changed" : "current", manifestHash: imageHash(snapshot()) };
   } catch (error) { return { kind: "partial", paths: journal.changes.map(change => change.relativePath), reason: error instanceof Error ? error.message : "Journal interrupted" }; }
 }
