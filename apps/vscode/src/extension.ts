@@ -140,6 +140,7 @@ export function activate(context: vscode.ExtensionContext): void {
       conversation?.dispose(); knowledge?.dispose();
       repository?.close();
       repository = next;
+      view.setVisit(project.projectId, next.beginVisit(), revision => { next.recordVisitedRevision(project.projectId, revision); });
       view.show(project);
       const coordinator = new ExecutionCoordinator({ repository: next, storageDirectory: executionStorage, createClient, publish: publishExecution,
         readProviderConfiguration: () => parseProviderConfiguration(vscode.workspace.getConfiguration("piarre").get<unknown>("providers", [])),

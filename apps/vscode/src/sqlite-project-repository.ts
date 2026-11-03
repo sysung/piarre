@@ -1,3 +1,4 @@
+import type { VisitBaseline } from "../../../packages/core/src/resumption.js";
 import { randomUUID } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import {
@@ -17,7 +18,7 @@ export class SqliteProjectRepository {
   constructor(databasePath: string) {
     this.database = new DatabaseSync(databasePath);
     this.database.exec(
-      "PRAGMA busy_timeout = 5000; PRAGMA synchronous = FULL; CREATE TABLE IF NOT EXISTS events (revision INTEGER PRIMARY KEY, schema_version INTEGER NOT NULL, payload TEXT NOT NULL); CREATE TABLE IF NOT EXISTS commands (command_id TEXT PRIMARY KEY, input TEXT NOT NULL, result_revision INTEGER NOT NULL REFERENCES events(revision));",
+      "PRAGMA busy_timeout = 5000; PRAGMA synchronous = FULL; CREATE TABLE IF NOT EXISTS project_visit (singleton INTEGER PRIMARY KEY CHECK(singleton = 1), revision INTEGER NOT NULL); CREATE TABLE IF NOT EXISTS events (revision INTEGER PRIMARY KEY, schema_version INTEGER NOT NULL, payload TEXT NOT NULL); CREATE TABLE IF NOT EXISTS commands (command_id TEXT PRIMARY KEY, input TEXT NOT NULL, result_revision INTEGER NOT NULL REFERENCES events(revision));",
     );
   }
 
@@ -84,6 +85,27 @@ export class SqliteProjectRepository {
       }
     });
     return events;
+  }
+
+  beginVisit(): VisitBaseline {
+    return this.transaction(() => {
+      const current = this.read();
+      const row = this.database.prepare("SELECT revision FROM project_visit WHERE singleton = 1").get();
+      let baseline: VisitBaseline = { kind: "first-visit" };
+      if (row) {
+        baseline = typeof row.revision === "number" && Number.isSafeInteger(row.revision) && row.revision >= 1 && row.revision <= current.revision
+          ? { kind: "previous-visit", snapshot: this.read(row.revision) }
+          : { kind: "unavailable", reason: "Invalid saved visit revision" };
+      }
+      this.database.prepare("INSERT INTO project_visit VALUES (1, ?) ON CONFLICT(singleton) DO UPDATE SET revision = excluded.revision").run(current.revision);
+      return baseline;
+    });
+  }
+
+  recordVisitedRevision(projectId: string, revision: number): void {
+    const current = this.read();
+    if (current.projectId !== projectId || !Number.isSafeInteger(revision) || revision < 1 || revision > current.revision) throw new Error("Invalid visited revision");
+    this.database.prepare("INSERT INTO project_visit VALUES (1, ?) ON CONFLICT(singleton) DO UPDATE SET revision = max(project_visit.revision, excluded.revision)").run(revision);
   }
 
   dispatch(inputCommand: unknown): CommandResult {

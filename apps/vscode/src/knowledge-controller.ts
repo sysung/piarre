@@ -1,3 +1,4 @@
+import { knowledgeWorkImpact } from "../../../packages/core/src/resumption.js";
 import { fileURLToPath } from "node:url";
 import { lookupProjectSources, type RetrievalResult } from "./project-retrieval.js";
 import * as vscode from "vscode";
@@ -68,9 +69,10 @@ export class KnowledgeController {
     if (current?.recordedAtRevision !== entry.recordedAtRevision) return;
     const affected = entry.affectedTaskIds.map(id => project.tasks.find(task => task.taskId === id)?.title ?? id);
     const conflicts = knowledgeConflicts(project, { ...entry, standing: { kind: "confirmed", confirmationCommandId: "preview-only" } });
+    const impact = knowledgeWorkImpact(project, entry.knowledgeId).map(item => `Plan ${item.plan.planId} @${String(item.plan.recordedAtRevision)}; ${item.runs.map(run => `approval ${run.grant.approvalId}, run ${run.runId} (${run.state.kind}; process ${run.process.kind}; workspace ${run.workspace.kind})${run.state.kind === "terminal" ? `, result ${run.state.result.resultId} @${String(run.state.result.recordedAtRevision)}, ${String(run.state.result.checks.length)} historical check records` : ""}`).join("; ") || "no approval/result recorded"}`).join("\n");
     const label = correcting ? "Approve correction" : "Confirm knowledge";
     const approved = await vscode.window.showWarningMessage(`${label}: ${entry.topic}?`, { modal: true,
-      detail: `${correcting ? `Previous (revision ${String(entry.recordedAtRevision)}):\n${entry.content.text}\n\nReplacement` : "Record"}:\n${text}\n\n${correcting ? "Linked plans and their future approvals/evidence become stale" : "Explicitly linked tasks"}: ${affected.join(", ") || "None recorded"}. Missing links cannot establish complete impact.\n\n${conflicts.length ? "Different confirmed records for this topic remain disputed; this action will not silently choose one.\n\n" : ""}This does not approve coding work, release a writer, or verify a claim.` }, label);
+      detail: `${correcting ? `Previous (revision ${String(entry.recordedAtRevision)}):\n${entry.content.text}\n\nReplacement` : "Record"}:\n${text}\n\n${correcting ? "Linked plans and their future approvals/evidence become stale" : "Explicitly linked tasks"}: ${affected.join(", ") || "None recorded"}. Missing links cannot establish complete impact.\n\n${correcting ? `Recorded plan/approval/result impact:\n${impact || "No recorded execution relationships"}\nUnknown writers retain ownership and require reconciliation. Unrelated records are preserved.\n\n` : ""}${conflicts.length ? "Different confirmed records for this topic remain disputed; this action will not silently choose one.\n\n" : ""}This does not approve coding work, release a writer, or verify a claim.` }, label);
     if (approved !== label || !this.isCurrent()) return;
     const target = { projectId: project.projectId, knowledgeId: entry.knowledgeId, recordedAtRevision: entry.recordedAtRevision };
     this.apply(project, correcting ? { kind: "correct-knowledge", target, affectedTaskIds: entry.affectedTaskIds,
