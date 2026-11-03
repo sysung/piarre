@@ -100,7 +100,7 @@ export class ProjectRetrieval {
     const walk = (directory: string, depth: number): void => {
       const absolute = path.join(this.root, directory);
       const directoryStat = lstatSync(absolute);
-      manifest.push([directory, directoryStat.mode, directoryStat.uid, directoryStat.gid, directoryStat.dev, directoryStat.ino]);
+      manifest.push([directory, directoryStat.mode, directoryStat.uid, directoryStat.gid, directoryStat.dev, directoryStat.ino, directoryStat.ctimeMs]);
       if (lstatSync(absolute).isSymbolicLink() || (directory && !realpathSync(absolute).startsWith(this.root + path.sep))) {
         issues.push(`Excluded unsafe directory: ${directory}`); manifest.push([directory, "unsafe"]); return;
       }
