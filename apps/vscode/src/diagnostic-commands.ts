@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { createDiagnosticBundle, DiagnosticBundleStore } from "./diagnostic-bundle.js";
+import { createDiagnosticBundle, diagnosticFailureMessage, DiagnosticBundleStore, validateRecordingLink } from "./diagnostic-bundle.js";
 import type { SqliteProjectRepository } from "./sqlite-project-repository.js";
 
 function extensionVersion(manifest: unknown): string {
@@ -15,9 +15,28 @@ export function registerDiagnosticCommands(context: vscode.ExtensionContext, cur
   expire();
   const timer = setInterval(expire, 60_000);
   const run = (operation: () => Promise<void>) => async (): Promise<void> => {
-    try { expire(); await operation(); } catch { await vscode.window.showErrorMessage("Piarre could not complete diagnostics. No upload occurred. Check the selected file and storage permissions."); }
+    try { expire(); await operation(); } catch (error: unknown) { await vscode.window.showErrorMessage(diagnosticFailureMessage(error)); }
   };
-  const choose = async (): Promise<string | undefined> => vscode.window.showQuickPick([...storage().list()], { placeHolder: "Choose a retained diagnostic bundle" });
+  const choose = async (): Promise<string | undefined> => {
+    const items = storage().list().map(name => {
+      const summary = storage().summary(name);
+      return summary ? { name, label: summary.capturedAt, description: summary.detail === "metadata" ? "Metadata only" : "Reviewable content",
+        detail: `Expires ${summary.expiresAt} · Project ${summary.project}` }
+        : { name, label: "Unreadable diagnostic bundle", description: "Metadata unavailable; can be deleted", detail: name };
+    });
+    const selected = await vscode.window.showQuickPick(items, { placeHolder: "Choose a retained diagnostic bundle to review", matchOnDescription: true, matchOnDetail: true });
+    return selected?.name;
+  };
+  const preview = async (name: string, action: "export" | "delete"): Promise<boolean> => {
+    try {
+      await vscode.window.showTextDocument(vscode.Uri.file(storage().path(name)), { preview: false });
+      const proceed = action === "export" ? "Continue to export" : "Continue to deletion";
+      return await vscode.window.showInformationMessage("Review the opened diagnostic bundle before continuing. You can keep reading in the editor or dismiss this message to cancel.", proceed) === proceed;
+    } catch {
+      if (action !== "delete") throw new Error("Diagnostic preview unavailable");
+      return await vscode.window.showWarningMessage("This bundle cannot be previewed. Delete the unreadable local file? Exported copies remain separate.", { modal: true }, "Continue to deletion") === "Continue to deletion";
+    }
+  };
   return vscode.Disposable.from(
     { dispose: () => { clearInterval(timer); } },
     vscode.commands.registerCommand("piarre.createDiagnosticBundle", run(async () => {
@@ -36,7 +55,7 @@ export function registerDiagnosticCommands(context: vscode.ExtensionContext, cur
         { label: "Keep locally for 7 days", days: 7 as const },
       ], { placeHolder: "Choose local retention. Expiration runs while Piarre is active and when next opened." });
       if (!retention || currentRepository() !== repository) return;
-      const recordingLink = "recording" in detail ? await vscode.window.showInputBox({ prompt: "Optional existing HTTPS recording link. It will be visible in the bundle. No query parameters or credentials.", ignoreFocusOut: true }) : undefined;
+      const recordingLink = "recording" in detail ? await vscode.window.showInputBox({ prompt: "Optional existing HTTPS recording link. It will be visible in the bundle. No query parameters or credentials.", ignoreFocusOut: true, validateInput: validateRecordingLink }) : undefined;
       if ("recording" in detail && recordingLink === undefined) return;
       if (currentRepository() !== repository) return;
       const { snapshot, events } = repository.readDiagnosticSnapshot();
@@ -62,7 +81,7 @@ export function registerDiagnosticCommands(context: vscode.ExtensionContext, cur
       await vscode.window.showInformationMessage("Diagnostics are local. Review before export. No recording, upload or remote analysis was started. Copies and provider retention are separate.");
     })),
     vscode.commands.registerCommand("piarre.exportDiagnosticBundle", run(async () => {
-      const name = await choose(); if (!name) return;
+      const name = await choose(); if (!name || !await preview(name, "export")) return;
       const action = await vscode.window.showWarningMessage("Export this diagnostic bundle? Review its contents first. The exported copy has its own retention and may contain private information.", { modal: true }, "Export reviewed bundle");
       if (action !== "Export reviewed bundle") return;
       const destination = await vscode.window.showSaveDialog({ defaultUri: vscode.Uri.file(name), filters: { JSON: ["json"] }, title: "Export diagnostic bundle to a new file" });
@@ -71,7 +90,7 @@ export function registerDiagnosticCommands(context: vscode.ExtensionContext, cur
       await vscode.window.showInformationMessage("Diagnostic export verified. No upload occurred. Delete the exported copy separately when no longer needed.");
     })),
     vscode.commands.registerCommand("piarre.deleteDiagnosticBundle", run(async () => {
-      const name = await choose(); if (!name) return;
+      const name = await choose(); if (!name || !await preview(name, "delete")) return;
       const action = await vscode.window.showWarningMessage("Delete this retained local bundle? Exported copies, open editor content and provider data are separate.", { modal: true }, "Delete local bundle");
       if (action !== "Delete local bundle") return;
       storage().delete(name);
