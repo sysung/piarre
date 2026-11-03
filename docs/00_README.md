@@ -6,7 +6,7 @@ The lasting documents are:
 
 - [Product PRD](01_PRODUCT_PRD.md). Who Piarre serves, the business problem, product principles, and required behavior.
 - [Technical design](02_TECHNICAL_DESIGN.md). UI, architecture, trust boundaries, and verification requirements.
-- [User design principles](04_USER_DESIGN_PRINCIPLES.md). The human-agent collaboration goals that guide design choices and experiments.
+- [User design principles](03_USER_DESIGN_PRINCIPLES.md). The human-agent collaboration goals that guide design choices and experiments.
 - This README. Documentation ownership and navigation.
 
 Update these documents as the product changes. Merge lasting decisions into the relevant document instead of adding another design summary.
