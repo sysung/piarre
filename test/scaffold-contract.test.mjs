@@ -65,13 +65,12 @@ test("the editor toolchain stays aligned to the pinned VS Code version", async (
   assert.equal(rootManifest.devDependencies?.["@types/vscode"], vscodeVersion);
 });
 
-test("docs contains only the five lasting project documents", async () => {
+test("docs contains only the four lasting project documents", async () => {
   const entries = await readdir(new URL("../docs/", import.meta.url));
   assert.deepEqual(entries.sort(), [
     "00_README.md",
     "01_PRODUCT_PRD.md",
     "02_TECHNICAL_DESIGN.md",
-    "03_IMPLEMENTATION_BACKLOG.md",
     "04_USER_DESIGN_PRINCIPLES.md",
-  ], "Keep lasting content in the five docs files. Put temporary plans, evidence, and history in .artifacts; track work in GitHub issues.");
+  ], "Keep lasting content in the four docs files. Put temporary plans, evidence, and history in .artifacts; track work in GitHub issues.");
 });
