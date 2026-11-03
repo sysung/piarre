@@ -113,6 +113,7 @@ function journeyScript(): string {
     const stable=()=>{if(goal.value!=='private unsent fixture'||document.activeElement!==goal||goal.selectionStart!==2||goal.selectionEnd!==8)throw new Error('Coordination update lost private input or selection');};
     const click=(action,extra='')=>{const button=overview.querySelector('[data-coordination-action="'+action+'"]'+extra);if(!button)throw new Error('Missing coordination control '+action);button.click();};
     click('prepare');await wait(()=>sharedContext&&overview.querySelector('[data-coordination-action="approve"]'));stable();
+    const canonical=value=>{if(Array.isArray(value))return value.map(canonical);if(value!==null&&typeof value==='object')return Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])]));return value;};
     const inspectContext=()=>{
     const context=[...overview.querySelectorAll('details[data-coordination-disclosure]')].find(detail=>detail.dataset.coordinationDisclosure===sharedContext.groupId+'-sources');
     if(!context||!context.querySelector('summary').textContent.includes('Exact shared source context'))throw new Error('Prepared shared source disclosure missing from current DOM');
@@ -122,7 +123,7 @@ function journeyScript(): string {
     if(!excerpt.previousElementSibling.textContent.includes(sharedContext.source.reference.recordId))throw new Error('Chosen source identity missing from current DOM');
     const provenance=excerpt.nextElementSibling;
     provenance.open=true;
-    if(JSON.stringify(JSON.parse(provenance.querySelector('pre').textContent))!==JSON.stringify(sharedContext.source.reference))throw new Error('Shared source provenance differs from captured identity');
+    if(JSON.stringify(canonical(JSON.parse(provenance.querySelector('pre').textContent)))!==JSON.stringify(canonical(sharedContext.source.reference)))throw new Error('Shared source provenance differs from captured identity');
     };
     inspectContext();stable();
     click('steer');await wait(()=>overview.textContent.includes('Look for contradictory requirements'));stable();
