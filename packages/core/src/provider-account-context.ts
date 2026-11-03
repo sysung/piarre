@@ -12,7 +12,9 @@ export type CodexExecutionContext = {
   readonly observedAt: string;
   readonly model: CodexDefaultModel;
   readonly usage: CodexObservedUsage;
-  readonly taskForecast: { readonly kind: "unknown" };
+  readonly modelProfiles?: readonly { readonly model: string; readonly defaultEffort: string; readonly supportedEfforts: readonly string[] }[];
+  readonly authType?: "chatgpt" | "apiKey" | "unknown";
+  readonly facts?: { readonly accountHash: string | null; readonly planType: string | null; readonly bucketId: string | null; readonly ordinaryUsageAllowed: boolean | null };
 };
-export type CodexThreadMetadata = { readonly model: string | null; readonly modelProvider: string | null };
+export type CodexThreadMetadata = { readonly model: string | null; readonly modelProvider: string | null; readonly reasoningEffort?: string | null; readonly serviceTier?: string | null };
 

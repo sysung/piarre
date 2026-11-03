@@ -1,6 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { isAbsolute } from "node:path";
-import { parseDefaultModel, parseObservedUsage, parseThreadMetadata, type CodexExecutionContext, type CodexDefaultModel, type CodexObservedUsage, type CodexThreadMetadata } from "./codex-account-context";
+import { parseDefaultModel, parseObservedUsage, parseAccountFacts, parseModelProfiles, parseThreadMetadata, type CodexExecutionContext, type CodexDefaultModel, type CodexObservedUsage, type CodexThreadMetadata } from "./codex-account-context";
 
 const MAX_FRAME_BYTES = 1024 * 1024;
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -18,7 +18,7 @@ const PATCH_SCHEMA = {
       properties: { fileId: { type: "string", minLength: 1, maxLength: 128 }, content: { anyOf: [{ type: "string", maxLength: 100_000 }, { type: "null" }] } } } } },
 };
 type TerminalObservation = { readonly threadId: string; readonly turnId: string; readonly status: "completed" | "interrupted" | "failed" };
-type TurnInput = { readonly prompt: string; readonly cwd: string; readonly model?: string; readonly onProgress?: (text: string) => void; readonly onThreadStarted?: (threadId: string) => void; readonly onThreadMetadata?: (metadata: CodexThreadMetadata) => void; readonly onTurnTerminal?: (observation: TerminalObservation) => void; readonly onTurnStarted?: (threadId: string, turnId: string) => void };
+type TurnInput = { readonly prompt: string; readonly cwd: string; readonly model?: string; readonly serviceTierForTurn?: "default"; readonly effort?: string; readonly onBeforeTurnStart?: (context: CodexExecutionContext) => void; readonly onProgress?: (text: string) => void; readonly onThreadStarted?: (threadId: string) => void; readonly onThreadMetadata?: (metadata: CodexThreadMetadata) => void; readonly onTurnTerminal?: (observation: TerminalObservation) => void; readonly onTurnStarted?: (threadId: string, turnId: string) => void };
 
 type ConnectResult = { kind: "ready"; authType: "chatgpt" | "apiKey" | "unknown" } | { kind: "login-required" };
 type Response = { output: unknown; threadId: string; turnId: string; status: "completed" | "interrupted" };
@@ -81,12 +81,19 @@ export class CodexConversationClient {
   }
 
   /** Explicit preflight only; connection and activation never query usage/model metadata. */
-  async readExecutionContext(): Promise<CodexExecutionContext> {
-    if (this.state !== "ready") throw new Error("Connect Codex explicitly before reading execution context; no turn may be active.");
+  async readExecutionContext(): Promise<CodexExecutionContext> { return this.readContext(false); }
+
+  private async readContext(forTurn: boolean): Promise<CodexExecutionContext> {
+    if (this.state !== "ready" && !(forTurn && this.state === "busy")) throw new Error("Connect Codex explicitly before reading execution context; no turn may be active.");
     this.state = "busy";
     let model: CodexDefaultModel = { kind: "unknown" };
     let usage: CodexObservedUsage;
+    let facts: CodexExecutionContext["facts"];
+
     try {
+      const account = object(await this.request("account/read", { refreshToken: false }));
+      const accountType = account.account === null || account.account === undefined ? undefined : object(account.account).type;
+      const authType = accountType === "chatgpt" || accountType === "apiKey" ? accountType : "unknown";
       const pages: unknown[] = [];
       let cursor: string | undefined;
       const seen = new Set<string>();
@@ -100,11 +107,11 @@ export class CodexConversationClient {
           seen.add(cursor);
         }
       } catch { model = { kind: "unknown" }; }
-      try { usage = parseObservedUsage(await this.request("account/rateLimits/read", {})); }
+      try { const observation = await this.request("account/rateLimits/read", {}); usage = parseObservedUsage(observation); facts = parseAccountFacts(observation, account.account); }
       catch { usage = { kind: "unknown" }; }
-      return { observedAt: new Date().toISOString(), model, usage, taskForecast: { kind: "unknown" } };
+      return { observedAt: new Date().toISOString(), authType, model, modelProfiles: parseModelProfiles(pages), usage, ...(facts ? { facts } : {}) };
     } finally {
-      if (this.process) this.state = "ready";
+      if (this.process) this.state = forTurn ? "busy" : "ready";
     }
   }
 
@@ -126,6 +133,7 @@ export class CodexConversationClient {
       const sandbox = object(started.sandbox);
       if (sandbox.type !== "readOnly" || sandbox.networkAccess === true || started.approvalPolicy !== "never") throw new Error("Codex did not confirm read-only policy.");
       await this.checkTools(threadId);
+      if (input.onBeforeTurnStart) input.onBeforeTurnStart(await this.readContext(true));
       input.onThreadStarted?.(threadId);
       const completion = new Promise<Response>((resolve, reject) => {
         this.active = { threadId, buffered: [], resolve, reject, onProgress: input.onProgress, onTurnTerminal: input.onTurnTerminal,
@@ -134,7 +142,7 @@ export class CodexConversationClient {
       // Attach rejection handling before turn/start, which can race terminal notifications.
       void completion.catch(() => undefined);
       const result = object(await this.request("turn/start", {
-        threadId, cwd: input.cwd, model: input.model, input: [{ type: "text", text: input.prompt }],
+        threadId, cwd: input.cwd, model: input.model, ...(input.serviceTierForTurn ? { serviceTierForTurn: input.serviceTierForTurn } : {}), ...(input.effort ? { effort: input.effort } : {}), input: [{ type: "text", text: input.prompt }],
         sandboxPolicy: { type: "readOnly", networkAccess: false }, approvalPolicy: "never", outputSchema,
       }));
       const turn = object(result.turn);

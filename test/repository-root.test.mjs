@@ -6,6 +6,18 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { build } from "esbuild";
 
+test("local macOS Host entrypoints refuse accidental window launches", { skip: process.platform !== "darwin" }, () => {
+  const env = { ...process.env };
+  delete env.CI;
+  delete env.PIARRE_GUI_TESTS;
+  for (const entrypoint of ["apps/vscode/test/run.mjs", "apps/vscode/scripts/test-package.mjs"]) {
+    const result = spawnSync(process.execPath, [entrypoint], { env, encoding: "utf8", timeout: 5000 });
+    assert.equal(result.status, 1, result.stderr);
+    assert.match(result.stderr, /Set PIARRE_GUI_TESTS=1 only for an intentional local GUI verification run/);
+    assert.equal(result.stdout, "");
+  }
+});
+
 test("repository opening works without the host's text stream decoder", async () => {
   const directory = await mkdtemp(path.join(tmpdir(), "piarre-répô-"));
   try {

@@ -3,7 +3,10 @@ import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { currentKnowledge, type ProjectSnapshot } from "../../../packages/core/src/index.js";
-import { hasUncertainProvider, planFreshness, type ExecutionAction, type ExecutionCheck, type ExecutionCriterion, type ExecutionRun, type CheckEvidence } from "../../../packages/core/src/execution.js";
+import { hasUncertainProvider, planFreshness, executionDependenciesReady, type ExecutionAction, type ExecutionCheck, type ExecutionCriterion, type ExecutionRun, type CheckEvidence } from "../../../packages/core/src/execution.js";
+import { createExecutionForecast, executionForecastText, type SpendingConsent } from "../../../packages/core/src/execution-forecast.js";
+import { type ProviderConfiguration } from "../../../packages/core/src/inspection.js";
+import type { CodexExecutionContext } from "../../../packages/core/src/provider-account-context.js";
 import { parsePatchProposal } from "../../../packages/core/src/execution-patch.js";
 import { CandidateWorkspace } from "./candidate-workspace.js";
 import { digest } from "./candidate-journal.js";
@@ -14,6 +17,7 @@ import type { SqliteProjectRepository } from "./sqlite-project-repository.js";
 
 type Client = Pick<CodexConversationClient, "connect" | "readExecutionContext" | "proposePatch" | "interrupt" | "dispose">;
 type Runner = Pick<CandidateCheckRunner, "capability" | "run" | "interrupt">;
+export class ExecutionReviewCancelled extends Error {}
 const disposedOwners = new Set<string>();
 interface Options {
   readonly repository: SqliteProjectRepository;
@@ -21,13 +25,18 @@ interface Options {
   readonly createClient: () => Client;
   readonly createRunner?: () => Runner;
   readonly publish: (snapshot: ProjectSnapshot) => void;
+  readonly readProviderConfiguration?: () => ProviderConfiguration;
+  readonly confirmSpending?: (disclosure: string) => Promise<"consent" | "cancel">;
   readonly hasDirtyDocuments?: (absolutePaths: readonly string[]) => boolean;
 }
 export class ExecutionCoordinator {
   private disposedSnapshot: ProjectSnapshot | undefined;
   private readonly ownerId = randomUUID();
+  private readonly reviewingPlans = new Set<string>();
+  private readonly prepared = new Map<string, { client: Client; authType: "chatgpt" | "apiKey" | "unknown"; expiresAt: number; timer: NodeJS.Timeout }>();
   private readonly active = new Map<string, { client: Client; runner: Runner; stopped: boolean }>();
   constructor(private readonly options: Options) {}
+  private isDisposed(): boolean { return this.disposedSnapshot !== undefined; }
   private snapshot(): ProjectSnapshot { return this.disposedSnapshot ?? this.options.repository.read(); }
   private dispatch(action: ExecutionAction, commandId: string = randomUUID()): void {
     if (this.disposedSnapshot) throw new Error("Execution coordinator is disposed.");
@@ -49,27 +58,65 @@ export class ExecutionCoordinator {
     const candidate = this.candidateForRun(runId);
     return { run: this.run(runId), root: candidate.root, sourceRoot: candidate.sourceRoot, files: candidate.files, diff: candidate.diff(), manifestHash: candidate.manifestHash(), original: candidate.inspectOriginal(), integration: new WorkspaceIntegration({ candidate }).preview() };
   }
+  private configuration(model: string) {
+    const configuration = this.options.readProviderConfiguration?.() ?? { kind: "valid", selections: [] };
+    if (configuration.kind !== "valid") throw new Error("Provider configuration is invalid. Prepare a new plan after correcting it.");
+    const coding = configuration.selections.find(selection => selection.role === "coding");
+    if (coding && (coding.provider !== "codex" || coding.model !== model)) throw new Error("Configured coding provider/model differs from the reviewed route.");
+    return { billing: coding?.billing ?? { kind: "unknown" } as const, profileHash: digest(JSON.stringify({ provider: "codex", model, adapter: "codex-readonly-patch-v1", effort: "default", serviceTierForTurn: "default" })), hash: digest(JSON.stringify({ coding: coding ?? null, model, adapter: "codex-readonly-patch-v1", serviceTierForTurn: "default" })) };
+  }
+  private prompt(plan: { readonly objective: string; readonly criteria: readonly ExecutionCriterion[]; readonly maxTokens: number }, candidate: CandidateWorkspace, linked: readonly unknown[]): string {
+    return JSON.stringify({ instruction: "Propose only bounded file replacements using disclosed opaque fileId values. Return summary and operations. Do not run tools or checks.", objective: plan.objective, criteria: plan.criteria, knowledge: linked, files: candidate.files, maxTokens: { kind: "soft", value: plan.maxTokens } });
+  }
+  private contextMatches(plan: NonNullable<ReturnType<ExecutionCoordinator["snapshot"]>["executionPlans"][number]>, context: CodexExecutionContext): boolean {
+    const forecast = plan.forecast;
+    if (forecast.kind !== "configured-v1") return false;
+    const old = plan.accountContext;
+    const facts = (value: CodexExecutionContext) => ({ accountHash: value.facts?.accountHash ?? null, planType: value.facts?.planType ?? null, bucketId: value.facts?.bucketId ?? null, ordinaryUsageAllowed: value.facts?.ordinaryUsageAllowed ?? null,
+      model: value.model, modelProfiles: value.modelProfiles ?? [], windows: value.usage.kind === "observed" ? value.usage.windows.map(window => ({ source: window.source, duration: window.windowDurationMins, reset: window.resetsAt })) : null });
+    if (context.authType !== undefined && context.authType !== plan.provider.authType) return false;
+    const age = Date.now() - Date.parse(context.observedAt);
+    return age >= 0 && age <= 300_000 && JSON.stringify(facts(old)) === JSON.stringify(facts(context));
+  }
+  private finalBoundary(runId: string, candidate: CandidateWorkspace): void {
+    const run = this.run(runId); const plan = run.grant.plan; const forecast = plan.forecast;
+    this.clean(candidate);
+    if (this.stopped(runId) || this.snapshot().schedulingPaused || !executionDependenciesReady(this.snapshot(), plan.taskId) || planFreshness(this.snapshot(), plan) !== "current" || Date.now() >= Math.min(run.grant.deadlineAt, run.grant.expiresAt) || forecast.kind !== "configured-v1" || Date.now() >= forecast.validUntil || this.configuration(plan.provider.requestedModel).hash !== forecast.configurationHash || candidate.inspectOriginal().kind !== "unchanged" || candidate.diff().length) throw new Error("Approved scope, configuration, forecast or execution authority changed before generation. Prepare and review a new plan.");
+  }
   async prepare(input: { readonly taskId: string; readonly relativePaths: readonly string[]; readonly objective: string; readonly criteria: readonly ExecutionCriterion[]; readonly checks: readonly ExecutionCheck[]; readonly durationMs?: number; readonly maxTokens?: number; readonly requestedModel?: string }) {
     this.clean();
+    for (const value of this.prepared.values()) { clearTimeout(value.timer); value.client.dispose(); } this.prepared.clear();
     const client = this.options.createClient();
+    let retained = false;
     try {
       const connection = await client.connect();
       if (connection.kind !== "ready") throw new Error("Connect Codex before preparing execution.");
       const context = await client.readExecutionContext();
+      if (context.authType !== undefined && context.authType !== connection.authType) throw new Error("Codex authentication changed during preparation.");
       const requestedModel = input.requestedModel ?? (context.model.kind === "resolved-default" ? context.model.model : undefined);
       if (!requestedModel) throw new Error("Codex did not report a default model. Configure an explicit coding model before preparing a run.");
       const project = this.snapshot();
       const candidate = CandidateWorkspace.capture({ repositoryRoot: fileURLToPath(project.repositoryUri), relativePaths: input.relativePaths, storageDirectory: this.options.storageDirectory });
       this.clean(candidate);
       const baselineCheckpoint = candidate.checkpoint({ checkpointId: "before-run" });
-      const knowledge = currentKnowledge(project).filter(entry => entry.affectedTaskIds.includes(input.taskId)).map(entry => ({ projectId: entry.projectId, knowledgeId: entry.knowledgeId, recordedAtRevision: entry.recordedAtRevision }));
+      const linked = currentKnowledge(project).filter(entry => entry.affectedTaskIds.includes(input.taskId));
+      const knowledge = linked.map(entry => ({ projectId: entry.projectId, knowledgeId: entry.knowledgeId, recordedAtRevision: entry.recordedAtRevision }));
+      const configuration = this.configuration(requestedModel);
+      const maxTokens = input.maxTokens ?? 16_000;
+      const catalogProfile = context.modelProfiles?.find(profile => profile.model === requestedModel);
+      const namedEffort = catalogProfile && ["none", "minimal", "low", "medium", "high", "xhigh"].includes(catalogProfile.defaultEffort) ? catalogProfile.defaultEffort : undefined;
+      const forecast = createExecutionForecast({ forecastId: randomUUID(), now: Date.now(), configurationHash: configuration.hash, provider: "codex", model: requestedModel, authType: connection.authType, billing: configuration.billing, context, promptBytes: Buffer.byteLength(this.prompt({ ...input, maxTokens }, candidate, linked)), softTokenTarget: maxTokens, profile: namedEffort ? { kind: "named", effort: namedEffort } : { kind: "default", configurationHash: configuration.profileHash }, concurrentUsage: project.executionRuns.some(run => run.providerOutcome.kind === "abandoned" || hasUncertainProvider(run)) });
       this.dispatch({ kind: "prepare-execution-plan", plan: { taskId: input.taskId, objective: input.objective, criteria: input.criteria, checks: input.checks, knowledge,
         baselineCheckpoint, files: candidate.files.map(file => file.baseline), candidateRoot: candidate.root, controlDirectory: candidate.controlDirectory, captureHash: candidate.captureHash, sourceRoot: candidate.sourceRoot,
-        provider: { kind: "codex-readonly-patch", authType: connection.authType, requestedModel }, accountContext: context, durationMs: input.durationMs ?? 120_000, maxTokens: input.maxTokens ?? 16_000 } });
+        provider: { kind: "codex-readonly-patch", authType: connection.authType, requestedModel }, accountContext: context, forecast, durationMs: input.durationMs ?? 120_000, maxTokens: input.maxTokens ?? 16_000 } });
       const plan = this.snapshot().executionPlans.at(-1);
       if (!plan) throw new Error("Prepared plan was not persisted.");
-      return { plan, capability: await (this.options.createRunner?.() ?? new CandidateCheckRunner()).capability() };
-    } finally { client.dispose(); }
+      const capability = await (this.options.createRunner?.() ?? new CandidateCheckRunner()).capability();
+      if (forecast.kind !== "configured-v1") throw new Error("Forecast unavailable.");
+      const timer = setTimeout(() => { this.prepared.delete(plan.planId); client.dispose(); }, Math.max(0, forecast.validUntil - Date.now()));
+      timer.unref(); this.prepared.set(plan.planId, { client, authType: connection.authType, expiresAt: forecast.validUntil, timer }); retained = true;
+      return { plan, capability };
+    } finally { if (!retained) client.dispose(); }
   }
   async approveAndRun(input: { readonly planId: string; readonly planRevision: number; readonly approvalId: string }): Promise<ExecutionRun> {
     const duplicate = this.snapshot().executionRuns.find(run => run.grant.approvalId === input.approvalId);
@@ -83,35 +130,62 @@ export class ExecutionCoordinator {
     const candidate = CandidateWorkspace.reopen({ controlDirectory: plan.controlDirectory, storageDirectory: this.options.storageDirectory, expectedCaptureHash: plan.captureHash });
     this.clean(candidate);
     if (candidate.inspectOriginal().kind !== "unchanged" || candidate.diff().length) throw new Error("Disclosed files changed after preparation.");
+    const forecast = plan.forecast;
+    const prepared = this.prepared.get(plan.planId);
+    if (this.reviewingPlans.has(plan.planId) || !prepared || forecast.kind !== "configured-v1" || Date.now() >= prepared.expiresAt || this.configuration(plan.provider.requestedModel).hash !== forecast.configurationHash) throw new Error("Prepared connection or forecast expired or changed. Prepare a new plan.");
+    this.reviewingPlans.add(plan.planId);
+    const client = prepared.client;
     const runId = `run:${input.approvalId}`;
-    const approvedAt = Date.now();
-    this.dispatch({ kind: "approve-execution", planId: input.planId, planRevision: input.planRevision, runId, approvedAt, expiresAt: approvedAt + plan.durationMs, ownerPid: process.pid, ownerId: this.ownerId }, input.approvalId);
-    const client = this.options.createClient(); const runner = this.options.createRunner?.() ?? new CandidateCheckRunner();
+    try {
+      const context = await client.readExecutionContext();
+      if (!this.contextMatches(plan, context)) throw new Error("Account, model, usage reset or profile changed. Prepare a new plan.");
+      const disclosure = `${executionForecastText(forecast)}\n\nExact files: ${plan.files.map(file => file.relativePath).join(", ")}. Local duration ${String(plan.durationMs / 1000)} seconds. Plan ${plan.planId}, revision ${String(plan.recordedAtRevision)}; attempt ${runId}.\n\nThe provider has no supported per-turn included-only billing control. This exact attempt may consume allowance or incur charges, including continuing remote usage after interruption/disconnection. No dollar cap, paid fallback, alternate provider, retry or future run is authorized. ${forecast.accountHash === null ? "Account identity is unavailable. Consent applies only to this short-lived prepared connection; applicability of calibration remains unknown." : "The account binding is a local hash of supported provider metadata."}`;
+      if (await this.options.confirmSpending?.(disclosure) !== "consent") throw new ExecutionReviewCancelled("Spending consent was cancelled. No generation was requested.");
+      const finalContext = await client.readExecutionContext();
+      if (!this.contextMatches(plan, finalContext) || this.configuration(plan.provider.requestedModel).hash !== forecast.configurationHash || Date.now() >= forecast.validUntil) throw new Error("Account or configuration changed during review. Prepare a replacement plan and consent.");
+      this.clean(candidate);
+      if (candidate.inspectOriginal().kind !== "unchanged" || candidate.diff().length) throw new Error("Disclosed files changed during review.");
+      const approvedAt = Date.now();
+      const spendingConsent: SpendingConsent = { kind: "native-uncertain-one-attempt", forecastId: forecast.forecastId, configurationHash: forecast.configurationHash, planId: plan.planId, planRevision: plan.recordedAtRevision, runId, route: forecast.route, consentedAt: approvedAt };
+      this.dispatch({ kind: "approve-execution", spendingConsent, planId: input.planId, planRevision: input.planRevision, runId, approvedAt, expiresAt: Math.min(approvedAt + plan.durationMs, forecast.validUntil), ownerPid: process.pid, ownerId: this.ownerId }, input.approvalId);
+      this.dispatch({ kind: "record-execution-account-observation", runId, context: finalContext });
+    } catch (error) { client.dispose(); throw error; }
+    finally { this.reviewingPlans.delete(plan.planId); this.prepared.delete(plan.planId); clearTimeout(prepared.timer); }
+    const runner = this.options.createRunner?.() ?? new CandidateCheckRunner();
     const active = { client, runner, stopped: false }; this.active.set(runId, active);
     let timer: NodeJS.Timeout | undefined;
     try {
-      const connection = await client.connect();
-      if (connection.kind !== "ready" || connection.authType !== plan.provider.authType) throw new Error("Codex authentication route changed after approval.");
+      this.finalBoundary(runId, candidate);
       this.dispatch({ kind: "request-execution", runId, requestedAt: Date.now() });
       const linked = currentKnowledge(this.snapshot()).filter(entry => plan.knowledge.some(version => version.knowledgeId === entry.knowledgeId && version.recordedAtRevision === entry.recordedAtRevision));
-      const prompt = JSON.stringify({ instruction: "Propose only bounded file replacements using disclosed opaque fileId values. Return summary and operations. Do not run tools or checks.", objective: plan.objective, criteria: plan.criteria, knowledge: linked, files: candidate.files, maxTokens: { kind: "soft", value: plan.maxTokens } });
-      const response = await Promise.race([client.proposePatch({ prompt, cwd: candidate.root, model: plan.provider.requestedModel,
+      const prompt = this.prompt(plan, candidate, linked);
+      if (forecast.promptBytes !== Buffer.byteLength(prompt)) throw new Error("Serialized context changed after forecast review.");
+      const response = await Promise.race([client.proposePatch({ prompt, cwd: candidate.root, model: plan.provider.requestedModel, serviceTierForTurn: "default", ...(forecast.profile.kind === "named" ? { effort: forecast.profile.effort } : {}),
         onThreadMetadata: metadata => {
           if (this.stopped(runId)) throw new Error("Run was stopped before generation started.");
           if (metadata.model !== plan.provider.requestedModel || metadata.modelProvider !== "openai") throw new Error("Observed Codex model or provider differs from the approved plan. Generation was not started.");
-          this.dispatch({ kind: "observe-execution-provider", runId, model: metadata.model, modelProvider: metadata.modelProvider, observedAt: Date.now() });
+          if (forecast.profile.kind === "named" && metadata.reasoningEffort != null && metadata.reasoningEffort !== forecast.profile.effort) throw new Error("Observed reasoning effort differs from the frozen requested profile.");
+          if (forecast.estimate.kind === "subscription" && forecast.estimate.windows.some(window => window.kind === "scenario") && forecast.profile.kind === "named" && metadata.reasoningEffort !== forecast.profile.effort) throw new Error("Calibrated profile could not be verified before generation; prepare a plan with unknown consumption.");
+          this.dispatch({ kind: "observe-execution-provider", runId, model: metadata.model, modelProvider: metadata.modelProvider, reasoningEffort: metadata.reasoningEffort ?? null, threadServiceTier: metadata.serviceTier ?? null, observedAt: Date.now() });
+        },
+        onBeforeTurnStart: context => {
+          if (!this.contextMatches(plan, context)) throw new Error("Account, reset or effort profile changed at the final turn boundary. No generation was submitted.");
+          this.finalBoundary(runId, candidate);
+          this.dispatch({ kind: "record-execution-account-observation", runId, context });
         },
         onThreadStarted: threadId => {
-          const grant = this.run(runId).grant;
-          if (this.stopped(runId) || Date.now() >= Math.min(grant.deadlineAt, grant.expiresAt)) throw new Error("Run was stopped or approval expired before generation started.");
+          this.finalBoundary(runId, candidate);
           this.dispatch({ kind: "bind-execution-thread", runId, threadId });
         },
         onTurnStarted: (threadId, turnId) => { this.dispatch({ kind: "bind-execution-turn", runId, threadId, turnId }); if (active.stopped) void client.interrupt().catch(() => { client.dispose(); }); },
         onTurnTerminal: observation => { if (!this.disposedSnapshot) this.dispatch({ kind: "observe-execution-terminal", runId, ...observation, observedAt: Date.now() }); } }),
       new Promise<never>((_, reject) => { timer = setTimeout(() => { active.stopped = true; void client.interrupt().catch(() => undefined); client.dispose(); reject(new Error("Approved absolute deadline expired; provider completion and usage are unknown.")); }, Math.max(0, this.run(runId).grant.deadlineAt - Date.now())); })]);
-      if (timer) { clearTimeout(timer); timer = undefined; }
       if (this.disposedSnapshot) return this.run(runId);
       if (this.run(runId).providerOutcome.kind === "unobserved") this.dispatch({ kind: "observe-execution-terminal", runId, threadId: response.threadId, turnId: response.turnId, status: response.status, observedAt: Date.now() });
+      const completionContext = await client.readExecutionContext().catch(() => undefined);
+      if (this.isDisposed()) return this.run(runId);
+      if (timer) { clearTimeout(timer); timer = undefined; }
+      if (completionContext) this.dispatch({ kind: "record-execution-account-observation", runId, context: completionContext });
       if (response.status === "interrupted") { this.finish(runId, "failed", "Provider interruption was observed; no candidate was applied.", candidate); return this.run(runId); }
       if (this.stopped(runId)) throw new Error("Generation was interrupted; no candidate was applied.");
       const proposal = parsePatchProposal({ files: plan.files, value: response.output });
@@ -172,6 +246,7 @@ export class ExecutionCoordinator {
   }
   dispose(): void {
     if (this.disposedSnapshot) return;
+    for (const value of this.prepared.values()) { clearTimeout(value.timer); value.client.dispose(); } this.prepared.clear();
     disposedOwners.add(this.ownerId);
     for (const [runId, active] of this.active) {
       active.stopped = true;

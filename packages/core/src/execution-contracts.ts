@@ -1,3 +1,4 @@
+import { parseExecutionForecast, parseSpendingConsent } from "./execution-forecast.js";
 import type { CodexExecutionContext, CodexUsageWindow } from "./provider-account-context.js";
 import type { ExecutionAction, ExecutionEvent, ExecutionPlanDraft, CheckEvidence, ExecutionCheck, ExecutionCriterion, WorkspaceRequest } from "./execution.js";
 import type { FileBaseline } from "./execution-patch.js";
@@ -42,7 +43,8 @@ function check(value: unknown): ExecutionCheck {
   return { checkId: text(row.checkId, 512), argv: argv(row.argv), criterionIds: unique(list(row.criterionIds, item => text(item, 512))) };
 }
 function accountContext(value: unknown): CodexExecutionContext {
-  const row = fields(value, ["observedAt", "model", "usage", "taskForecast"]);
+  if (!isRecord(value)) invalid();
+  const row = fields(value, ["observedAt", "model", "usage", ...( "taskForecast" in value ? ["taskForecast"] : []), ...("authType" in value ? ["authType"] : []), ...("modelProfiles" in value ? ["modelProfiles"] : []), ...("facts" in value ? ["facts"] : [])]);
   const observedAt = text(row.observedAt, 40);
   if (!Number.isFinite(Date.parse(observedAt)) || new Date(observedAt).toISOString() !== observedAt) invalid();
   if (!isRecord(row.model)) invalid();
@@ -58,12 +60,17 @@ function accountContext(value: unknown): CodexExecutionContext {
       resetsAt: window.resetsAt === null ? null : integer(window.resetsAt, 0, 8_640_000_000_000) };
   }, 2) : [];
   if (usage.kind === "observed" && windows.length === 0) invalid(); unique(windows.map(window => window.source));
-  const forecast = fields(row.taskForecast, ["kind"]); if (forecast.kind !== "unknown") invalid();
-  return { observedAt, model: model.kind === "unknown" ? { kind: "unknown" } : { kind: "resolved-default", model: text(model.model, 128) },
-    usage: usage.kind === "unknown" ? { kind: "unknown" } : { kind: "observed", source: "account/rateLimits/read", windows }, taskForecast: { kind: "unknown" } };
+  if (row.taskForecast !== undefined) { const forecast = fields(row.taskForecast, ["kind"]); if (forecast.kind !== "unknown") invalid(); }
+  const facts = row.facts === undefined ? undefined : fields(row.facts, ["accountHash", "planType", "bucketId", "ordinaryUsageAllowed"]);
+  if (facts && facts.ordinaryUsageAllowed !== null && typeof facts.ordinaryUsageAllowed !== "boolean") invalid();
+  const modelProfiles = row.modelProfiles === undefined ? undefined : list(row.modelProfiles, item => { const profile = fields(item, ["model", "defaultEffort", "supportedEfforts"]); return { model: text(profile.model, 128), defaultEffort: text(profile.defaultEffort, 128), supportedEfforts: unique(list(profile.supportedEfforts, item => text(item, 128), 10)) }; });
+  return { observedAt, ...(modelProfiles ? { modelProfiles } : {}), ...(row.authType === undefined ? {} : { authType: enumeration(row.authType, ["chatgpt", "apiKey", "unknown"] as const) }), model: model.kind === "unknown" ? { kind: "unknown" } : { kind: "resolved-default", model: text(model.model, 128) },
+    usage: usage.kind === "unknown" ? { kind: "unknown" } : { kind: "observed", source: "account/rateLimits/read", windows }, ...(facts ? { facts: { accountHash: facts.accountHash === null ? null : sha(facts.accountHash), planType: facts.planType === null ? null : text(facts.planType, 128), bucketId: facts.bucketId === null ? null : text(facts.bucketId, 128), ordinaryUsageAllowed: facts.ordinaryUsageAllowed === null ? null : facts.ordinaryUsageAllowed === true } } : {}) };
 }
-function plan(value: unknown): ExecutionPlanDraft {
-  const row = fields(value, ["taskId", "objective", "criteria", "knowledge", "files", "checks", "candidateRoot", "controlDirectory", "captureHash", "baselineCheckpoint", "sourceRoot", "provider", "accountContext", "durationMs", "maxTokens"]);
+function plan(value: unknown, legacy: boolean): ExecutionPlanDraft {
+  if (!isRecord(value)) invalid();
+  const row = fields(value, ["taskId", "objective", "criteria", "knowledge", "files", "checks", "candidateRoot", "controlDirectory", "captureHash", "baselineCheckpoint", "sourceRoot", "provider", "accountContext", "durationMs", "maxTokens", ...("forecast" in value ? ["forecast"] : [])]);
+  if (!legacy && (!isRecord(row.forecast) || row.forecast.kind !== "configured-v1")) invalid();
   const baselineCheckpoint = fields(row.baselineCheckpoint, ["checkpointId", "manifestHash"]);
   const provider = fields(row.provider, ["kind", "authType", "requestedModel"]);
   if (provider.kind !== "codex-readonly-patch") invalid();
@@ -75,7 +82,7 @@ function plan(value: unknown): ExecutionPlanDraft {
   return { taskId: text(row.taskId), objective: text(row.objective), criteria, knowledge, files, checks,
     candidateRoot: absolute(row.candidateRoot), controlDirectory: absolute(row.controlDirectory), captureHash: sha(row.captureHash), baselineCheckpoint: { checkpointId: text(baselineCheckpoint.checkpointId), manifestHash: sha(baselineCheckpoint.manifestHash) }, sourceRoot: absolute(row.sourceRoot),
     provider: { kind: "codex-readonly-patch", authType: enumeration(provider.authType, ["chatgpt", "apiKey", "unknown"]), requestedModel: text(provider.requestedModel, 128) },
-    accountContext: accountContext(row.accountContext),
+    accountContext: accountContext(row.accountContext), forecast: row.forecast === undefined ? { kind: "legacy-unknown" } : parseExecutionForecast(row.forecast),
     durationMs: integer(row.durationMs, 1000, 120_000), maxTokens: integer(row.maxTokens, 1, 1_000_000) };
 }
 function evidence(value: unknown): CheckEvidence {
@@ -96,13 +103,14 @@ function workspaceRequest(value: unknown): WorkspaceRequest {
   if (row.kind !== "restore") invalid();
   return { kind: "restore", target: enumeration(row.target, ["source", "candidate"]), checkpointId: text(row.checkpointId), expectedManifestHash: sha(row.expectedManifestHash), targetManifestHash: sha(row.targetManifestHash) };
 }
-export function parseExecutionAction(value: unknown): ExecutionAction | undefined {
+export function parseExecutionAction(value: unknown, legacy = false): ExecutionAction | undefined {
   if (!isRecord(value) || typeof value.kind !== "string") return undefined;
   switch (value.kind) {
-    case "prepare-execution-plan": { const row = fields(value, ["kind", "plan"]); return { kind: value.kind, plan: plan(row.plan) }; }
-    case "approve-execution": { const row = fields(value, ["kind", "planId", "planRevision", "runId", "approvedAt", "expiresAt", "ownerPid", "ownerId"]); return { kind: value.kind, planId: text(row.planId), planRevision: integer(row.planRevision), runId: text(row.runId), approvedAt: epoch(row.approvedAt), expiresAt: epoch(row.expiresAt), ownerPid: integer(row.ownerPid), ownerId: text(row.ownerId) }; }
+    case "prepare-execution-plan": { const row = fields(value, ["kind", "plan"]); return { kind: value.kind, plan: plan(row.plan, legacy) }; }
+    case "approve-execution": { const row = fields(value, ["kind", "planId", "planRevision", "runId", "approvedAt", "expiresAt", "ownerPid", "ownerId", ...("spendingConsent" in value ? ["spendingConsent"] : [])]); const spendingConsent = row.spendingConsent === undefined && legacy ? { kind: "legacy-unconfirmed" } as const : parseSpendingConsent(row.spendingConsent); if (!legacy && spendingConsent.kind === "legacy-unconfirmed") invalid(); return { kind: value.kind, spendingConsent, planId: text(row.planId), planRevision: integer(row.planRevision), runId: text(row.runId), approvedAt: epoch(row.approvedAt), expiresAt: epoch(row.expiresAt), ownerPid: integer(row.ownerPid), ownerId: text(row.ownerId) }; }
+    case "record-execution-account-observation": { const row = fields(value, ["kind", "runId", "context"]); return { kind: value.kind, runId: text(row.runId), context: accountContext(row.context) }; }
     case "request-execution": { const row = fields(value, ["kind", "runId", "requestedAt"]); return { kind: value.kind, runId: text(row.runId), requestedAt: epoch(row.requestedAt) }; }
-    case "observe-execution-provider": { const row = fields(value, ["kind", "runId", "model", "modelProvider", "observedAt"]); return { kind: value.kind, runId: text(row.runId), model: text(row.model, 128), modelProvider: text(row.modelProvider, 128), observedAt: epoch(row.observedAt) }; }
+    case "observe-execution-provider": { const row = fields(value, ["kind", "runId", "model", "modelProvider", "observedAt", ...("reasoningEffort" in value ? ["reasoningEffort"] : []), ...("threadServiceTier" in value ? ["threadServiceTier"] : [])]); return { kind: value.kind, reasoningEffort: row.reasoningEffort === null || row.reasoningEffort === undefined ? null : text(row.reasoningEffort, 128), threadServiceTier: row.threadServiceTier === null || row.threadServiceTier === undefined ? null : text(row.threadServiceTier, 128), runId: text(row.runId), model: text(row.model, 128), modelProvider: text(row.modelProvider, 128), observedAt: epoch(row.observedAt) }; }
     case "bind-execution-thread": { const row = fields(value, ["kind", "runId", "threadId"]); return { kind: value.kind, runId: text(row.runId), threadId: text(row.threadId, 512) }; }
     case "bind-execution-turn": { const row = fields(value, ["kind", "runId", "threadId", "turnId"]); return { kind: value.kind, runId: text(row.runId), threadId: text(row.threadId, 512), turnId: text(row.turnId, 512) }; }
     case "observe-execution-terminal": { const row = fields(value, ["kind", "runId", "threadId", "turnId", "status", "observedAt"]); return { kind: value.kind, runId: text(row.runId), threadId: text(row.threadId, 512), turnId: text(row.turnId, 512), status: enumeration(row.status, ["completed", "interrupted", "failed"]), observedAt: epoch(row.observedAt) }; }
@@ -127,6 +135,6 @@ export function parseExecutionAction(value: unknown): ExecutionAction | undefine
 export function parseExecutionEvent(value: unknown): ExecutionEvent | undefined {
   if (!isRecord(value) || value.kind !== "execution-recorded") return undefined;
   const row = fields(value, ["kind", "commandId", "action"]);
-  const action = parseExecutionAction(row.action); if (!action) invalid();
+  const action = parseExecutionAction(row.action, true); if (!action) invalid();
   return { kind: "execution-recorded", commandId: text(row.commandId), action };
 }

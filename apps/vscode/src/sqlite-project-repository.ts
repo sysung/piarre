@@ -137,6 +137,10 @@ export class SqliteProjectRepository {
       if (snapshot.revision !== command.expectedProjectRevision)
         return { kind: "stale", actualRevision: snapshot.revision };
       const action = command.action;
+      if (["request-execution", "observe-execution-provider", "bind-execution-thread"].includes(action.kind) && "runId" in action) {
+        const run = snapshot.executionRuns.find(run => run.runId === action.runId);
+        if (run && (run.grant.spendingConsent?.kind !== "native-uncertain-one-attempt" || run.grant.plan.forecast.kind !== "configured-v1")) throw new Error("Historical spending authority cannot start generation. Prepare a new plan and native consent.");
+      }
       if (action.kind === "delete-proposal" && !snapshot.proposals.some(proposal => proposal.groupId === action.groupId)) throw new Error("Proposal no longer exists");
       const event = decideProjectEvent(command);
       const revision = snapshot.revision + 1;

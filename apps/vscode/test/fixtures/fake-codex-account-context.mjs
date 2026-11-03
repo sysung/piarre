@@ -1,9 +1,11 @@
+import { appendFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 import assert from "node:assert/strict";
 const mode = process.argv[2];
 let page = 0;
 for await (const line of createInterface({ input: process.stdin })) {
   const request = JSON.parse(line);
+  if (process.argv[3]) appendFileSync(process.argv[3], `${request.method}\n`);
   const reply = (result) => process.stdout.write(`${JSON.stringify({ id: request.id, result })}\n`);
   const reject = () => process.stdout.write(`${JSON.stringify({ id: request.id, error: { code: -32601, message: "private-account@example.com raw-error" } })}\n`);
   switch (request.method) {
@@ -25,8 +27,12 @@ for await (const line of createInterface({ input: process.stdin })) {
       if (mode === "unsupported") { reject(); break; }
       reply({ rateLimits: mode === "empty" ? {} : { primary: { usedPercent: 23, windowDurationMins: 90, resetsAt: 1800000000 }, secondary: { usedPercent: 5, windowDurationMins: null, resetsAt: null }, credits: { hasCredits: true, unlimited: false, balance: "100" } }, accountId: "discard-account" }); break;
     case "thread/start":
-      reply({ thread: { id: "metadata-thread" }, model: "public-model", modelProvider: "openai", sandbox: { type: "readOnly", networkAccess: false }, approvalPolicy: "never" }); break;
+      reply({ thread: { id: "metadata-thread" }, model: "public-model", modelProvider: "openai", ...(mode === "tier-dispatch" ? { serviceTier: "fast", reasoningEffort: "medium" } : {}), sandbox: { type: "readOnly", networkAccess: false }, approvalPolicy: "never" }); break;
     case "turn/start":
+      if (mode === "tier-dispatch") {
+        assert.equal(request.params.serviceTierForTurn, "default"); assert.equal("serviceTier" in request.params, false); assert.equal(request.params.effort, "medium");
+        reply({ turn: { id: "tier-turn", status: "completed", items: [{ id: "final", type: "agentMessage", text: JSON.stringify({ summary: "No change", operations: [] }) }] } }); break;
+      }
       throw new Error("Metadata callback must block before turn/start");
     default: throw new Error("Unexpected metadata fixture request");
   }

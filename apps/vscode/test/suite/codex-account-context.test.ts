@@ -1,3 +1,5 @@
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import assert from "node:assert/strict";
 import path from "node:path";
 import { CodexConversationClient } from "../../src/codex-conversation-client";
@@ -22,7 +24,7 @@ suite("Codex public execution metadata", () => {
         { source: "primary", usedPercent: 23, windowDurationMins: 90, resetsAt: 1800000000 },
         { source: "secondary", usedPercent: 5, windowDurationMins: null, resetsAt: null },
       ] });
-      assert.deepEqual(result.taskForecast, { kind: "unknown" });
+      assert.equal("taskForecast" in result, false);
       assert.equal(new Date(result.observedAt).toISOString(), result.observedAt);
       assert.doesNotMatch(JSON.stringify(result), /private-account|discard-account|balance|displayName|weekly|five.hour/);
     } finally { connection.dispose(); }
@@ -50,6 +52,27 @@ suite("Codex public execution metadata", () => {
         throw new Error("Prepared model mismatch blocks execution");
       } }), /Prepared model mismatch/);
     } finally { connection.dispose(); }
+  });
+
+  test("standard per-turn override uses exact supported wire key despite inherited fast tier", async () => {
+    const connection = client("tier-dispatch");
+    try {
+      await connection.connect(); let inherited: string | null | undefined;
+      const result = await connection.proposePatch({ prompt: "Inspect", cwd: process.cwd(), serviceTierForTurn: "default", effort: "medium", onThreadMetadata: metadata => { inherited = metadata.serviceTier; assert.equal(metadata.reasoningEffort, "medium"); } });
+      assert.equal(inherited, "fast"); assert.equal(result.status, "completed");
+    } finally { connection.dispose(); }
+  });
+
+  test("final metadata await rechecks actual account context and blocks turn/start", async () => {
+    const directory = mkdtempSync(path.join(tmpdir(), "piarre-preflight-")); const log = path.join(directory, "requests");
+    const connection = new CodexConversationClient({ command: process.env.PIARRE_TEST_NODE ?? process.execPath, args: [path.resolve(__dirname, "../../test/fixtures/fake-codex-account-context.mjs"), "success", log] });
+    try {
+      await connection.connect(); let observed = false;
+      await assert.rejects(connection.proposePatch({ prompt: "Inspect", cwd: process.cwd(), serviceTierForTurn: "default", onBeforeTurnStart: context => {
+        assert.equal(context.authType, "chatgpt"); observed = true; throw new Error("Account/reset/configuration no longer matches approved forecast");
+      } }), /no longer matches/);
+      const requests = readFileSync(log, "utf8").trim().split("\n"); assert.equal(observed, true); assert.equal(requests.filter(method => method === "turn/start").length, 0); assert.equal(requests.filter(method => method === "account/rateLimits/read").length, 1); assert.equal(requests.filter(method => method === "thread/start").length, 1);
+    } finally { connection.dispose(); rmSync(directory, { recursive: true, force: true }); }
   });
 
   test("only resolves one reported default from a complete catalog", () => {
