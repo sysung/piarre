@@ -4,7 +4,7 @@ import { chmodSync, constants, existsSync, closeSync, fstatSync, lstatSync, mkdi
 import path from "node:path";
 import { parsePatchProposal, validateFileManifest, type PatchProposal, type FileBaseline } from "../../../packages/core/src/execution-patch.js";
 
-import { digest, imageHash, imageChanges, permissionMode, parseFileMode, inside, parseImages, parseJournal, readImage, readRecord, replayJournal, writeRecord, type FileImage, type FileChange, type JournalResult } from "./candidate-journal.js";
+import { digest, imageHash, imageChanges, permissionMode, parseFileMode, inside, parseImages, parseJournal, readImage, readRecord, replayJournal, writeRecord, type FileImage, type FileChange, type JournalResult, type JournalAuthority, assertJournalAuthority } from "./candidate-journal.js";
 
 export interface CapturedFile {
   readonly baseline: FileBaseline;
@@ -133,36 +133,40 @@ export class CandidateWorkspace {
     return { currentManifestHash: imageHash(current), targetManifestHash: imageHash(target), changes: imageChanges(current, target).map(change => ({ ...change, kind: change.after === null ? "delete" : change.before === null ? "create" : "replace" })) };
   }
 
-  apply({ commandId, proposal, afterStep }: { readonly commandId: string; readonly proposal: PatchProposal; readonly afterStep?: (index: number) => void }): JournalResult {
+  async apply({ commandId, proposal, afterStep, shouldContinue }: { readonly commandId: string; readonly proposal: PatchProposal; readonly shouldContinue?: () => boolean; readonly afterStep?: (index: number) => void }): Promise<JournalResult> {
     const filename = `journal-${digest(commandId)}.json`;
-    if (existsSync(path.join(this.controlDirectory, filename))) return this.reconcile({ commandId, afterStep });
     const parsed = parsePatchProposal({ files: this.files.map(file => file.baseline), value: { summary: proposal.summary, operations: proposal.operations.map(operation => ({ fileId: operation.baseline.fileId, content: operation.kind === "delete" ? null : operation.content })) } });
     const changes = parsed.operations.map(operation => {
       const captured = this.files.find(file => file.baseline.fileId === operation.baseline.fileId);
       if (!captured || JSON.stringify(captured.baseline) !== JSON.stringify(operation.baseline)) throw new Error("Patch baseline mismatch");
       return { relativePath: operation.baseline.relativePath, before: captured.content, after: operation.kind === "delete" ? null : operation.content, beforeMode: captured.mode, afterMode: operation.kind === "delete" ? null : captured.mode ?? 0o600 };
     });
+    if (existsSync(path.join(this.controlDirectory, filename))) return this.reconcile({ commandId, afterStep });
     const current = this.snapshot();
     const conflicts = imageChanges(this.files.map(file => ({ relativePath: file.baseline.relativePath, content: file.content, mode: file.mode })), current).map(file => file.relativePath);
     if (conflicts.length) return { kind: "conflict", paths: conflicts, reason: "Candidate differs from approved baseline" };
-    return this.begin(commandId, changes, afterStep);
+    return this.begin(commandId, changes, { afterStep, shouldContinue });
   }
-  restore({ commandId, checkpointId, expectedManifestHash, afterStep }: { readonly commandId: string; readonly checkpointId: string; readonly expectedManifestHash: string; readonly afterStep?: (index: number) => void }): JournalResult {
-    if (existsSync(path.join(this.controlDirectory, `journal-${digest(commandId)}.json`))) return this.reconcile({ commandId, afterStep });
+  async restore({ commandId, checkpointId, expectedManifestHash, targetManifestHash, parentIdentityHash, afterStep }: { readonly commandId: string; readonly checkpointId: string; readonly expectedManifestHash: string; readonly targetManifestHash?: string; readonly parentIdentityHash?: string; readonly afterStep?: (index: number) => void }): Promise<JournalResult> {
+    if (existsSync(path.join(this.controlDirectory, `journal-${digest(commandId)}.json`))) return this.reconcile({ commandId, authority: { before: this.loadCheckpoint(`preserved:${commandId}`), target: this.loadCheckpoint(checkpointId), expectedManifestHash, targetManifestHash: targetManifestHash ?? imageHash(this.loadCheckpoint(checkpointId)), parentIdentityHash }, afterStep });
     const preview = this.previewRestore({ checkpointId });
-    if (preview.currentManifestHash !== expectedManifestHash) return { kind: "conflict", paths: this.files.map(file => file.baseline.relativePath), reason: "Restore preview is stale" };
+    if (preview.currentManifestHash !== expectedManifestHash || (targetManifestHash && preview.targetManifestHash !== targetManifestHash)) return { kind: "conflict", paths: this.files.map(file => file.baseline.relativePath), reason: "Restore preview is stale" };
     this.checkpoint({ checkpointId: `preserved:${commandId}` });
-    return this.begin(commandId, preview.changes, afterStep);
+    return this.begin(commandId, preview.changes.map(({ relativePath, before, after, beforeMode, afterMode }) => ({ relativePath, before, after, beforeMode, afterMode })), { afterStep, parentIdentityHash });
   }
-  private begin(commandId: string, changes: readonly FileChange[], afterStep?: (index: number) => void): JournalResult {
+  private async begin(commandId: string, changes: readonly FileChange[], { afterStep, shouldContinue, parentIdentityHash }: { readonly afterStep?: (index: number) => void; readonly shouldContinue?: () => boolean; readonly parentIdentityHash?: string }): Promise<JournalResult> {
     const filename = `journal-${digest(commandId)}.json`;
-    writeRecord(this.controlDirectory, filename, { commandId, changes, completed: false, parents: changes.map(change => publicationParents(this.root, change.relativePath)) });
-    return this.reconcile({ commandId, afterStep });
+    const journal = { commandId, changes, completed: false, parents: changes.map(change => publicationParents(this.root, change.relativePath)) };
+    if (parentIdentityHash && digest(JSON.stringify(journal.parents)) !== parentIdentityHash) throw new Error("Reviewed publication directories changed.");
+    writeRecord(this.controlDirectory, filename, journal);
+    return replayJournal({ root: this.root, controlDirectory: this.controlDirectory, filename, journal, snapshot: () => this.snapshot(), ...(shouldContinue ? { shouldContinue } : {}), ...(afterStep ? { afterStep } : {}) });
   }
-  reconcile({ commandId, afterStep }: { readonly commandId: string; readonly afterStep?: (index: number) => void }): JournalResult {
+  async reconcile({ commandId, authority, afterStep }: { readonly commandId: string; readonly authority?: JournalAuthority; readonly afterStep?: (index: number) => void }): Promise<JournalResult> {
     const filename = `journal-${digest(commandId)}.json`;
     const journal = parseJournal(readRecord(this.controlDirectory, filename));
     if (journal.commandId !== commandId || journal.changes.some(change => !this.files.some(file => file.baseline.relativePath === change.relativePath))) throw new Error("Journal scope mismatch");
+    if (authority && !journal.completed) assertJournalAuthority(this.root, journal, authority);
+    else if (!journal.completed) return { kind: "conflict", paths: journal.changes.map(change => change.relativePath), reason: "Interrupted candidate publication requires reviewed recovery; its journal is not execution authority." };
     return replayJournal({ root: this.root, controlDirectory: this.controlDirectory, filename, journal, snapshot: () => this.snapshot(), ...(afterStep ? { afterStep } : {}) });
   }
   inspectOriginal(): { readonly kind: "unchanged" } | { readonly kind: "changed"; readonly paths: readonly string[] } {

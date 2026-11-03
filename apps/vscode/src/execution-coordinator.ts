@@ -17,12 +17,13 @@ import type { SqliteProjectRepository } from "./sqlite-project-repository.js";
 
 import { activeRecovery, supersededOperation, type RecoverySelection } from "../../../packages/core/src/recovery.js";
 import { captureRetainedVersion, inspectRetainedInodes, inspectVersion, prepareRecoveryFiles, previewRecoveryFiles, replayRecoveryFiles, type RecoveryPreview } from "./recovery-files.js";
-import { checkEscrowLayout } from "./scoped-publication.js";
+import { checkEscrowLayout, publicationParents } from "./scoped-publication.js";
 
 type Client = Pick<CodexConversationClient, "connect" | "readExecutionContext" | "proposePatch" | "interrupt" | "dispose">;
 type Runner = Pick<CandidateCheckRunner, "capability" | "run" | "interrupt">;
 export class ExecutionReviewCancelled extends Error {}
 const disposedOwners = new Set<string>();
+const pendingPublicationOwners = new Set<string>();
 interface Options {
   readonly repository: SqliteProjectRepository;
   readonly storageDirectory: string;
@@ -39,8 +40,11 @@ export class ExecutionCoordinator {
   private readonly reviewingPlans = new Set<string>();
   private readonly prepared = new Map<string, { client: Client; authType: "chatgpt" | "apiKey" | "unknown"; expiresAt: number; timer: NodeJS.Timeout }>();
   private readonly recoveryPreviews = new Map<string, RecoveryPreview>();
+  private readonly publishing = new Set<string>();
   private readonly active = new Map<string, { client: Client; runner: Runner; stopped: boolean }>();
   constructor(private readonly options: Options) {}
+  private beginPublication(runId: string): void { this.publishing.add(runId); pendingPublicationOwners.add(this.ownerId); }
+  private endPublication(runId: string): void { this.publishing.delete(runId); if (!this.publishing.size) pendingPublicationOwners.delete(this.ownerId); }
   private isDisposed(): boolean { return this.disposedSnapshot !== undefined; }
   private snapshot(): ProjectSnapshot { return this.disposedSnapshot ?? this.options.repository.read(); }
   private dispatch(action: ExecutionAction, commandId: string = randomUUID()): void {
@@ -100,11 +104,13 @@ export class ExecutionCoordinator {
       if (context.authType !== undefined && context.authType !== connection.authType) throw new Error("Codex authentication changed during preparation.");
       const requestedModel = input.requestedModel ?? (context.model.kind === "resolved-default" ? context.model.model : undefined);
       if (!requestedModel) throw new Error("Codex did not report a default model. Configure an explicit coding model before preparing a run.");
-      const project = this.snapshot();
+      let project = this.snapshot();
       const candidate = CandidateWorkspace.capture({ repositoryRoot: fileURLToPath(project.repositoryUri), relativePaths: input.relativePaths, storageDirectory: this.options.storageDirectory });
       this.clean(candidate);
-      checkEscrowLayout(candidate.sourceRoot, candidate.controlDirectory, candidate.files.map(file => file.baseline.relativePath));
-      checkEscrowLayout(candidate.root, candidate.controlDirectory, candidate.files.map(file => file.baseline.relativePath));
+      await checkEscrowLayout(candidate.sourceRoot, candidate.controlDirectory, candidate.files.map(file => file.baseline.relativePath));
+      await checkEscrowLayout(candidate.root, candidate.controlDirectory, candidate.files.map(file => file.baseline.relativePath));
+      this.clean(candidate);
+      project = this.snapshot();
       const baselineCheckpoint = candidate.checkpoint({ checkpointId: "before-run" });
       const linked = currentKnowledge(project).filter(entry => entry.affectedTaskIds.includes(input.taskId));
       const knowledge = linked.map(entry => ({ projectId: entry.projectId, knowledgeId: entry.knowledgeId, recordedAtRevision: entry.recordedAtRevision }));
@@ -200,7 +206,11 @@ export class ExecutionCoordinator {
       if (candidate.inspectOriginal().kind !== "unchanged") throw new Error("Source changed during generation.");
       this.dispatch({ kind: "begin-candidate-apply", runId, observedAt: Date.now() });
       candidate.checkpoint({ checkpointId: "before-run" });
-      const applied = candidate.apply({ commandId: `patch:${runId}`, proposal });
+      this.beginPublication(runId);
+      const applied = await candidate.apply({ commandId: `patch:${runId}`, proposal, shouldContinue: () => !this.isDisposed() && !this.stopped(runId) && Date.now() < this.run(runId).grant.deadlineAt });
+      this.endPublication(runId);
+      this.clean(candidate);
+      if (this.stopped(runId) || Date.now() >= this.run(runId).grant.deadlineAt) throw new Error("Publication finished after stop or deadline; no checks started.");
       if (applied.kind !== "changed" && applied.kind !== "current") throw new Error("Candidate journal requires reconciliation.");
       if (!proposal.operations.length) { this.finish(runId, "no-change", proposal.summary, candidate); return this.run(runId); }
       for (const check of plan.checks) {
@@ -230,7 +240,7 @@ export class ExecutionCoordinator {
       if (run.state.kind !== "terminal" && run.state.kind !== "unknown") this.dispatch({ kind: "mark-execution-unknown", runId, reason: error instanceof Error ? error.message : "Execution completion is unknown." });
       const canRecordUnknownCompletion = !hasUncertainProvider(this.run(runId)) && this.run(runId).process.kind === "none" && this.run(runId).state.kind === "unknown" && run.state.kind !== "applying";
       if (canRecordUnknownCompletion) this.finish(runId, "unknown", error instanceof Error ? error.message : "Execution completion is unknown.", candidate);
-    } finally { if (timer) clearTimeout(timer); client.dispose(); if (this.run(runId).process.kind === "none") this.active.delete(runId); }
+    } finally { this.endPublication(runId); if (timer) clearTimeout(timer); client.dispose(); if (this.run(runId).process.kind === "none") this.active.delete(runId); }
     return this.run(runId);
   }
   private stopped(runId: string): boolean { return this.active.get(runId)?.stopped ?? true; }
@@ -283,30 +293,33 @@ export class ExecutionCoordinator {
     await Promise.resolve();
     if (this.disposedSnapshot) return;
     for (const initial of this.snapshot().executionRuns) {
-      if (this.active.has(initial.runId)) continue;
+      if (this.active.has(initial.runId) || this.publishing.has(initial.runId)) continue;
       const recoveryOwner = activeRecovery(initial);
-      const ownerPid = recoveryOwner?.ownerPid ?? initial.ownerPid;
-      const ownerId = recoveryOwner?.ownerId ?? initial.ownerId;
+      const workspaceWriter = initial.workspace.kind === "writing" || initial.workspace.kind === "unknown" ? initial.workspace.request.writer : undefined;
+      const ownerPid = recoveryOwner?.ownerPid ?? workspaceWriter?.ownerPid ?? initial.ownerPid;
+      const ownerId = recoveryOwner?.ownerId ?? workspaceWriter?.ownerId ?? initial.ownerId;
+      if (pendingPublicationOwners.has(ownerId)) continue;
       let ownerAlive = true;
       try { process.kill(ownerPid, 0); } catch (error) { if (error instanceof Error && "code" in error && error.code === "ESRCH") ownerAlive = false; }
       if (ownerAlive && ownerId !== this.ownerId && !(ownerPid === process.pid && disposedOwners.has(ownerId))) continue;
       if (recoveryOwner) {
-        try { this.completeRecovery(initial.runId, recoveryOwner.operationId); } catch { /* The durable unknown successor retains ownership. */ }
+        try { await this.completeRecovery(initial.runId, recoveryOwner.operationId); } catch { /* The durable unknown successor retains ownership. */ }
         continue;
       }
       if (initial.workspace.kind === "writing" || initial.workspace.kind === "unknown") {
         this.clean();
         const candidate = this.candidateForRun(initial.runId); this.clean(candidate);
         const operation = initial.workspace;
+        this.beginPublication(initial.runId);
         try {
           const result = operation.request.kind === "restore" && operation.request.target === "candidate"
-            ? candidate.reconcile({ commandId: operation.operationId })
-            : new WorkspaceIntegration({ candidate }).reconcile({ commandId: operation.operationId });
+            ? await candidate.restore({ commandId: operation.operationId, checkpointId: operation.request.checkpointId, expectedManifestHash: operation.request.expectedManifestHash, targetManifestHash: operation.request.targetManifestHash, parentIdentityHash: operation.request.parentIdentityHash })
+            : await new WorkspaceIntegration({ candidate }).reconcile({ commandId: operation.operationId, authority: { ...operation.request, parentIdentityHash: operation.request.parentIdentityHash } });
           if ((result.kind === "changed" || result.kind === "current") && result.manifestHash === operation.request.targetManifestHash) this.dispatch({ kind: "finish-workspace-operation", runId: initial.runId, operationId: operation.operationId, manifestHash: result.manifestHash, observedAt: Date.now() });
           else if (operation.kind === "writing") this.dispatch({ kind: "mark-workspace-unknown", runId: initial.runId, reason: "Workspace journal conflicts with current bytes; newer work is preserved." });
         } catch {
           if (operation.kind === "writing") this.dispatch({ kind: "mark-workspace-unknown", runId: initial.runId, reason: "Workspace journal cannot establish completion; ownership retained." });
-        }
+        } finally { this.endPublication(initial.runId); }
       }
       if (initial.state.kind === "terminal") continue;
       const runId = initial.runId;
@@ -322,7 +335,7 @@ export class ExecutionCoordinator {
         this.dispatch({ kind: "reconcile-execution-process", runId, nonce: process.nonce, reason: "Observed terminal nonce-correlated check receipt after restart.", evidence });
       } else if (!supersededOperation(run, `patch:${runId}`) && existsSync(path.join(candidate.controlDirectory, `journal-${digest(`patch:${runId}`)}.json`))) {
         this.clean(candidate);
-        const journal = candidate.reconcile({ commandId: `patch:${runId}` });
+        const journal = await candidate.reconcile({ commandId: `patch:${runId}` });
         if (journal.kind !== "changed" && journal.kind !== "current") continue;
       }
       if (hasUncertainProvider(this.run(runId))) continue;
@@ -350,34 +363,40 @@ export class ExecutionCoordinator {
     this.clean();
     const candidate = this.candidateForRun(input.runId); this.clean(candidate); const integration = new WorkspaceIntegration({ candidate }); const preview = integration.preview();
     if (run.state.kind !== "terminal" || run.state.result.resultId !== input.resultId || run.state.result.recordedAtRevision !== input.resultRevision || run.state.result.manifestHash !== preview.currentCandidateHash || candidate.inspectOriginal().kind !== "unchanged") throw new Error("Reviewed result or original workspace changed.");
-    this.dispatch({ kind: "begin-workspace-operation", runId: input.runId, request: { kind: "integrate", resultId: input.resultId, resultRevision: input.resultRevision, expectedManifestHash: preview.sourceManifestHash, targetManifestHash: preview.currentCandidateHash } }, input.operationId);
+    const parentIdentityHash = digest(JSON.stringify(preview.changes.map(change => publicationParents(candidate.sourceRoot, change.relativePath))));
+    this.dispatch({ kind: "begin-workspace-operation", runId: input.runId, request: { kind: "integrate", parentIdentityHash, writer: { ownerId: this.ownerId, ownerPid: process.pid }, resultId: input.resultId, resultRevision: input.resultRevision, expectedManifestHash: preview.sourceManifestHash, targetManifestHash: preview.currentCandidateHash } }, input.operationId);
+    this.beginPublication(input.runId);
     try {
       this.clean(candidate);
-      const result = integration.apply({ commandId: input.operationId, expectedSourceManifestHash: preview.sourceManifestHash, expectedCandidateManifestHash: preview.currentCandidateHash });
+      const result = await integration.apply({ commandId: input.operationId, expectedSourceManifestHash: preview.sourceManifestHash, expectedCandidateManifestHash: preview.currentCandidateHash, parentIdentityHash });
       if (result.kind !== "changed" && result.kind !== "current") throw new Error("Workspace journal is conflicted; preserved bytes require reconciliation.");
       this.clean(candidate);
       this.dispatch({ kind: "finish-workspace-operation", runId: input.runId, operationId: input.operationId, manifestHash: result.manifestHash, observedAt: Date.now() });
       this.dispatch({ kind: "accept-execution-result", runId: input.runId, resultId: input.resultId, resultRevision: input.resultRevision });
     } catch (error) { if (this.run(input.runId).workspace.kind === "writing") this.dispatch({ kind: "mark-workspace-unknown", runId: input.runId, reason: error instanceof Error ? error.message : "Workspace completion unknown." }); throw error; }
+    finally { this.endPublication(input.runId); }
     return this.run(input.runId);
   }
   previewRestore(input: { readonly runId: string; readonly target: "source" | "candidate"; readonly checkpointId: string }) {
     this.clean(); const candidate = this.candidateForRun(input.runId); this.clean(candidate);
     return input.target === "source" ? new WorkspaceIntegration({ candidate }).previewRestore(input) : candidate.previewRestore(input);
   }
-  restore(input: { readonly runId: string; readonly target: "source" | "candidate"; readonly checkpointId: string; readonly expectedManifestHash: string; readonly targetManifestHash: string; readonly operationId: string }): ExecutionRun {
+  async restore(input: { readonly runId: string; readonly target: "source" | "candidate"; readonly checkpointId: string; readonly expectedManifestHash: string; readonly targetManifestHash: string; readonly operationId: string }): Promise<ExecutionRun> {
     const previous = this.run(input.runId);
     if (previous.workspace.kind === "restored" && previous.workspace.operationId === input.operationId) return previous;
     this.clean(); const candidate = this.candidateForRun(input.runId); this.clean(candidate); const integration = new WorkspaceIntegration({ candidate });
     const preview = this.previewRestore(input);
     if (preview.currentManifestHash !== input.expectedManifestHash || preview.targetManifestHash !== input.targetManifestHash) throw new Error("Restore preview changed.");
-    this.dispatch({ kind: "begin-workspace-operation", runId: input.runId, request: { kind: "restore", target: input.target, checkpointId: input.checkpointId, expectedManifestHash: input.expectedManifestHash, targetManifestHash: input.targetManifestHash } }, input.operationId);
+    const parentIdentityHash = digest(JSON.stringify(preview.changes.map(change => publicationParents(input.target === "source" ? candidate.sourceRoot : candidate.root, change.relativePath))));
+    this.dispatch({ kind: "begin-workspace-operation", runId: input.runId, request: { kind: "restore", parentIdentityHash, writer: { ownerId: this.ownerId, ownerPid: process.pid }, target: input.target, checkpointId: input.checkpointId, expectedManifestHash: input.expectedManifestHash, targetManifestHash: input.targetManifestHash } }, input.operationId);
+    this.beginPublication(input.runId);
     try {
       this.clean(candidate);
-      const result = input.target === "source" ? integration.restore({ restoreCommandId: input.operationId, checkpointId: input.checkpointId, expectedManifestHash: input.expectedManifestHash }) : candidate.restore({ commandId: input.operationId, checkpointId: input.checkpointId, expectedManifestHash: input.expectedManifestHash });
+      const result = await (input.target === "source" ? integration.restore({ restoreCommandId: input.operationId, checkpointId: input.checkpointId, expectedManifestHash: input.expectedManifestHash, targetManifestHash: input.targetManifestHash, parentIdentityHash }) : candidate.restore({ commandId: input.operationId, checkpointId: input.checkpointId, expectedManifestHash: input.expectedManifestHash, targetManifestHash: input.targetManifestHash, parentIdentityHash }));
       if (result.kind !== "changed" && result.kind !== "current") throw new Error("Restore journal needs reconciliation.");
       this.dispatch({ kind: "finish-workspace-operation", runId: input.runId, operationId: input.operationId, manifestHash: result.manifestHash, observedAt: Date.now() });
     } catch (error) { this.dispatch({ kind: "mark-workspace-unknown", runId: input.runId, reason: error instanceof Error ? error.message : "Restore completion unknown." }); throw error; }
+    finally { this.endPublication(input.runId); }
     return this.run(input.runId);
   }
   savedVersions(runId: string) {
@@ -405,21 +424,23 @@ export class ExecutionCoordinator {
     if (this.options.hasDirtyDocuments?.(run.grant.plan.files.flatMap(file => [path.join(run.grant.plan.sourceRoot, file.relativePath), path.join(run.grant.plan.candidateRoot, file.relativePath)]))) blockers.push("Unsaved scoped editor buffers block recovery. Piarre will not save or discard them.");
     if (this.snapshot().executionRuns.some(other => other.runId !== run.runId && (other.state.kind !== "terminal" || other.workspace.kind === "writing" || other.workspace.kind === "unknown" || activeRecovery(other)))) blockers.push("Another run retains writer ownership.");
     const recovery = activeRecovery(run);
-    const ownerId = recovery?.ownerId ?? run.ownerId; const ownerPid = recovery?.ownerPid ?? run.ownerPid;
+    const workspaceWriter = run.workspace.kind === "writing" || run.workspace.kind === "unknown" ? run.workspace.request.writer : undefined;
+    const ownerId = recovery?.ownerId ?? workspaceWriter?.ownerId ?? run.ownerId; const ownerPid = recovery?.ownerPid ?? workspaceWriter?.ownerPid ?? run.ownerPid;
+    if (pendingPublicationOwners.has(ownerId)) blockers.push("Native publication is still pending; retain ownership until its receipt is observed.");
     if ((recovery || run.state.kind !== "terminal" || run.workspace.kind === "writing" || run.workspace.kind === "unknown") && ownerId !== this.ownerId && !(ownerPid === process.pid && disposedOwners.has(ownerId))) {
       let alive = true; try { process.kill(ownerPid, 0); } catch (error) { if (error instanceof Error && "code" in error && error.code === "ESRCH") alive = false; }
       if (alive) blockers.push("A foreign live or uncertain owner may still write. Its PID is not permission to stop it.");
     }
     return blockers;
   }
-  previewRecovery(input: { readonly runId: string; readonly selection: RecoverySelection }): RecoveryPreview {
+  async previewRecovery(input: { readonly runId: string; readonly selection: RecoverySelection }): Promise<RecoveryPreview> {
     this.clean();
-    const preview = previewRecoveryFiles(this.run(input.runId), input.selection, this.snapshot().revision, this.recoveryBlockers(this.run(input.runId)));
+    const preview = await previewRecoveryFiles(this.run(input.runId), input.selection, this.snapshot().revision, this.recoveryBlockers(this.run(input.runId)));
     this.recoveryPreviews.set(preview.previewId, preview);
     return preview;
   }
   cancelRecovery(previewId: string): void { this.recoveryPreviews.delete(previewId); }
-  recover(input: { readonly previewId: string; readonly intendedPaths: readonly string[]; readonly operationId: string }): ExecutionRun {
+  async recover(input: { readonly previewId: string; readonly intendedPaths: readonly string[]; readonly operationId: string }): Promise<ExecutionRun> {
     const existing = this.snapshot().executionRuns.find(run => run.recoveries.some(record => record.operationId === input.operationId));
     if (existing) {
       const record = existing.recoveries.find(record => record.operationId === input.operationId);
@@ -429,27 +450,29 @@ export class ExecutionCoordinator {
     this.clean(); const preview = this.recoveryPreviews.get(input.previewId);
     if (!preview) throw new Error("Recovery preview expired or was cancelled.");
     const run = this.run(preview.runId);
-    const refreshed = previewRecoveryFiles(run, preview.selection, this.snapshot().revision, this.recoveryBlockers(run));
+    const refreshed = await previewRecoveryFiles(run, preview.selection, this.snapshot().revision, this.recoveryBlockers(run));
     if (refreshed.blockers.length) throw new Error(refreshed.blockers.join("\n"));
     if (preview.projectRevision !== refreshed.projectRevision || preview.bindingHash !== refreshed.bindingHash || preview.currentManifestHash !== refreshed.currentManifestHash || preview.intendedManifestHash !== refreshed.intendedManifestHash) throw new Error("Recovery preview is stale. Review current files again.");
     if (new Set(input.intendedPaths).size !== input.intendedPaths.length || input.intendedPaths.some(relative => !preview.current.some(image => image.relativePath === relative))) throw new Error("Recovery choices are outside the reviewed scope.");
+    this.clean();
     const target = prepareRecoveryFiles(run, preview, input.intendedPaths, input.operationId);
     this.dispatch({ kind: "begin-recovery", runId: run.runId, request: { previewId: preview.previewId, projectRevision: preview.projectRevision, selection: preview.selection, bindingHash: preview.bindingHash, parentIdentityHash: digest(JSON.stringify(preview.parentIdentities)), expectedManifestHash: preview.currentManifestHash, targetManifestHash: imageHash(target), intendedPaths: input.intendedPaths, reviewedAt: Date.now(), ownerId: this.ownerId, ownerPid: process.pid } }, input.operationId);
     this.recoveryPreviews.delete(input.previewId);
-    this.completeRecovery(run.runId, input.operationId);
+    await this.completeRecovery(run.runId, input.operationId);
     return this.run(run.runId);
   }
-  private completeRecovery(runId: string, operationId: string): void {
+  private async completeRecovery(runId: string, operationId: string): Promise<void> {
     const run = this.run(runId);
     try {
       const blockers = this.recoveryBlockers(run); if (blockers.length) throw new Error(blockers.join("\n"));
-      const result = replayRecoveryFiles(run, operationId);
+      this.beginPublication(runId);
+      const result = await replayRecoveryFiles(run, operationId);
       if (result.kind !== "changed" && result.kind !== "current") throw new Error("reason" in result ? result.reason : "Recovery completion unknown.");
       this.dispatch({ kind: "finish-recovery", runId, operationId, manifestHash: result.manifestHash, observedAt: Date.now() });
     } catch (error) {
       this.dispatch({ kind: "mark-recovery-unknown", runId, operationId, reason: error instanceof Error ? error.message : "Recovery completion unknown; reservation retained." });
       throw error;
-    }
+    } finally { this.endPublication(runId); }
   }
 
 }

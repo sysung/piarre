@@ -9,6 +9,47 @@ const MAX_EVENTS = 5_000;
 const BUNDLE_NAME = /^bundle-[a-f0-9-]{36}\.json$/;
 const hash = (value: string): string => createHash("sha256").update(value).digest("hex");
 const reference = (value: string): string => `ref:${hash(value).slice(0, 24)}`;
+const diagnosticMessages = {
+  recording: "Use an HTTPS recording link of at most 2,048 characters without credentials, query parameters, or fragments.",
+  traversal: "Diagnostic content exceeds the traversal limit. Choose metadata or a smaller project. Nothing was saved.",
+  size: "Diagnostic content exceeds 2 MiB. Choose metadata or a smaller project. Nothing was saved.",
+  capacity: "Diagnostic retention is full (20 bundles). Delete old bundles before collecting more.",
+  collection: "Project exceeds the diagnostic collection limit. Use a smaller project before collecting again. Nothing was saved.",
+} as const;
+export class DiagnosticValidationError extends Error {
+  constructor(readonly code: keyof typeof diagnosticMessages) { super(diagnosticMessages[code]); }
+}
+export function diagnosticFailureMessage(error: unknown): string {
+  return error instanceof DiagnosticValidationError ? diagnosticMessages[error.code]
+    : "Piarre could not complete diagnostics. No upload occurred. Check the selected file and storage permissions.";
+}
+export function validateRecordingLink(value: string): string | undefined {
+  if (!value) return undefined;
+  try {
+    const url = new URL(value);
+    if (url.protocol === "https:" && !url.username && !url.password && !url.search && !url.hash && value.length <= 2048) return undefined;
+  } catch { /* Invalid input receives the same safe guidance as an unsupported URL. */ }
+  return diagnosticMessages.recording;
+}
+export interface DiagnosticSummary {
+  readonly capturedAt: string;
+  readonly detail: DiagnosticDetail;
+  readonly expiresAt: string;
+  readonly project: string;
+}
+function parseSummary(serialized: string): DiagnosticSummary | undefined {
+  const data: unknown = JSON.parse(serialized);
+  if (!data || typeof data !== "object" || !("manifest" in data) || !data.manifest || typeof data.manifest !== "object") return undefined;
+  const manifest = data.manifest;
+  if (!("capturedAt" in manifest) || typeof manifest.capturedAt !== "string" || !Number.isFinite(Date.parse(manifest.capturedAt))
+    || !("detail" in manifest) || (manifest.detail !== "metadata" && manifest.detail !== "reviewable-content")
+    || !("retentionDays" in manifest) || (manifest.retentionDays !== 1 && manifest.retentionDays !== 7)
+    || !("source" in manifest) || !manifest.source || typeof manifest.source !== "object"
+    || !("project" in manifest.source) || typeof manifest.source.project !== "string" || !/^ref:[a-f0-9]{24}$/.test(manifest.source.project)) return undefined;
+  const expiresAt = Date.parse(manifest.capturedAt) + manifest.retentionDays * 86_400_000;
+  if (!Number.isFinite(new Date(expiresAt).getTime())) return undefined;
+  return { capturedAt: new Date(manifest.capturedAt).toISOString(), detail: manifest.detail, expiresAt: new Date(expiresAt).toISOString(), project: manifest.source.project };
+}
 export type DiagnosticDetail = "metadata" | "reviewable-content";
 export type DiagnosticRetention = 0 | 1 | 7;
 export interface DiagnosticInput {
@@ -38,10 +79,10 @@ export function redactDiagnosticText(text: string, repositoryPath = ""): string 
 }
 
 function redactContent(value: unknown, repositoryPath: string, depth = 0, budget = { remaining: 40_000, bytesRemaining: MAX_BYTES }): unknown {
-  if (--budget.remaining < 0 || depth > 30) throw new Error("Diagnostic content exceeds the traversal limit. Choose metadata or a smaller project.");
+  if (--budget.remaining < 0 || depth > 30) throw new DiagnosticValidationError("traversal");
   if (typeof value === "string") {
     budget.bytesRemaining -= Buffer.byteLength(value);
-    if (budget.bytesRemaining < 0) throw new Error("Diagnostic content exceeds 2 MiB before redaction. Nothing was saved.");
+    if (budget.bytesRemaining < 0) throw new DiagnosticValidationError("size");
     return redactDiagnosticText(value, repositoryPath);
   }
   if (Array.isArray(value)) return value.map((item: unknown) => redactContent(item, repositoryPath, depth + 1, budget));
@@ -66,13 +107,13 @@ function providerMetadata(value: unknown): unknown {
 export function createDiagnosticBundle(input: DiagnosticInput): string {
   if (input.snapshot.revision !== input.events.length) throw new Error("Diagnostic snapshot and event revision disagree.");
   if (![0, 1, 7].includes(input.retentionDays)) throw new Error("Unsupported diagnostic retention.");
-  if (input.events.length > 50_000 || input.snapshot.executionRuns.length > 500 || input.snapshot.executionRuns.reduce((total, run) => total + run.evidence.length, 0) > 5_000) throw new Error("Project exceeds the diagnostic collection limit.");
+  if (input.events.length > 50_000 || input.snapshot.executionRuns.length > 500 || input.snapshot.executionRuns.reduce((total, run) => total + run.evidence.length, 0) > 5_000) throw new DiagnosticValidationError("collection");
   const capturedAt = new Date().toISOString();
   const repositoryPath = input.snapshot.repositoryUri.startsWith("file:") ? new URL(input.snapshot.repositoryUri).pathname : "";
   let recording: unknown = null;
   if (input.recordingLink) {
+    if (validateRecordingLink(input.recordingLink)) throw new DiagnosticValidationError("recording");
     const url = new URL(input.recordingLink);
-    if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash || input.recordingLink.length > 2048) throw new Error("Use an HTTPS recording link without credentials, query parameters, or fragments.");
     recording = { link: redactDiagnosticText(url.href, repositoryPath), capturedByPiarre: false };
   }
   const runs = input.snapshot.executionRuns.map(run => ({
@@ -105,7 +146,7 @@ export function createDiagnosticBundle(input: DiagnosticInput): string {
   };
   bundle.manifest.payloadSha256 = hash(JSON.stringify({ providers: bundle.providers, events: bundle.events, runs: bundle.runs, recording: bundle.recording, content: bundle.content }));
   const serialized = JSON.stringify(bundle, null, 2) + "\n";
-  if (Buffer.byteLength(serialized) > MAX_BYTES) throw new Error("Diagnostic bundle exceeds 2 MiB. Choose metadata or a smaller project. Nothing was saved.");
+  if (Buffer.byteLength(serialized) > MAX_BYTES) throw new DiagnosticValidationError("size");
   return serialized;
 }
 
@@ -124,8 +165,8 @@ export class DiagnosticBundleStore {
     return target;
   }
   save(serialized: string): string {
-    if (Buffer.byteLength(serialized) > MAX_BYTES) throw new Error("Diagnostic bundle exceeds 2 MiB.");
-    if (this.list().length >= 20) throw new Error("Diagnostic retention is full (20 bundles). Delete old bundles before collecting more.");
+    if (Buffer.byteLength(serialized) > MAX_BYTES) throw new DiagnosticValidationError("size");
+    if (this.list().length >= 20) throw new DiagnosticValidationError("capacity");
     const name = `bundle-${randomUUID()}.json`;
     writeFileSync(this.target(name), serialized, { flag: "wx", mode: 0o600 });
     return name;
@@ -145,14 +186,19 @@ export class DiagnosticBundleStore {
     rmSync(target, { force: true });
     if (existsSync(target)) throw new Error("Diagnostic deletion could not be verified.");
   }
+  summary(name: string): DiagnosticSummary | undefined {
+    try { return parseSummary(this.read(name)); } catch { return undefined; }
+  }
   expire(now = Date.now()): number {
     let deleted = 0;
     for (const name of this.list()) {
-      const data: unknown = JSON.parse(this.read(name));
-      if (!data || typeof data !== "object" || !("manifest" in data) || !data.manifest || typeof data.manifest !== "object" || !("capturedAt" in data.manifest) || !("retentionDays" in data.manifest)) continue;
-      const { capturedAt, retentionDays } = data.manifest;
-      if (typeof capturedAt !== "string" || typeof retentionDays !== "number" || ![1, 7].includes(retentionDays)) continue;
-      if (Date.parse(capturedAt) + retentionDays * 86_400_000 <= now) { this.delete(name); deleted++; }
+      try {
+        const data: unknown = JSON.parse(this.read(name));
+        if (!data || typeof data !== "object" || !("manifest" in data) || !data.manifest || typeof data.manifest !== "object" || !("capturedAt" in data.manifest) || !("retentionDays" in data.manifest)) continue;
+        const { capturedAt, retentionDays } = data.manifest;
+        if (typeof capturedAt !== "string" || typeof retentionDays !== "number" || ![1, 7].includes(retentionDays)) continue;
+        if (Date.parse(capturedAt) + retentionDays * 86_400_000 <= now) { this.delete(name); deleted++; }
+      } catch { /* Keep unreadable bundles for explicit deletion; other bundles still expire. */ }
     }
     return deleted;
   }
