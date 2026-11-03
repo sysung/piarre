@@ -4,7 +4,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { runTests, downloadAndUnzipVSCode } from "@vscode/test-electron";
+import { assertGuiTestsAllowed, isolatedSettings } from "./profile-settings.mjs";
 import { vscodeVersion } from "../../../config/vscode-version.mjs";
+
+assertGuiTestsAllowed();
 
 const packageRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -22,6 +25,8 @@ await Promise.all([
   mkdir(extensionsPath, { recursive: true }),
   mkdir(path.dirname(logPath), { recursive: true }),
 ]);
+await mkdir(path.join(userDataPath, "User"), { recursive: true });
+await writeFile(path.join(userDataPath, "User", "settings.json"), JSON.stringify(isolatedSettings));
 execFileSync("git", ["init", fixturePath]);
 
 const environment = [
@@ -58,6 +63,7 @@ try {
   const restrictedUserData = path.join(testRoot, "restricted-user-data");
   await mkdir(path.join(restrictedUserData, "User"), { recursive: true });
   await writeFile(path.join(restrictedUserData, "User", "settings.json"), JSON.stringify({
+    ...isolatedSettings,
     "security.workspace.trust.enabled": true,
     "security.workspace.trust.startupPrompt": "never",
     "security.workspace.trust.emptyWindow": false,

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "adoptedAtRevision": "549552ecb699a32881adb026374cbd30697f4e4f",
+  "adoptedAtRevision": "353e31bff3c1c86ff31bcf393346d50d5d413d85",
   "principles": [
     {
       "id": "business-intent",
@@ -209,6 +209,22 @@
       "scenarios": [
         "verification",
         "candidate-isolation"
+      ]
+    },
+    {
+      "id": "agent-visibility-first",
+      "behavior": "Make agent ownership, observed activity, blockers, decisions and evidence visible without requiring a status conversation",
+      "source": {
+        "kind": "product",
+        "path": "docs/01_PRODUCT_PRD.md",
+        "revision": "353e31bff3c1c86ff31bcf393346d50d5d413d85",
+        "sha256": "a5de8022d2ac11e6c59b17af4da4f5746a4653d7f2de5a1d8ccdbcebce169efa"
+      },
+      "scenarios": [
+        "agent-visibility",
+        "progress",
+        "recovery",
+        "user-value"
       ]
     }
   ]

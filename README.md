@@ -38,3 +38,5 @@ The Work panel also accepts a typed goal. **Review goal** prepares a determinist
 Saved goals appear newest first as compact cards. Choose **Open proposal** to inspect one in a reusable VS Code pane beside Work. Opening a saved proposal does not save, approve, or run anything.
 
 Use **Delete goal** on a saved card or **Delete goal and proposal** in its detail pane to remove that goal and its proposed tasks after confirmation. Repository files and prior project history are retained.
+
+Local macOS Host tests open VS Code windows. Enable them deliberately with `PIARRE_GUI_TESTS=1 npm test` or `PIARRE_GUI_TESTS=1 npm run test:package --workspace apps/vscode`. Without that flag, the launcher stops before creating a profile or opening a window. CI Host runs remain enabled. `npm run check`, packaging, compilation and filtered Node tests do not need the flag.

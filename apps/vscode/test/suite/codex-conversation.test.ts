@@ -16,6 +16,16 @@ suite("Codex conversation process adapter", () => {
     } finally { connection.dispose(); }
   });
 
+  test("patch mode uses a private bounded output schema while retaining read-only policy", async () => {
+    const connection = client("patch");
+    try {
+      await connection.connect();
+      const result = await connection.proposePatch({ prompt: "Change only the disclosed file", cwd: process.cwd() });
+      assert.equal(result.status, "completed");
+      assert.deepEqual(result.output, { summary: "Adjust the refund rule", operations: [{ fileId: "opaque-file", content: "export const days = 45;" }] });
+    } finally { connection.dispose(); }
+  });
+
   test("handles partial frames and terminal notifications before start acknowledgement", async () => {
     const connection = client();
     const progress: string[] = [];
@@ -79,6 +89,16 @@ suite("Codex conversation process adapter", () => {
     } finally { connection.dispose(); }
   });
 
+  for (const mode of ["failed", "disconnect"]) {
+    test(`terminal observation distinguishes ${mode} from successful verification`, async () => {
+      const connection = client(mode); const observations: unknown[] = [];
+      try {
+        await connection.connect();
+        await assert.rejects(connection.respond({ prompt: "hello", cwd: process.cwd(), onTurnTerminal: observation => { observations.push(observation); } }));
+        assert.deepEqual(observations, mode === "failed" ? [{ threadId: "thread-1", turnId: "turn-1", status: "failed" }] : []);
+      } finally { connection.dispose(); }
+    });
+  }
   test("request timeout rejects with unknown completion", async function () {
     this.timeout(20_000);
     const connection = client("timeout");
@@ -91,7 +111,8 @@ suite("Codex conversation process adapter", () => {
     try {
       await connection.connect();
       let settled = false;
-      const response = connection.respond({ prompt: "hello", cwd: process.cwd() });
+      const observations: unknown[] = [];
+      const response = connection.respond({ prompt: "hello", cwd: process.cwd(), onTurnTerminal: observation => { observations.push(observation); } });
       void response.then(() => { settled = true; });
       for (let attempt = 0; ; attempt++) {
         try { await connection.interrupt(); break; } catch (error) {
@@ -99,9 +120,10 @@ suite("Codex conversation process adapter", () => {
           await new Promise((resolve) => setTimeout(resolve, 5));
         }
       }
-      assert.equal(settled, false);
+      assert.equal(settled, false); assert.deepEqual(observations, []);
       await assert.rejects(connection.respond({ prompt: "overlap", cwd: process.cwd() }), /Connect Codex explicitly/);
       assert.deepEqual(await response, { output: null, threadId: "thread-1", turnId: "turn-1", status: "interrupted" });
+      assert.deepEqual(observations, [{ threadId: "thread-1", turnId: "turn-1", status: "interrupted" }]);
     } finally { connection.dispose(); }
   });
 });

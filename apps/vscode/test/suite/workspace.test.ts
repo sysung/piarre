@@ -233,6 +233,8 @@ suite("Typed workspace previews", () => {
 
   test("real webview preserves unsent input on inspection updates and requires explicit save", async function () {
     this.timeout(20000);
+    let phase = "waiting for renderer";
+    let diagnosticTimer: ReturnType<typeof setTimeout> | undefined;
     let panel: vscode.WebviewPanel | undefined;
     const view = new WorkView((...args) => {
       panel = vscode.window.createWebviewPanel(...args);
@@ -248,8 +250,10 @@ suite("Typed workspace previews", () => {
       const actualPanel = panel;
       const result = new Promise<unknown>((resolve) => {
         actualPanel.webview.onDidReceiveMessage((value: unknown) => {
+          if (typeof value === "object" && value !== null && "kind" in value && value.kind === "test-phase" && "phase" in value && typeof value.phase === "string") phase = value.phase;
           if (typeof value === "object" && value !== null && "kind" in value && value.kind === "test-result") resolve(value);
         });
+        diagnosticTimer = setTimeout(() => { resolve({ kind: "test-result", ok: false, error: `Webview stalled at ${phase}; visible=${String(actualPanel.visible)} active=${String(actualPanel.active)}` }); }, 15000);
       });
       actualPanel.webview.html = actualPanel.webview.html.replace("const api = acquireVsCodeApi();", `
 const nativeApi = acquireVsCodeApi();
@@ -280,14 +284,34 @@ window.addEventListener('message', ({data}) => { if (data.kind === 'test-checked
     if (desk.closest('details:not([open])')) throw new Error('Project inspection is hidden');
     const main = document.querySelector('main');
     for (const width of [320, 1280]) {
+      api.postMessage({kind:"test-phase",phase:"layout measurement " + width});
       main.style.width = width + 'px';
-      await new Promise(requestAnimationFrame);
       const a = planning.getBoundingClientRect(); const b = desk.getBoundingClientRect();
       if (width === 320 ? b.top < a.bottom - 1 : b.left < a.right - 1) throw new Error('Incorrect layout at ' + width + 'px');
       if (main.scrollWidth > width) throw new Error('Horizontal overflow at ' + width + 'px: ' + main.scrollWidth);
     }
+    api.postMessage({kind:'test-phase',phase:'layout restore'});
     main.style.removeProperty('width');
-    await new Promise(requestAnimationFrame);
+    api.postMessage({kind:'test-phase',phase:'execution announcements and disclosure focus'});
+    const liveStatus = document.getElementById('execution-status');
+    if (liveStatus.getAttribute('role') !== 'status' || liveStatus.getAttribute('aria-live') !== 'polite') throw new Error('Execution progress has no persistent polite status');
+    const reviewMarkup = '<details data-review-key="recent-plans"><summary>Recent plans</summary><details data-review-key="plan:fixture:4"><summary>Exact plan, files, and limits</summary><p>Approved fixture scope</p></details></details>';
+    const progress = text => ({kind:'inspection', html:'', brief:'No saved goals yet.', agentOverview:reviewMarkup, executionControls:'<section data-execution-status="' + JSON.stringify([{id:'fixture-run',text}]).replaceAll('"','&quot;') + '"></section>'});
+    window.dispatchEvent(new MessageEvent('message', {data:progress('Fixture task: checking candidate; acceptance pending.')}));
+    const recent = document.querySelector('[data-review-key="recent-plans"]');
+    const exact = document.querySelector('[data-review-key="plan:fixture:4"]');
+    recent.open = true; exact.open = true; exact.querySelector('summary').focus();
+    window.dispatchEvent(new MessageEvent('message', {data:progress('Fixture task: checks completed; review the exact changes and evidence.')}));
+    const updatedExact = document.querySelector('[data-review-key="plan:fixture:4"]');
+    if (!document.querySelector('[data-review-key="recent-plans"]').open || !updatedExact.open || document.activeElement !== updatedExact.querySelector('summary')) throw new Error('Execution update lost expanded review or summary focus');
+    if (document.getElementById('execution-status') !== liveStatus || !liveStatus.textContent.includes('Fixture task: checks completed; review')) throw new Error('Completion did not update the persistent task status and pending decision');
+    let repeatedAnnouncements = 0;
+    const announcementObserver = new MutationObserver(records => { repeatedAnnouncements += records.length; });
+    announcementObserver.observe(liveStatus, {childList:true, characterData:true, subtree:true});
+    window.dispatchEvent(new MessageEvent('message', {data:progress('Fixture task: checks completed; review the exact changes and evidence.')}));
+    await Promise.resolve(); announcementObserver.disconnect();
+    if (repeatedAnnouncements) throw new Error('Unchanged inspection repeated the live announcement');
+    api.postMessage({kind:'test-phase',phase:'privacy and save journey'});
     goal.value = '<script>unsent & private</scr' + 'ipt>';
     goal.dispatchEvent(new Event('input'));
     if (bridgeCalls.some(value => JSON.stringify(value).includes('unsent & private'))) throw new Error('Unsent input crossed the renderer state bridge');
@@ -364,6 +388,6 @@ window.addEventListener('message', ({data}) => { if (data.kind === 'test-checked
       listener.dispose();
       assert.deepEqual(observed, { kind: "test-result", ok: true });
       assert.equal(repository.read().proposals.length, 1);
-    } finally { view.dispose(); }
+    } finally { if (diagnosticTimer) clearTimeout(diagnosticTimer); view.dispose(); }
   });
 });

@@ -1,13 +1,18 @@
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import assert from "node:assert/strict";
 import { downloadAndUnzipVSCode, resolveCliArgsFromVSCodeExecutablePath, runTests } from "@vscode/test-electron";
+import { assertGuiTestsAllowed, isolatedSettings } from "../test/profile-settings.mjs";
 import { vscodeVersion } from "../../../config/vscode-version.mjs";
+
+assertGuiTestsAllowed();
 
 const temporaryProfile = await mkdtemp(path.join(tmpdir(), "piarre-package-"));
 try {
+  await mkdir(path.join(temporaryProfile, "user", "User"), { recursive: true });
+  await writeFile(path.join(temporaryProfile, "user", "User", "settings.json"), JSON.stringify(isolatedSettings));
   const manifest = JSON.parse(await readFile("package.json", "utf8"));
   const executable = await downloadAndUnzipVSCode(vscodeVersion);
   const [cli] = resolveCliArgsFromVSCodeExecutablePath(executable);
