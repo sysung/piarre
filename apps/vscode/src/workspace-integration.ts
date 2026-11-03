@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { CandidateWorkspace } from "./candidate-workspace.js";
-import { digest, imageHash, parseImages, parseJournal, readImage, readRecord, replayJournal, writeRecord, type FileChange, type FileImage, type JournalResult } from "./candidate-journal.js";
+import { digest, imageHash, imageChanges, parseImages, parseJournal, readImage, readRecord, replayJournal, writeRecord, type FileChange, type FileImage, type JournalResult } from "./candidate-journal.js";
 
 export class WorkspaceIntegration {
   private readonly candidate: CandidateWorkspace;
@@ -9,11 +9,9 @@ export class WorkspaceIntegration {
   private snapshot(): readonly FileImage[] { return this.candidate.files.map(file => readImage(this.candidate.sourceRoot, file.baseline.relativePath)); }
   private candidateSnapshot(): readonly FileImage[] { return this.candidate.files.map(file => readImage(this.candidate.root, file.baseline.relativePath)); }
   private changes(current: readonly FileImage[], target: readonly FileImage[]): readonly FileChange[] {
-    return target.flatMap((image, index) => {
-      const before = current[index]?.content ?? null;
-      return before === image.content ? [] : [{ relativePath: image.relativePath, before, after: image.content }];
-    });
+    return imageChanges(current, target);
   }
+
   preview(): { readonly sourceManifestHash: string; readonly currentCandidateHash: string; readonly changes: readonly FileChange[] } {
     const current = this.snapshot(); const target = this.candidateSnapshot();
     return { sourceManifestHash: imageHash(current), currentCandidateHash: imageHash(target), changes: this.changes(current, target) };
@@ -35,7 +33,7 @@ export class WorkspaceIntegration {
   }): JournalResult {
     if (existsSync(path.join(this.candidate.controlDirectory, this.recordName(commandId)))) return this.reconcile({ commandId, ...(afterStep ? { afterStep } : {}) });
     const current = this.snapshot(); const target = this.candidateSnapshot();
-    const baseline = this.candidate.files.map(file => ({ relativePath: file.baseline.relativePath, content: file.content }));
+    const baseline = this.candidate.files.map(file => ({ relativePath: file.baseline.relativePath, content: file.content, mode: file.mode }));
     if (imageHash(current) !== expectedSourceManifestHash || imageHash(current) !== imageHash(baseline) || imageHash(target) !== expectedCandidateManifestHash) return { kind: "conflict", paths: current.map(file => file.relativePath), reason: "Source or candidate changed since capture or review" };
     this.checkpoint(`integration-before:${commandId}`, current);
     return this.begin(commandId, this.changes(current, target), target, afterStep);

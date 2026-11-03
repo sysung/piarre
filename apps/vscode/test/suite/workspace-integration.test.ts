@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, statSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { parsePatchProposal } from "../../../../packages/core/src/execution-patch.js";
@@ -26,6 +26,34 @@ suite("Reviewed source integration", () => {
     return { commandId: "integrate", expectedSourceManifestHash: preview.sourceManifestHash, expectedCandidateManifestHash: preview.currentCandidateHash };
   };
   const reopened = () => new WorkspaceIntegration({ candidate: CandidateWorkspace.reopen({ controlDirectory: candidate.controlDirectory, storageDirectory: storage, expectedCaptureHash: candidate.captureHash }) });
+  test("executable permissions survive capture, integration, restore and preserved recovery", () => {
+    const script = path.join(source, "run.sh"); writeFileSync(script, "#!/bin/sh\necho before\n"); chmodSync(script, 0o755);
+    const executable = CandidateWorkspace.capture({ repositoryRoot: source, storageDirectory: storage, relativePaths: ["run.sh"] });
+    const file = executable.files[0]; assert.ok(file);
+    assert.equal(statSync(path.join(executable.root, "run.sh")).mode & 0o777, 0o755);
+    executable.apply({ commandId: "patch", proposal: parsePatchProposal({ files: [file.baseline], value: { summary: "edit", operations: [{ fileId: file.baseline.fileId, content: "#!/bin/sh\necho after\n" }] } }) });
+    const reviewed = new WorkspaceIntegration({ candidate: executable }); const preview = reviewed.preview();
+    assert.equal(reviewed.apply({ commandId: "integrate", expectedSourceManifestHash: preview.sourceManifestHash, expectedCandidateManifestHash: preview.currentCandidateHash }).kind, "changed");
+    assert.equal(statSync(script).mode & 0o777, 0o755);
+    chmodSync(script, 0o700);
+    const restore = reviewed.previewRestore({ checkpointId: "integration-before:integrate" });
+    assert.equal(reviewed.restore({ restoreCommandId: "restore", checkpointId: "integration-before:integrate", expectedManifestHash: restore.currentManifestHash }).kind, "changed");
+    assert.equal(statSync(script).mode & 0o777, 0o755);
+    assert.equal(readFileSync(script, "utf8"), "#!/bin/sh\necho before\n");
+    const preserved = reviewed.previewRestore({ checkpointId: "integration-preserved:restore" });
+    assert.equal(reviewed.restore({ restoreCommandId: "recover", checkpointId: "integration-preserved:restore", expectedManifestHash: preserved.currentManifestHash }).kind, "changed");
+    assert.equal(statSync(script).mode & 0o777, 0o700);
+    assert.equal(readFileSync(script, "utf8"), "#!/bin/sh\necho after\n");
+  });
+  test("mode-only manual changes invalidate source and candidate review", () => {
+    const reviewed = args(); const hash = candidate.manifestHash();
+    chmodSync(path.join(candidate.root, "a.ts"), 0o755);
+    assert.notEqual(candidate.manifestHash(), hash);
+    assert.equal(integration.apply(reviewed).kind, "conflict");
+    chmodSync(path.join(source, "a.ts"), 0o755);
+    assert.equal(candidate.inspectOriginal().kind, "changed");
+    assert.equal(integration.apply(args()).kind, "conflict");
+  });
   test("reviewed create/replace/delete reaches exact candidate hash while preserving unrelated files", () => {
     const request = args();
     assert.equal(readFileSync(path.join(source, "a.ts"), "utf8"), "\uFEFFbase\r\n");
