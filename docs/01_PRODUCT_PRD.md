@@ -51,6 +51,8 @@ The product must:
 
 Fewer messages alone do not establish success. Reduced reading and interruption must not hide defects, weaken review, or transfer unrecognized risk to the developer. AI-fatigue reduction is a product objective to validate, not a current capability claim.
 
+The proposed long-term objective also includes preserving the developer's understanding of agent-produced work. The [post-PoC HCI research continuation](05_RESEARCH_BACKLOG.md#continuation-preserve-understanding-throughout-delegation) explores collaborative correction of intent, evidence-backed explanations, informed review, and later maintenance. These studies do not add PoC features or release gates.
+
 ## 3. Audience
 
 ### Primary audience
@@ -312,6 +314,8 @@ P1 adds workers only after P0 preserves state and evidence reliably:
 - comparison of competing plans or implementations.
 
 ### Later candidates
+
+[Post-PoC product research backlog](05_RESEARCH_BACKLOG.md) records deferred ideas about visible agent sessions, grounded conversation, an inbox during credit limits, global and repository skills, optional skill self-improvement, skill-stage diagrams, evolving memory, verifiable task routing, and informed review. These are hypotheses to investigate, not additions to P0 or commitments to P1. The long-term direction is a product form of p-stack that adapts to developer workflows. Token savings and reduced AI fatigue require evidence.
 
 - team collaboration and shared project history.
 - remote workers and organization policy.

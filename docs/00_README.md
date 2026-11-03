@@ -7,6 +7,7 @@
 - `02_TECHNICAL_DESIGN.md`: architecture, contracts, state machines, privacy, security, failure handling.
 - `03_IMPLEMENTATION_BACKLOG.md`: dependency-ordered engineering tasks with definitions of done.
 - `04_TEST_EVALUATION.md`: recorded dogfooding, replay, edge cases, release gates.
+- [05_RESEARCH_BACKLOG.md](05_RESEARCH_BACKLOG.md): post-PoC hypotheses about agent visibility, conversation, inbox triage, skills, memory, and informed review.
 
 ## Product direction
 Piarre is a voice-first IDE for directing, observing, and verifying coding agents. The live work graph is the primary object. Voice directs visible work. Exact plans, code, diffs, approvals, budgets, and evidence remain visual. Models propose actions, while deterministic code owns authorization and task state.

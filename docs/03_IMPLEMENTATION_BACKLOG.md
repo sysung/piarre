@@ -2,6 +2,8 @@
 
 This document is the source of truth for the v0.2 implementation sequence.
 
+The separate [post-PoC product research backlog](05_RESEARCH_BACKLOG.md) contains unestimated discovery topics. Its R-series entries do not change the B-series sequence, milestones, or estimates. Promotion into implementation requires the publication process below.
+
 ## Estimate basis
 
 Focused engineering hours for one experienced TypeScript developer, including automated tests and a short evidence note. Product studies, review latency, and unknown provider defects are excluded.
