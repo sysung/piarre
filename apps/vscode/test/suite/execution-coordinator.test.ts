@@ -7,6 +7,7 @@ import { ExecutionCoordinator } from "../../src/execution-coordinator.js";
 import { CandidateCheckRunner } from "../../src/candidate-check-runner.js";
 import type { CodexConversationClient } from "../../src/codex-conversation-client.js";
 import { SqliteProjectRepository } from "../../src/sqlite-project-repository.js";
+import { ownsExecutionLease } from "../../../../packages/core/src/index.js";
 import { GoalInterpreter } from "../../src/goal-interpreter.js";
 
 const nodeExecutable = process.env.PIARRE_TEST_NODE ?? process.execPath;
@@ -70,16 +71,27 @@ suite("Execution coordinator actual backend", () => {
     await assert.rejects(coordinator().approveAndRun({ planId: prepared.plan.planId, planRevision: prepared.plan.recordedAtRevision, approvalId: "manual" }), /changed/);
     assert.equal(requests, 0); assert.equal(repository.read().executionRuns.length, 0);
   });
-  test("lost acknowledgment is durable and duplicate approval never calls provider again", async () => {
+  test("lost acknowledgment retains ownership across restart and blocks replacement requests", async () => {
     const { plan } = await prepare(); loseAcknowledgment = true;
     const input = { planId: plan.planId, planRevision: plan.recordedAtRevision, approvalId: "lost" };
-    const run = await coordinator().approveAndRun(input);
-    assert.equal(requests, 1); assert.equal(run.state.kind, "terminal");
-    assert.equal(run.state.result.outcome, "unknown");
+    const control = coordinator(); const run = await control.approveAndRun(input);
+    assert.equal(requests, 1); assert.equal(run.state.kind, "unknown");
+    assert.equal(ownsExecutionLease(run), true);
     assert.equal(readFileSync(path.join(source, "refund.txt"), "utf8"), "30\n");
-    repository.close(); repository = new SqliteProjectRepository(path.join(directory, "project.sqlite"));
-    await coordinator().approveAndRun(input); assert.equal(requests, 1);
-    await assert.rejects(coordinator().approveAndRun({ ...input, planRevision: 1 }), /conflicts/);
+    control.dispose(); repository.close(); repository = new SqliteProjectRepository(path.join(directory, "project.sqlite"));
+    const recovered = coordinator(); await recovered.reconcile();
+    assert.equal(repository.read().executionRuns[0]?.state.kind, "unknown");
+    await recovered.approveAndRun(input); assert.equal(requests, 1);
+    await assert.rejects(recovered.approveAndRun({ ...input, approvalId: "replacement" }));
+    assert.equal(requests, 1);
+    await assert.rejects(recovered.approveAndRun({ ...input, planRevision: 1 }), /conflicts/);
+    const resolved = recovered.abandonProvider({ runId: run.runId, reason: "Explicit fixture review acknowledges possible continuing provider usage." });
+    assert.equal(resolved.providerOutcome.kind, "abandoned"); assert.equal(resolved.state.kind, "terminal");
+    assert.equal(resolved.state.result.outcome, "unknown"); assert.equal(ownsExecutionLease(resolved), false);
+    assert.match(resolved.state.result.summary, /Remote activity and charges may continue/);
+    assert.throws(() => recovered.abandonProvider({ runId: run.runId, reason: "Repeated consent" }));
+    const replacement = await recovered.approveAndRun({ ...input, approvalId: "explicit-replacement" });
+    assert.equal(requests, 2); assert.equal(replacement.state.kind, "unknown");
   });
   test("real sandbox checks gate review, integration preserves source until approval, restore protects newer bytes", async function () {
     if ((await new CandidateCheckRunner().capability()).kind === "unsupported") { this.skip(); return; }
@@ -141,7 +153,8 @@ suite("Execution coordinator actual backend", () => {
     repository = new SqliteProjectRepository(path.join(directory, "project.sqlite"));
     assert.deepEqual(repository.read(), before);
     await coordinator().reconcile();
-    assert.equal(repository.read().executionRuns[0]?.state.kind, "terminal");
+    assert.equal(repository.read().executionRuns[0]?.state.kind, "unknown");
+    assert.equal(repository.read().executionRuns.some(ownsExecutionLease), true);
     assert.equal(requests, 0);
   });
   test("pause survives restart and blocks a prepared approval", async () => {

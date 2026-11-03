@@ -17,7 +17,8 @@ const PATCH_SCHEMA = {
     items: { type: "object", additionalProperties: false, required: ["fileId", "content"],
       properties: { fileId: { type: "string", minLength: 1, maxLength: 128 }, content: { anyOf: [{ type: "string", maxLength: 100_000 }, { type: "null" }] } } } } },
 };
-type TurnInput = { readonly prompt: string; readonly cwd: string; readonly model?: string; readonly onProgress?: (text: string) => void; readonly onThreadStarted?: (threadId: string) => void; readonly onThreadMetadata?: (metadata: CodexThreadMetadata) => void; readonly onTurnStarted?: (threadId: string, turnId: string) => void };
+type TerminalObservation = { readonly threadId: string; readonly turnId: string; readonly status: "completed" | "interrupted" | "failed" };
+type TurnInput = { readonly prompt: string; readonly cwd: string; readonly model?: string; readonly onProgress?: (text: string) => void; readonly onThreadStarted?: (threadId: string) => void; readonly onThreadMetadata?: (metadata: CodexThreadMetadata) => void; readonly onTurnTerminal?: (observation: TerminalObservation) => void; readonly onTurnStarted?: (threadId: string, turnId: string) => void };
 
 type ConnectResult = { kind: "ready"; authType: "chatgpt" | "apiKey" | "unknown" } | { kind: "login-required" };
 type Response = { output: unknown; threadId: string; turnId: string; status: "completed" | "interrupted" };
@@ -26,7 +27,7 @@ type ActiveTurn = {
   threadId: string; turnId?: string; text?: string;
   buffered: { method: string; params: Record<string, unknown> }[];
   resolve(value: Response): void; reject(error: Error): void;
-  timer: NodeJS.Timeout; onProgress?: (text: string) => void;
+  onTurnTerminal?: (observation: TerminalObservation) => void; timer: NodeJS.Timeout; onProgress?: (text: string) => void;
 };
 
 function object(value: unknown): Record<string, unknown> {
@@ -127,7 +128,7 @@ export class CodexConversationClient {
       await this.checkTools(threadId);
       input.onThreadStarted?.(threadId);
       const completion = new Promise<Response>((resolve, reject) => {
-        this.active = { threadId, buffered: [], resolve, reject, onProgress: input.onProgress,
+        this.active = { threadId, buffered: [], resolve, reject, onProgress: input.onProgress, onTurnTerminal: input.onTurnTerminal,
           timer: setTimeout(() => { this.fail(new Error("Codex turn timed out; completion is unknown.")); }, TURN_TIMEOUT_MS) };
       });
       // Attach rejection handling before turn/start, which can race terminal notifications.
@@ -239,6 +240,7 @@ export class CodexConversationClient {
     if (identifier(turn.id) !== active.turnId) throw new Error("Unexpected Codex turn id.");
     if (method !== "turn/completed") return;
     if (!Array.isArray(turn.items)) throw new Error("Malformed terminal Codex turn.");
+    if (turn.status === "completed" || turn.status === "interrupted" || turn.status === "failed") active.onTurnTerminal?.({ threadId: active.threadId, turnId: active.turnId, status: turn.status });
     for (const item of turn.items) this.item(object(item), active);
     if (turn.status !== "completed" && turn.status !== "interrupted") {
       this.fail(new Error("Codex turn failed or was cancelled.")); return;

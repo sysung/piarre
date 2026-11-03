@@ -3,7 +3,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { currentKnowledge, type ProjectSnapshot } from "../../../packages/core/src/index.js";
-import { planFreshness, type ExecutionAction, type ExecutionCheck, type ExecutionCriterion, type ExecutionRun, type CheckEvidence } from "../../../packages/core/src/execution.js";
+import { hasUncertainProvider, planFreshness, type ExecutionAction, type ExecutionCheck, type ExecutionCriterion, type ExecutionRun, type CheckEvidence } from "../../../packages/core/src/execution.js";
 import { parsePatchProposal } from "../../../packages/core/src/execution-patch.js";
 import { CandidateWorkspace } from "./candidate-workspace.js";
 import { digest } from "./candidate-journal.js";
@@ -106,10 +106,14 @@ export class ExecutionCoordinator {
           if (this.stopped(runId) || Date.now() >= Math.min(grant.deadlineAt, grant.expiresAt)) throw new Error("Run was stopped or approval expired before generation started.");
           this.dispatch({ kind: "bind-execution-thread", runId, threadId });
         },
-        onTurnStarted: (threadId, turnId) => { this.dispatch({ kind: "bind-execution-turn", runId, threadId, turnId }); } }),
+        onTurnStarted: (threadId, turnId) => { this.dispatch({ kind: "bind-execution-turn", runId, threadId, turnId }); if (active.stopped) void client.interrupt().catch(() => { client.dispose(); }); },
+        onTurnTerminal: observation => { if (!this.disposedSnapshot) this.dispatch({ kind: "observe-execution-terminal", runId, ...observation, observedAt: Date.now() }); } }),
       new Promise<never>((_, reject) => { timer = setTimeout(() => { active.stopped = true; void client.interrupt().catch(() => undefined); client.dispose(); reject(new Error("Approved absolute deadline expired; provider completion and usage are unknown.")); }, Math.max(0, this.run(runId).grant.deadlineAt - Date.now())); })]);
       if (timer) { clearTimeout(timer); timer = undefined; }
-      if (response.status !== "completed" || this.stopped(runId)) throw new Error("Generation was interrupted; no candidate was applied.");
+      if (this.disposedSnapshot) return this.run(runId);
+      if (this.run(runId).providerOutcome.kind === "unobserved") this.dispatch({ kind: "observe-execution-terminal", runId, threadId: response.threadId, turnId: response.turnId, status: response.status, observedAt: Date.now() });
+      if (response.status === "interrupted") { this.finish(runId, "failed", "Provider interruption was observed; no candidate was applied.", candidate); return this.run(runId); }
+      if (this.stopped(runId)) throw new Error("Generation was interrupted; no candidate was applied.");
       const proposal = parsePatchProposal({ files: plan.files, value: response.output });
       this.clean(candidate);
       if (candidate.inspectOriginal().kind !== "unchanged") throw new Error("Source changed during generation.");
@@ -143,7 +147,7 @@ export class ExecutionCoordinator {
       if (this.disposedSnapshot) return this.run(runId);
       const run = this.run(runId);
       if (run.state.kind !== "terminal" && run.state.kind !== "unknown") this.dispatch({ kind: "mark-execution-unknown", runId, reason: error instanceof Error ? error.message : "Execution completion is unknown." });
-      const canRecordUnknownCompletion = this.run(runId).process.kind === "none" && this.run(runId).state.kind === "unknown" && run.state.kind !== "applying";
+      const canRecordUnknownCompletion = !hasUncertainProvider(this.run(runId)) && this.run(runId).process.kind === "none" && this.run(runId).state.kind === "unknown" && run.state.kind !== "applying";
       if (canRecordUnknownCompletion) this.finish(runId, "unknown", error instanceof Error ? error.message : "Execution completion is unknown.", candidate);
     } finally { if (timer) clearTimeout(timer); client.dispose(); if (this.run(runId).process.kind === "none") this.active.delete(runId); }
     return this.run(runId);
@@ -158,7 +162,11 @@ export class ExecutionCoordinator {
   private finish(runId: string, outcome: "needs-review" | "failed" | "no-change" | "unknown", summary: string, candidate: CandidateWorkspace): void { this.dispatch({ kind: "finish-execution", runId, summary, outcome, manifestHash: candidate.manifestHash() }); }
   async stop({ runId }: { readonly runId: string }): Promise<ExecutionRun> {
     const active = this.active.get(runId);
-    if (active) { active.stopped = true; const interruption = active.client.interrupt(); active.client.dispose(); await Promise.allSettled([interruption, active.runner.interrupt()]); }
+    if (active) {
+      active.stopped = true;
+      if (this.run(runId).state.kind === "generating" || this.run(runId).state.kind === "reserved") this.dispatch({ kind: "mark-execution-unknown", runId, reason: "Stop requested; provider termination is not yet confirmed." });
+      await Promise.allSettled([active.client.interrupt().catch(() => { active.client.dispose(); }), active.runner.interrupt()]);
+    }
     else if (this.run(runId).state.kind !== "terminal" && this.run(runId).state.kind !== "unknown") this.dispatch({ kind: "mark-execution-unknown", runId, reason: "No live owner can confirm interruption; reconcile persisted effects." });
     return this.run(runId);
   }
@@ -228,8 +236,16 @@ export class ExecutionCoordinator {
         const journal = candidate.reconcile({ commandId: `patch:${runId}` });
         if (journal.kind !== "changed" && journal.kind !== "current") continue;
       }
+      if (hasUncertainProvider(this.run(runId))) continue;
       this.finish(runId, "unknown", "Recovered effects require fresh planning and approval; checks are never restarted automatically.", candidate);
     }
+  }
+  abandonProvider({ runId, reason }: { readonly runId: string; readonly reason: string }): ExecutionRun {
+    const run = this.run(runId);
+    if (run.state.kind !== "unknown" || !hasUncertainProvider(run) || run.process.kind !== "none" || run.workspace.kind !== "not-integrated") throw new Error("This run has no isolated uncertain provider request to resolve.");
+    this.active.get(runId)?.client.dispose();
+    this.dispatch({ kind: "abandon-execution-provider", runId, reason, abandonedAt: Date.now(), manifestHash: this.candidateForRun(runId).manifestHash() });
+    return this.run(runId);
   }
   async applyAndAccept(input: { readonly runId: string; readonly resultId: string; readonly resultRevision: number; readonly operationId: string }): Promise<ExecutionRun> {
     await Promise.resolve();

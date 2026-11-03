@@ -86,6 +86,7 @@ export interface ExecutionRun {
   readonly grant: ExecutionGrant;
   readonly state: RunState;
   readonly providerTurn: ProviderTurn;
+  readonly providerOutcome: { readonly kind: "unobserved" } | { readonly kind: "observed"; readonly status: "completed" | "interrupted" | "failed"; readonly observedAt: number } | { readonly kind: "abandoned"; readonly commandId: string; readonly reason: string; readonly abandonedAt: number };
   readonly providerObservation: { readonly kind: "unobserved" } | { readonly kind: "observed"; readonly model: string; readonly modelProvider: string; readonly observedAt: number };
   readonly process: CheckProcess;
   readonly evidence: readonly CheckEvidence[];
@@ -100,6 +101,8 @@ export type ExecutionAction =
   | { readonly kind: "observe-execution-provider"; readonly runId: string; readonly model: string; readonly modelProvider: string; readonly observedAt: number }
   | { readonly kind: "bind-execution-thread"; readonly runId: string; readonly threadId: string }
   | { readonly kind: "bind-execution-turn"; readonly runId: string; readonly threadId: string; readonly turnId: string }
+  | { readonly kind: "observe-execution-terminal"; readonly runId: string; readonly threadId: string; readonly turnId: string; readonly status: "completed" | "interrupted" | "failed"; readonly observedAt: number }
+  | { readonly kind: "abandon-execution-provider"; readonly runId: string; readonly manifestHash: string; readonly reason: string; readonly abandonedAt: number }
   | { readonly kind: "begin-candidate-apply"; readonly runId: string; readonly observedAt: number }
   | { readonly kind: "begin-execution-check"; readonly runId: string; readonly checkId: string; readonly nonce: string; readonly requestedAt: number; readonly controlDirectory: string }
   | { readonly kind: "bind-check-process"; readonly runId: string; readonly checkId: string; readonly nonce: string; readonly pid: number; readonly watchdogPid: number; readonly startedAt: number; readonly controlDirectory: string }
@@ -159,6 +162,7 @@ export function executionDependenciesReady(project: ProjectSnapshot, taskId: str
   };
   return visit(taskId);
 }
+export function hasUncertainProvider(run: ExecutionRun): boolean { return (run.providerTurn.kind === "thread" || run.providerTurn.kind === "turn") && run.providerOutcome.kind === "unobserved"; }
 export function ownsExecutionLease(run: ExecutionRun): boolean { return run.state.kind !== "terminal" || run.workspace.kind === "writing" || run.workspace.kind === "unknown"; }
 export function currentExecutionPlan(project: ProjectSnapshot, taskId: string): ExecutionPlan | undefined {
   return project.executionPlans.filter(plan => plan.taskId === taskId).at(-1);
@@ -183,7 +187,7 @@ export function applyExecutionEvent(project: ProjectSnapshot, event: ExecutionEv
     if (!task || !executionDependenciesReady(project, task.taskId)) invalid();
     const run: ExecutionRun = { runId: action.runId, ownerPid: action.ownerPid, ownerId: action.ownerId, grant: { approvalId: event.commandId, plan, approvedAt: action.approvedAt,
       expiresAt: action.expiresAt, deadlineAt: action.approvedAt + plan.durationMs }, state: { kind: "reserved" },
-      providerTurn: { kind: "not-requested" }, providerObservation: { kind: "unobserved" }, process: { kind: "none" }, evidence: [], workspace: { kind: "not-integrated" }, reviewFreshness: { kind: "current" }, acceptance: { kind: "unreviewed" } };
+      providerTurn: { kind: "not-requested" }, providerOutcome: { kind: "unobserved" }, providerObservation: { kind: "unobserved" }, process: { kind: "none" }, evidence: [], workspace: { kind: "not-integrated" }, reviewFreshness: { kind: "current" }, acceptance: { kind: "unreviewed" } };
     return { ...project, revision, executionRuns: [...project.executionRuns, run] };
   }
   const run = project.executionRuns.find(item => item.runId === action.runId);
@@ -200,10 +204,19 @@ export function applyExecutionEvent(project: ProjectSnapshot, event: ExecutionEv
       if (project.schedulingPaused || planFreshness(project, run.grant.plan) !== "current" || !executionDependenciesReady(project, run.grant.plan.taskId) || run.state.kind !== "generating" || run.providerObservation.kind !== "observed" || run.providerTurn.kind !== "unacknowledged") invalid();
       next = { ...run, providerTurn: { kind: "thread", threadId: action.threadId } }; break;
     case "bind-execution-turn":
-      if (run.state.kind !== "generating" || run.providerTurn.kind !== "thread" || run.providerTurn.threadId !== action.threadId) invalid();
+      if ((run.state.kind !== "generating" && run.state.kind !== "unknown") || run.providerTurn.kind !== "thread" || run.providerTurn.threadId !== action.threadId) invalid();
       next = { ...run, providerTurn: { kind: "turn", threadId: action.threadId, turnId: action.turnId } }; break;
+    case "observe-execution-terminal":
+      if ((run.state.kind !== "generating" && run.state.kind !== "unknown") || run.providerOutcome.kind !== "unobserved" || run.providerTurn.kind !== "turn" || run.providerTurn.threadId !== action.threadId || run.providerTurn.turnId !== action.turnId || action.observedAt < run.grant.approvedAt) invalid();
+      next = { ...run, providerOutcome: { kind: "observed", status: action.status, observedAt: action.observedAt } }; break;
+    case "abandon-execution-provider": {
+      if (run.state.kind !== "unknown" || !hasUncertainProvider(run) || run.process.kind !== "none" || run.workspace.kind !== "not-integrated" || action.abandonedAt < run.grant.approvedAt) invalid();
+      const summary = `Unconfirmed provider request explicitly abandoned. Remote activity and charges may continue. ${action.reason}`;
+      next = { ...run, providerOutcome: { kind: "abandoned", commandId: event.commandId, reason: action.reason, abandonedAt: action.abandonedAt },
+        state: { kind: "terminal", result: { resultId: `result:${event.commandId}`, recordedAtRevision: revision, summary, outcome: "unknown", manifestHash: action.manifestHash, checks: run.evidence } }, reviewFreshness: { kind: "stale", reason: summary }, acceptance: { kind: "unreviewed" } }; break;
+    }
     case "begin-candidate-apply":
-      if (run.reviewFreshness.kind !== "current" || action.observedAt < run.grant.approvedAt || action.observedAt >= run.grant.deadlineAt || run.state.kind !== "generating" || run.providerTurn.kind !== "turn" || (planFreshness(project, run.grant.plan) !== "current" || !executionDependenciesReady(project, run.grant.plan.taskId))) invalid();
+      if (run.providerOutcome.kind !== "observed" || run.providerOutcome.status !== "completed" || run.reviewFreshness.kind !== "current" || action.observedAt < run.grant.approvedAt || action.observedAt >= run.grant.deadlineAt || run.state.kind !== "generating" || run.providerTurn.kind !== "turn" || (planFreshness(project, run.grant.plan) !== "current" || !executionDependenciesReady(project, run.grant.plan.taskId))) invalid();
       next = { ...run, state: { kind: "applying" } }; break;
     case "begin-execution-check":
       if (!executionDependenciesReady(project, run.grant.plan.taskId) || planFreshness(project, run.grant.plan) !== "current" || action.requestedAt < run.grant.approvedAt || action.requestedAt >= run.grant.deadlineAt || (run.state.kind !== "applying" && run.state.kind !== "checking") || run.process.kind !== "none" || run.evidence.some(item => item.checkId === action.checkId) || !run.grant.plan.checks.some(check => check.checkId === action.checkId)) invalid();
@@ -236,7 +249,7 @@ export function applyExecutionEvent(project: ProjectSnapshot, event: ExecutionEv
       next = { ...run, process: { kind: "none" }, evidence: action.evidence ? [...run.evidence.filter(item => item.checkId !== action.evidence?.checkId), action.evidence] : run.evidence }; break;
     }
     case "finish-execution": {
-      if (run.state.kind === "terminal" || run.process.kind !== "none") invalid();
+      if (run.state.kind === "terminal" || run.process.kind !== "none" || hasUncertainProvider(run)) invalid();
       if (action.outcome === "needs-review" && (run.state.kind !== "checking" || run.reviewFreshness.kind !== "current" || (planFreshness(project, run.grant.plan) !== "current" || !executionDependenciesReady(project, run.grant.plan.taskId)) || run.grant.plan.checks.length === 0 || run.grant.plan.checks.some(check => !run.evidence.some(item => item.checkId === check.checkId && item.kind === "passed" && item.manifestHash === action.manifestHash)) ||
           run.grant.plan.criteria.some(criterion => !run.evidence.some(item => item.kind === "passed" && item.criterionIds.includes(criterion.criterionId) && item.manifestHash === action.manifestHash)))) invalid();
       const result: ExecutionResult = { resultId: `result:${event.commandId}`, recordedAtRevision: revision, summary: action.summary,

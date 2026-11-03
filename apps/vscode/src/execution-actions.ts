@@ -1,7 +1,7 @@
 const globalActions = ["pause-all", "resume", "reconcile-all"];
-const itemActions = ["prepare", "view", "stop", "reconcile", "apply-accept", "restore-source", "restore-candidate", "open-candidate", "steer"];
+const itemActions = ["prepare", "view", "stop", "reconcile", "apply-accept", "restore-source", "restore-candidate", "open-candidate", "steer", "abandon-provider"];
 type GlobalAction = "pause-all" | "resume" | "reconcile-all";
-type ItemAction = "prepare" | "view" | "stop" | "reconcile" | "apply-accept" | "restore-source" | "restore-candidate" | "open-candidate" | "steer";
+type ItemAction = "prepare" | "view" | "stop" | "reconcile" | "apply-accept" | "restore-source" | "restore-candidate" | "open-candidate" | "steer" | "abandon-provider";
 export type ExecutionMessage = { readonly kind: "execution"; readonly action: GlobalAction }
   | { readonly kind: "execution"; readonly action: ItemAction; readonly id: string };
 function globalAction(value: string): value is GlobalAction { return globalActions.includes(value); }

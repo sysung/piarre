@@ -1,5 +1,5 @@
 import { applyExecutionEvent, ownsExecutionLease, type ExecutionAction, type ExecutionEvent, type ExecutionPlan, type ExecutionRun } from "./execution.js";
-export { currentExecutionPlan, planFreshness, executionDependenciesReady, ownsExecutionLease } from "./execution.js";
+export { currentExecutionPlan, planFreshness, executionDependenciesReady, hasUncertainProvider, ownsExecutionLease } from "./execution.js";
 export type { ExecutionAction, ExecutionEvent, ExecutionPlan, ExecutionPlanDraft, ExecutionRun, ExecutionResult, ExecutionCheck, CheckEvidence } from "./execution.js";
 import { applyKnowledgeEvent, knowledgeEvent, type KnowledgeAction, type KnowledgeEvent, type RecordedKnowledge, type KnowledgeImpact } from "./knowledge.js";
 export { currentKnowledge, knowledgeConflicts } from "./knowledge.js";
@@ -214,6 +214,8 @@ export function decideProjectEvent(command: ProjectCommand): ProjectEvent {
     case "observe-execution-provider":
     case "bind-execution-thread":
     case "bind-execution-turn":
+    case "observe-execution-terminal":
+    case "abandon-execution-provider":
     case "begin-candidate-apply":
     case "begin-execution-check":
     case "bind-check-process":

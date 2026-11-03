@@ -27,6 +27,7 @@ suite("Execution review rendering", () => {
     send({ kind: "observe-execution-provider", runId: "run", model: "fixture-model", modelProvider: "openai", observedAt: 1101 });
     send({ kind: "bind-execution-thread", runId: "run", threadId: "thread" });
     send({ kind: "bind-execution-turn", runId: "run", threadId: "thread", turnId: "turn" });
+    send({ kind: "observe-execution-terminal", runId: "run", threadId: "thread", turnId: "turn", status: "completed", observedAt: 1102 });
     send({ kind: "begin-candidate-apply", runId: "run", observedAt: 1200 });
     send({ kind: "begin-execution-check", runId: "run", checkId: "check", nonce: "nonce", requestedAt: 1300, controlDirectory: "/tmp/check" });
     send({ kind: "bind-check-process", runId: "run", checkId: "check", nonce: "nonce", pid: 2, watchdogPid: 3, startedAt: 1400, controlDirectory: "/tmp/check" });
@@ -39,10 +40,12 @@ suite("Execution review rendering", () => {
     approve(); assert.match(taskExecutionStatus(project, "task"), /generation not requested/);
     send({ kind: "request-execution", runId: "run", requestedAt: 1100 });
     assert.match(taskExecutionStatus(project, "task"), /Generating candidate/);
+    send({ kind: "observe-execution-provider", runId: "run", model: "fixture-model", modelProvider: "openai", observedAt: 1101 });
+    send({ kind: "bind-execution-thread", runId: "run", threadId: "thread" });
     send({ kind: "mark-execution-unknown", runId: "run", reason: "Lost acknowledgment" });
     assert.match(taskExecutionStatus(project, "task"), /stop is not confirmed/);
     const html = renderExecutionControls(project);
-    assert.match(html, /Execution lease retained/); assert.match(html, /data-execution-action="reconcile"/);
+    assert.match(html, /Execution lease retained/); assert.match(html, /data-execution-action="reconcile"/); assert.match(html, /data-execution-action="abandon-provider"/);
     assert.doesNotMatch(renderExecutionResult(project, "run"), /restore-candidate/);
   });
   test("exact evidence is escaped and review is separate from acceptance", () => {

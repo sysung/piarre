@@ -35,7 +35,7 @@ suite("Agent workspace actual execution journey", () => {
       const task = repository.read().tasks[0]; assert.ok(task);
       let requests = 0; let interruptions = 0;
       let releaseProvider: () => void = () => { throw new Error("Provider has not started"); };
-      let rejectProvider: (error: Error) => void = () => undefined;
+      let interruptProvider: () => void = () => undefined;
       const createClient = (): Client => ({
         connect: () => Promise.resolve({ kind: "ready", authType: "unknown" }),
         readExecutionContext: () => Promise.resolve({ model: { kind: "resolved-default", model: "fixture-model" }, usage: { kind: "unknown" }, observedAt: new Date().toISOString(), taskForecast: { kind: "unknown" } }),
@@ -49,12 +49,12 @@ suite("Agent workspace actual execution journey", () => {
           const file: unknown = prompt.files[0]; assert.ok(typeof file === "object" && file !== null && "baseline" in file);
           const baseline = file.baseline; assert.ok(typeof baseline === "object" && baseline !== null && "fileId" in baseline && typeof baseline.fileId === "string");
           const fileId = baseline.fileId;
-          return new Promise((resolve, reject) => {
-            rejectProvider = reject;
+          return new Promise(resolve => {
+            interruptProvider = () => { resolve({ status: "interrupted", threadId: "fixture-thread", turnId: "fixture-turn", output: null }); };
             releaseProvider = () => { resolve({ status: "completed", threadId: "fixture-thread", turnId: "fixture-turn", output: { summary: "Fixture proposed a 45-day window", operations: [{ fileId, content: "45\n" }] } }); };
           });
         },
-        interrupt: () => { interruptions++; rejectProvider(new Error("Fixture observed provider interruption")); return Promise.resolve(); },
+        interrupt: () => { interruptions++; interruptProvider(); return Promise.resolve(); },
         dispose: () => undefined,
       });
       let mainPanel: vscode.WebviewPanel | undefined;
@@ -81,7 +81,7 @@ suite("Agent workspace actual execution journey", () => {
               assert.equal(run.state.kind, "terminal");
               assert.equal(readFileSync(sourceFile, "utf8"), "30\n", "Generation and checks cannot integrate source");
               if (scenario === "stop") {
-                assert.equal(interruptions, 1); assert.equal(run.state.result.outcome, "unknown"); assert.match(run.state.result.summary, /interruption/); assert.equal(run.evidence.length, 0);
+                assert.equal(interruptions, 1); assert.equal(run.state.result.outcome, "failed"); assert.match(run.state.result.summary, /interruption was observed/); assert.equal(run.evidence.length, 0);
               } else {
                 assert.equal(run.state.result.outcome, "needs-review"); assert.equal(run.evidence[0]?.kind, "passed");
                 assert.equal(run.evidence[0].termination, "observed");
@@ -154,7 +154,7 @@ suite("Agent workspace actual execution journey", () => {
         try { assert.deepEqual(reopened.read(), durable, "Run evidence and acceptance must survive SQLite replay"); } finally { reopened.close(); }
       } finally {
         clearTimeout(deadline);
-        rejectProvider(new Error("Fixture cleanup")); await completion?.catch(() => undefined);
+        interruptProvider(); await completion?.catch(() => undefined);
         coordinator.dispose(); view.dispose(); repository.close(); rmSync(directory, { recursive: true, force: true });
       }
     });

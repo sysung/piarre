@@ -42,6 +42,7 @@ export class ExecutionUi {
         case "reconcile-all": await this.coordinator.reconcile(); return;
         case "prepare": await this.prepare(message.id); return;
         case "view": this.coordinator.refreshWorkspaceFreshness(); this.showResult(message.id); return;
+        case "abandon-provider": await this.abandonProvider(message.id); return;
         case "stop": await this.coordinator.stop({ runId: message.id }); return;
         case "reconcile": await this.coordinator.reconcile(); this.showResult(message.id); return;
         case "apply-accept": await this.apply(message.id); return;
@@ -94,7 +95,7 @@ export class ExecutionUi {
         const plan = prepared.plan;
         const dependenciesReady = executionDependenciesReady(this.snapshot(), taskId);
         const canStart = dependenciesReady && !this.snapshot().schedulingPaused && !this.snapshot().executionRuns.some(ownsExecutionLease);
-        const detail = `Goal: ${plan.objective}\n\nCriteria:\n${plan.criteria.map(item => `• ${item.text}`).join("\n")}\n\nShared and candidate-writable files:\n${plan.files.map(file => `${file.relativePath} (${file.kind === "existing" ? `${String(file.bytes)} bytes; SHA-256 ${file.sha256}` : "new file"})`).join("\n")}\n\nChecks:\n${plan.checks.map(check => JSON.stringify(check.argv)).join("\n")}\n\nProvider: Codex; ${plan.provider.authType} authentication; ${plan.provider.requestedModel}. ${accountContextText(plan.accountContext)} One attempt; ${String(plan.durationMs / 1000)} seconds total; ${String(plan.maxTokens)} token target is soft.\n\nPiarre supplies this goal, criteria, captured files and linked knowledge. Codex’s own configured instructions and account context may also apply. Checks can read local files and write the isolated working copy; network and child processes are denied. Package-manager subprocesses need a separately supported runner. Output stays local.\n\nExisting Unix permission bits are preserved; new files use 0600. Special permission bits are unsupported. Changes are prepared in an isolated working copy. Applying repository changes needs separate result review. Stop can leave partial work; an unknown state requires reconciliation. Snapshots preserve scoped files; external services and provider charges cannot be rolled back.\n\nPlan ${plan.planId}, revision ${String(plan.recordedAtRevision)}. ${!dependenciesReady ? "Prerequisite acceptance or evidence is missing or stale. This plan can be kept for later review." : canStart ? "" : "New execution is currently paused or another run still owns work; this plan can be kept for later review."}`;
+        const detail = `Goal: ${plan.objective}\n\nCriteria:\n${plan.criteria.map(item => `• ${item.text}`).join("\n")}\n\nShared and candidate-writable files:\n${plan.files.map(file => `${file.relativePath} (${file.kind === "existing" ? `${String(file.bytes)} bytes; SHA-256 ${file.sha256}` : "new file"})`).join("\n")}\n\nChecks:\n${plan.checks.map(check => JSON.stringify(check.argv)).join("\n")}\n\nProvider: Codex; ${plan.provider.authType} authentication; ${plan.provider.requestedModel}. ${accountContextText(plan.accountContext)} One attempt; ${String(plan.durationMs / 1000)} seconds for local execution. Remote completion and continued usage may remain unconfirmed after disconnection; ${String(plan.maxTokens)} token target is soft.\n\nPiarre supplies this goal, criteria, captured files and linked knowledge. Codex’s own configured instructions and account context may also apply. Checks can read local files and write the isolated working copy; network and child processes are denied. Package-manager subprocesses need a separately supported runner. Output stays local.\n\nExisting Unix permission bits are preserved; new files use 0600. Special permission bits are unsupported. Changes are prepared in an isolated working copy. Applying repository changes needs separate result review. Stop can leave partial work; an unknown state requires reconciliation. Snapshots preserve scoped files; external services and provider charges cannot be rolled back.\n\nPlan ${plan.planId}, revision ${String(plan.recordedAtRevision)}. ${!dependenciesReady ? "Prerequisite acceptance or evidence is missing or stale. This plan can be kept for later review." : canStart ? "" : "New execution is currently paused or another run still owns work; this plan can be kept for later review."}`;
         const startLabel = "Approve and run";
         const choice = await vscode.window.showWarningMessage("Review scoped agent work", { modal: true, detail }, ...(canStart ? [startLabel, "Edit plan"] : ["Keep plan", "Edit plan"]));
         if (!this.current()) return;
@@ -110,6 +111,16 @@ export class ExecutionUi {
     } finally { this.preparing = false; }
   }
 
+  private async abandonProvider(runId: string): Promise<void> {
+    const run = this.snapshot().executionRuns.find(item => item.runId === runId);
+    if (!run || run.state.kind !== "unknown") return;
+    const label = "Release uncertain request";
+    const approved = await vscode.window.showWarningMessage("Allow replacement work while provider activity is unconfirmed?", { modal: true,
+      detail: `${run.grant.plan.objective}\n\nRun ${runId} may still be active at Codex. Local connection disposal and an interrupt acknowledgment do not confirm remote completion. Charges or allowance use may continue. Releasing this request permits another separately approved run and may overlap provider usage. It does not accept generated changes, prove termination, or undo charges.` }, label);
+    if (approved !== label || !this.current()) return;
+    this.coordinator.abandonProvider({ runId, reason: "User explicitly acknowledged unconfirmed remote activity and possible overlapping usage in the native review dialog." });
+    this.showResult(runId);
+  }
   private async apply(runId: string): Promise<void> {
     if (this.reviewing.has(runId)) return;
     this.reviewing.add(runId);

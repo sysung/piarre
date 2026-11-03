@@ -27,6 +27,7 @@ suite("Durable execution authority and freshness", () => {
     send({ kind: "observe-execution-provider", runId: "run-1", model: "fixture-model", modelProvider: "openai", observedAt: 1101 });
     send({ kind: "bind-execution-thread", runId: "run-1", threadId: "thread" });
     send({ kind: "bind-execution-turn", runId: "run-1", threadId: "thread", turnId: "turn" });
+    send({ kind: "observe-execution-terminal", runId: "run-1", threadId: "thread", turnId: "turn", status: "completed", observedAt: 1102 });
   };
   const checking = () => {
     generating(); send({ kind: "begin-candidate-apply", runId: "run-1", observedAt: 2000 });
@@ -101,6 +102,7 @@ suite("Durable execution authority and freshness", () => {
     send({ kind: "observe-execution-provider", runId: "run-1", model: "fixture-model", modelProvider: "openai", observedAt: 1101 });
     send({ kind: "bind-execution-thread", runId: "run-1", threadId: "thread" });
     send({ kind: "bind-execution-turn", runId: "run-1", threadId: "thread", turnId: "turn" });
+    send({ kind: "observe-execution-terminal", runId: "run-1", threadId: "thread", turnId: "turn", status: "completed", observedAt: 1102 });
     assert.throws(() => send({ kind: "begin-candidate-apply", runId: "run-1", observedAt: 121000 }));
   });
   test("uncertain process termination retains the lease until actual reconciliation", () => {
