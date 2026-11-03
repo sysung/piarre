@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, unlinkSync, utimesSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, unlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { ProjectRetrieval, lookupProjectSources, type RetrievalRecord } from "../../src/project-retrieval.js";
@@ -38,6 +38,14 @@ suite("Grounded project retrieval", () => {
     assert.deepEqual(hit.source, { kind: "record", recordId: "refund-policy", revision: 7, category: "business", standing: "confirmed" });
     assert.equal(hit.text, records[0]?.text);
     assert.match(result.coverage.limitation, /no semantic understanding/);
+  });
+
+  test("file and directory permission-only changes invalidate the bounded index", () => {
+    chmodSync(path.join(root, "refund.ts"), 0o600);
+    assert.equal(search("refundWindowDays").kind, "stale");
+    index.rebuild();
+    chmodSync(root, 0o755);
+    assert.equal(search("refundWindowDays").kind, "stale");
   });
 
   test("no matching source is distinct from invalid query and wrong project", () => {

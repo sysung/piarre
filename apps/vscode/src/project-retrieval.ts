@@ -74,7 +74,7 @@ export class ProjectRetrieval {
       if (!before.isFile() || before.size > MAX_FILE_BYTES) throw new Error("Source is not a supported bounded file.");
       const text = readFileSync(descriptor, "utf8");
       const after = fstatSync(descriptor);
-      if (before.mtimeMs !== after.mtimeMs || before.size !== after.size || !realpathSync(absolute).startsWith(this.root + path.sep)) throw new Error("Source changed during retrieval.");
+      if (before.mtimeMs !== after.mtimeMs || before.size !== after.size || before.mode !== after.mode || before.ino !== after.ino || before.dev !== after.dev || before.ctimeMs !== after.ctimeMs || !realpathSync(absolute).startsWith(this.root + path.sep)) throw new Error("Source changed during retrieval.");
       if (text.includes("\u0000") || /^(?:<<<<<<< |=======\s*$|>>>>>>> )/m.test(text)) throw new Error("Binary or conflicted source is excluded.");
       return text;
     } finally { closeSync(descriptor); }
@@ -99,6 +99,8 @@ export class ProjectRetrieval {
     let entries = 0;
     const walk = (directory: string, depth: number): void => {
       const absolute = path.join(this.root, directory);
+      const directoryStat = lstatSync(absolute);
+      manifest.push([directory, directoryStat.mode, directoryStat.uid, directoryStat.gid, directoryStat.dev, directoryStat.ino]);
       if (lstatSync(absolute).isSymbolicLink() || (directory && !realpathSync(absolute).startsWith(this.root + path.sep))) {
         issues.push(`Excluded unsafe directory: ${directory}`); manifest.push([directory, "unsafe"]); return;
       }
@@ -111,7 +113,7 @@ export class ProjectRetrieval {
         if (entry.isDirectory()) { if (!excludedDirectories.has(entry.name)) walk(relative, depth + 1); continue; }
         if (!entry.isFile()) continue;
         const stat = lstatSync(path.join(this.root, relative));
-        manifest.push([relative, stat.size, stat.mtimeMs]);
+        manifest.push([relative, stat.size, stat.mtimeMs, stat.mode, stat.uid, stat.gid, stat.dev, stat.ino, stat.ctimeMs]);
         if (!supported.has(path.extname(entry.name).toLowerCase())) { issues.push(`Unsupported source: ${relative}`); continue; }
         paths.push(relative);
       }
