@@ -55,6 +55,14 @@ suite("Durable execution authority and freshness", () => {
     assert.equal(repository.read().executionRuns[0]?.providerObservation.kind, "unobserved");
     assert.equal(repository.read().executionRuns.some(ownsExecutionLease), true);
   });
+  test("plan changes during thread capability checks block the outbound turn", () => {
+    prepare(); approve(); send({ kind: "request-execution", runId: "run-1", requestedAt: 1100 });
+    send({ kind: "observe-execution-provider", runId: "run-1", model: "fixture-model", modelProvider: "openai", observedAt: 1101 });
+    prepare();
+    assert.throws(() => send({ kind: "bind-execution-thread", runId: "run-1", threadId: "stale-thread" }));
+    assert.equal(repository.read().executionRuns[0]?.providerTurn.kind, "unacknowledged");
+    assert.equal(repository.read().executionRuns.some(ownsExecutionLease), true);
+  });
   test("duplicate approval receipts cannot reserve another attempt and retain the historical snapshot", () => {
     const prepared = prepare(); const before = repository.read();
     const command = { commandId: "one-approval", projectId: before.projectId, expectedProjectRevision: before.revision,

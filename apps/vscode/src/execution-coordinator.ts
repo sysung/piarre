@@ -101,7 +101,11 @@ export class ExecutionCoordinator {
           if (metadata.model !== plan.provider.requestedModel || metadata.modelProvider !== "openai") throw new Error("Observed Codex model or provider differs from the approved plan. Generation was not started.");
           this.dispatch({ kind: "observe-execution-provider", runId, model: metadata.model, modelProvider: metadata.modelProvider, observedAt: Date.now() });
         },
-        onThreadStarted: threadId => { this.dispatch({ kind: "bind-execution-thread", runId, threadId }); },
+        onThreadStarted: threadId => {
+          const grant = this.run(runId).grant;
+          if (this.stopped(runId) || Date.now() >= Math.min(grant.deadlineAt, grant.expiresAt)) throw new Error("Run was stopped or approval expired before generation started.");
+          this.dispatch({ kind: "bind-execution-thread", runId, threadId });
+        },
         onTurnStarted: (threadId, turnId) => { this.dispatch({ kind: "bind-execution-turn", runId, threadId, turnId }); } }),
       new Promise<never>((_, reject) => { timer = setTimeout(() => { active.stopped = true; void client.interrupt().catch(() => undefined); client.dispose(); reject(new Error("Approved absolute deadline expired; provider completion and usage are unknown.")); }, Math.max(0, this.run(runId).grant.deadlineAt - Date.now())); })]);
       if (timer) { clearTimeout(timer); timer = undefined; }

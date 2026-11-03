@@ -197,7 +197,7 @@ export function applyExecutionEvent(project: ProjectSnapshot, event: ExecutionEv
       if (project.schedulingPaused || planFreshness(project, run.grant.plan) !== "current" || !executionDependenciesReady(project, run.grant.plan.taskId) || run.state.kind !== "generating" || run.providerObservation.kind !== "unobserved" || action.model !== run.grant.plan.provider.requestedModel || action.modelProvider !== "openai" || action.observedAt < run.grant.approvedAt || action.observedAt >= run.grant.deadlineAt) invalid();
       next = { ...run, providerObservation: { kind: "observed", model: action.model, modelProvider: action.modelProvider, observedAt: action.observedAt } }; break;
     case "bind-execution-thread":
-      if (run.state.kind !== "generating" || run.providerObservation.kind !== "observed" || run.providerTurn.kind !== "unacknowledged") invalid();
+      if (project.schedulingPaused || planFreshness(project, run.grant.plan) !== "current" || !executionDependenciesReady(project, run.grant.plan.taskId) || run.state.kind !== "generating" || run.providerObservation.kind !== "observed" || run.providerTurn.kind !== "unacknowledged") invalid();
       next = { ...run, providerTurn: { kind: "thread", threadId: action.threadId } }; break;
     case "bind-execution-turn":
       if (run.state.kind !== "generating" || run.providerTurn.kind !== "thread" || run.providerTurn.threadId !== action.threadId) invalid();
