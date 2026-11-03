@@ -292,6 +292,25 @@ window.addEventListener('message', ({data}) => { if (data.kind === 'test-checked
     }
     api.postMessage({kind:'test-phase',phase:'layout restore'});
     main.style.removeProperty('width');
+    api.postMessage({kind:'test-phase',phase:'execution announcements and disclosure focus'});
+    const liveStatus = document.getElementById('execution-status');
+    if (liveStatus.getAttribute('role') !== 'status' || liveStatus.getAttribute('aria-live') !== 'polite') throw new Error('Execution progress has no persistent polite status');
+    const reviewMarkup = '<details data-review-key="recent-plans"><summary>Recent plans</summary><details data-review-key="plan:fixture:4"><summary>Exact plan, files, and limits</summary><p>Approved fixture scope</p></details></details>';
+    const progress = text => ({kind:'inspection', html:'', brief:'No saved goals yet.', agentOverview:reviewMarkup, executionControls:'<section data-execution-status="' + JSON.stringify([{id:'fixture-run',text}]).replaceAll('"','&quot;') + '"></section>'});
+    window.dispatchEvent(new MessageEvent('message', {data:progress('Fixture task: checking candidate; acceptance pending.')}));
+    const recent = document.querySelector('[data-review-key="recent-plans"]');
+    const exact = document.querySelector('[data-review-key="plan:fixture:4"]');
+    recent.open = true; exact.open = true; exact.querySelector('summary').focus();
+    window.dispatchEvent(new MessageEvent('message', {data:progress('Fixture task: checks completed; review the exact changes and evidence.')}));
+    const updatedExact = document.querySelector('[data-review-key="plan:fixture:4"]');
+    if (!document.querySelector('[data-review-key="recent-plans"]').open || !updatedExact.open || document.activeElement !== updatedExact.querySelector('summary')) throw new Error('Execution update lost expanded review or summary focus');
+    if (document.getElementById('execution-status') !== liveStatus || !liveStatus.textContent.includes('Fixture task: checks completed; review')) throw new Error('Completion did not update the persistent task status and pending decision');
+    let repeatedAnnouncements = 0;
+    const announcementObserver = new MutationObserver(records => { repeatedAnnouncements += records.length; });
+    announcementObserver.observe(liveStatus, {childList:true, characterData:true, subtree:true});
+    window.dispatchEvent(new MessageEvent('message', {data:progress('Fixture task: checks completed; review the exact changes and evidence.')}));
+    await Promise.resolve(); announcementObserver.disconnect();
+    if (repeatedAnnouncements) throw new Error('Unchanged inspection repeated the live announcement');
     api.postMessage({kind:'test-phase',phase:'privacy and save journey'});
     goal.value = '<script>unsent & private</scr' + 'ipt>';
     goal.dispatchEvent(new Event('input'));

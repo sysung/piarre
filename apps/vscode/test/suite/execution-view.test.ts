@@ -2,6 +2,7 @@ import { forecastFixture, consentFixture } from "./forecast-fixture.js";
 import assert from "node:assert/strict";
 import { replay, executionDependenciesReady, type ExecutionAction, type ExecutionPlanDraft, type ProjectEvent, type ProjectSnapshot } from "../../../../packages/core/src/index.js";
 import { applyExecutionEvent } from "../../../../packages/core/src/execution.js";
+import { renderWorkspaceShell } from "../../src/workspace-shell.js";
 import { renderExecutionControls, renderExecutionDesk, renderExecutionResult, taskExecutionStatus } from "../../src/execution-view.js";
 
 suite("Execution review rendering", () => {
@@ -36,6 +37,23 @@ suite("Execution review rendering", () => {
     send({ kind: "finish-execution", runId: "run", summary: "Generated <candidate>", outcome, manifestHash });
   };
   setup(() => { history = [...events]; project = replay(history); });
+  test("stop and pause is disclosed, while status and disclosure identities survive progress updates", () => {
+    approve();
+    const plan = project.executionPlans[0]; assert.ok(plan);
+    const controls = renderExecutionControls(project);
+    assert.match(controls, />Stop all and pause new runs<\/button>/);
+    assert.doesNotMatch(controls, />Pause new runs<\/button>/);
+    assert.match(controls, /data-execution-status=/);
+    const key = `data-review-key="plan:${plan.planId}:${String(plan.recordedAtRevision)}"`;
+    assert.ok(renderExecutionDesk(project).includes(key));
+    send({ kind: "request-execution", runId: "run", requestedAt: 1100 });
+    assert.ok(renderExecutionDesk(project).includes(key));
+    assert.notEqual(renderExecutionControls(project), controls);
+    const shell = renderWorkspaceShell({ inspection: "", brief: "", agentOverview: renderExecutionDesk(project), executionControls: renderExecutionControls(project) });
+    assert.match(shell, /id="execution-status" role="status" aria-live="polite" aria-atomic="true"/);
+    assert.equal((shell.match(/id="execution-status"/g) ?? []).length, 1);
+    assert.match(renderExecutionDesk(project), /data-review-key="recent-plans"/);
+  });
   test("proposal, approval, generation, and unknown cancellation remain distinct", () => {
     assert.equal(taskExecutionStatus(project, "task"), "Proposed · execution not approved");
     approve(); assert.match(taskExecutionStatus(project, "task"), /generation not requested/);

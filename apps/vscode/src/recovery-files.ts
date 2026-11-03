@@ -4,7 +4,7 @@ import path from "node:path";
 import type { ExecutionRun } from "../../../packages/core/src/execution.js";
 import { unresolvedRecoveryOperation, type RecoverySelection, type SavedVersion } from "../../../packages/core/src/recovery.js";
 import { digest, imageChanges, imageHash, parseImages, parseJournal, readImage, readRecord, replayJournal, writeRecord, type FileImage, type JournalResult } from "./candidate-journal.js";
-import { checkEscrowLayout, publicationParents, retainedEscrowDirectories } from "./scoped-publication.js";
+import { checkEscrowLayout, publicationParents, retainedEscrowDirectories, supersedePublication } from "./scoped-publication.js";
 
 export interface RecoveryPreview {
   readonly supersedes: string | null; readonly previewId: string; readonly runId: string; readonly projectRevision: number; readonly selection: RecoverySelection;
@@ -100,7 +100,7 @@ function parentIdentities(run: ExecutionRun, target: "source" | "candidate"): re
     return parents.map(parent => { if (!existsSync(parent)) return [parent, "absent"]; const s = lstatSync(parent); if (!s.isDirectory() || s.isSymbolicLink()) throw new Error("Recovery parent is not an ordinary directory."); return [parent, s.dev, s.ino]; });
   });
 }
-export function previewRecoveryFiles(run: ExecutionRun, selection: RecoverySelection, projectRevision: number, blockers: readonly string[] = []): RecoveryPreview {
+export async function previewRecoveryFiles(run: ExecutionRun, selection: RecoverySelection, projectRevision: number, blockers: readonly string[] = []): Promise<RecoveryPreview> {
   const control = run.grant.plan.controlDirectory;
   const capture = validateCapture(run);
   const inspectedCurrent = inspectImages(run, selection.target);
@@ -123,7 +123,7 @@ export function previewRecoveryFiles(run: ExecutionRun, selection: RecoverySelec
   }
   states = states.map(state => inspectedCurrent.unavailable.includes(state.relativePath) ? { ...state, kind: "unavailable" } : state);
   const problems = [...blockers, ...inspectedCurrent.reasons];
-  try { checkEscrowLayout(recoveryRoot(run, selection.target), control, run.grant.plan.files.map(file => file.relativePath)); } catch (error) { problems.push(error instanceof Error ? error.message : "Publication unavailable"); }
+  try { await checkEscrowLayout(recoveryRoot(run, selection.target), control, run.grant.plan.files.map(file => file.relativePath)); } catch (error) { problems.push(error instanceof Error ? error.message : "Publication unavailable"); }
   let parents: readonly unknown[] = []; let capturedParents: RecoveryPreview["parentIdentities"] = [];
   try { parents = parentIdentities(run, selection.target); capturedParents = run.grant.plan.files.map(file => publicationParents(recoveryRoot(run, selection.target), file.relativePath)); }
   catch (error) { problems.push(error instanceof Error ? error.message : "Reviewed parent unavailable"); }
@@ -146,7 +146,7 @@ export function prepareRecoveryFiles(run: ExecutionRun, preview: RecoveryPreview
   writeRecord(control, journalName, { commandId: operationId, changes, completed: false, parents: changes.map(change => preview.parentIdentities[preview.current.findIndex(image => image.relativePath === change.relativePath)]) });
   return target;
 }
-export function replayRecoveryFiles(run: ExecutionRun, operationId: string): JournalResult {
+export async function replayRecoveryFiles(run: ExecutionRun, operationId: string): Promise<JournalResult> {
   const record = run.recoveries.find(record => record.operationId === operationId);
   if (!record) throw new Error("Recovery authority unavailable.");
   const control = run.grant.plan.controlDirectory;
@@ -162,13 +162,15 @@ export function replayRecoveryFiles(run: ExecutionRun, operationId: string): Jou
   if (typeof identityRecord !== "object" || identityRecord === null || !("bindingHash" in identityRecord) || identityRecord.bindingHash !== record.bindingHash || !("parents" in identityRecord) || !Array.isArray(identityRecord.parents) || identityRecord.parents.length !== before.length) throw new Error("Reviewed recovery directory identities unavailable.");
   const identityRows: readonly unknown[] = identityRecord.parents;
   if (digest(JSON.stringify(identityRows)) !== record.parentIdentityHash) throw new Error("Reviewed directory identity checksum differs.");
-  const assertParents = () => {
+  const expectedJournalParents = journal.changes.map(change => identityRows[before.findIndex(image => image.relativePath === change.relativePath)]);
+  if (JSON.stringify(journal.parents) !== JSON.stringify(expectedJournalParents)) throw new Error("Reviewed recovery journal directory identities changed.");
+  const assertParents = (allowCreated: boolean) => {
     for (const [index, image] of before.entries()) {
       const actual = publicationParents(recoveryRoot(run, record.selection.target), image.relativePath);
       if (JSON.stringify(actual) === JSON.stringify(identityRows[index])) continue;
       // A previously absent parent may have been exclusively created by this journal's helper.
       const changeIndex = journal.changes.findIndex(change => change.relativePath === image.relativePath);
-      if (changeIndex >= 0) {
+      if (allowCreated && changeIndex >= 0) {
         const key = digest(`${filename}:${String(changeIndex)}`);
         try {
           const intent = readRecord(path.join(control, `escrow-${key}`), "intent.json");
@@ -178,15 +180,20 @@ export function replayRecoveryFiles(run: ExecutionRun, operationId: string): Jou
       throw new Error("Reviewed recovery parent relocated or changed; replacement parent is untouched.");
     }
   };
-  assertParents();
-  for (const [index, image] of before.entries()) {
-    const changeIndex = journal.changes.findIndex(change => change.relativePath === image.relativePath);
-    if (changeIndex >= 0 && existsSync(path.join(control, `escrow-${digest(`${filename}:${String(changeIndex)}`)}`, "intent.json"))) continue;
-    const actual = readImage(recoveryRoot(run, record.selection.target), image.relativePath); const intended = target[index];
-    if (JSON.stringify(actual) !== JSON.stringify(image) && JSON.stringify(actual) !== JSON.stringify(intended)) throw new Error("Scoped bytes changed after review; no further writes.");
-  }
-  if (record.supersedes) writeRecord(control, `superseded-${digest(record.supersedes)}.json`, { successorId: operationId, previewId: record.previewId });
-  const result = replayJournal({ root: recoveryRoot(run, record.selection.target), controlDirectory: control, filename, journal, snapshot: () => currentImages(run, record.selection.target) });
-  assertParents();
+  assertParents(false);
+  const assertCurrent = () => {
+    for (const [index, image] of before.entries()) {
+      const changeIndex = journal.changes.findIndex(change => change.relativePath === image.relativePath);
+      if (changeIndex >= 0 && existsSync(path.join(control, `escrow-${digest(`${filename}:${String(changeIndex)}`)}`, "intent.json"))) continue;
+      const actual = readImage(recoveryRoot(run, record.selection.target), image.relativePath); const intended = target[index];
+      if (JSON.stringify(actual) !== JSON.stringify(image) && JSON.stringify(actual) !== JSON.stringify(intended)) throw new Error("Scoped bytes changed after review; no further writes.");
+    }
+  };
+  assertCurrent();
+  if (record.supersedes) await supersedePublication(control, record.supersedes, operationId, record.previewId);
+  assertParents(false);
+  assertCurrent();
+  const result = await replayJournal({ root: recoveryRoot(run, record.selection.target), controlDirectory: control, filename, journal, snapshot: () => currentImages(run, record.selection.target) });
+  assertParents(true);
   return result;
 }

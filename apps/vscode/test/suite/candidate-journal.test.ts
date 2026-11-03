@@ -3,9 +3,12 @@ import { existsSync, linkSync, mkdirSync, mkdtempSync, readFileSync, renameSync,
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { parsePatchProposal } from "../../../../packages/core/src/execution-patch.js";
+import { digest } from "../../src/candidate-journal.js";
+import { publicationParents } from "../../src/scoped-publication.js";
 import { CandidateWorkspace } from "../../src/candidate-workspace.js";
 
-suite("Durable isolated candidate journals", () => {
+suite("Durable isolated candidate journals", function () {
+  this.timeout(30_000); // Each real helper has a bounded 15-second deadline; fixtures publish several files.
   let directory: string;
   let repository: string;
   let storage: string;
@@ -21,9 +24,9 @@ suite("Durable isolated candidate journals", () => {
   teardown(() => { rmSync(directory, { recursive: true, force: true }); });
   const proposal = () => parsePatchProposal({ files: candidate.files.map(file => file.baseline), value: { summary: "change three files", operations: candidate.files.map(file => ({ fileId: file.baseline.fileId, content: file.baseline.relativePath === "a.ts" ? "\uFEFFchanged\r\n" : file.baseline.relativePath === "b.ts" ? null : "created" })) } });
   const reopen = () => CandidateWorkspace.reopen({ controlDirectory: candidate.controlDirectory, storageDirectory: storage, expectedCaptureHash: candidate.captureHash });
-  test("create/replace/delete writes exact candidate bytes with durable baseline and review diff", () => {
+  test("create/replace/delete writes exact candidate bytes with durable baseline and review diff", async () => {
     const hash = candidate.manifestHash();
-    assert.equal(candidate.apply({ commandId: "patch", proposal: proposal() }).kind, "changed");
+    assert.equal((await candidate.apply({ commandId: "patch", proposal: proposal() })).kind, "changed");
     assert.equal(readFileSync(path.join(candidate.root, "a.ts"), "utf8"), "\uFEFFchanged\r\n");
     assert.equal(existsSync(path.join(candidate.root, "b.ts")), false);
     assert.equal(readFileSync(path.join(candidate.root, "new/c.ts"), "utf8"), "created");
@@ -33,92 +36,103 @@ suite("Durable isolated candidate journals", () => {
     assert.equal(reopen().manifestHash(), candidate.manifestHash());
     assert.equal(path.dirname(candidate.controlDirectory), path.dirname(candidate.root));
   });
-  test("manual candidate edits conflict before any patch writes", () => {
+  test("stop or deadline between durable steps prevents the remaining candidate writes", async () => {
+    let continuing = true;
+    const result = await candidate.apply({ commandId: "stop-between-files", proposal: proposal(), shouldContinue: () => continuing, afterStep: () => { continuing = false; } });
+    assert.equal(result.kind, "partial");
+    assert.equal(readFileSync(path.join(candidate.root, "a.ts"), "utf8"), "\uFEFFchanged\r\n");
+    assert.equal(readFileSync(path.join(candidate.root, "b.ts"), "utf8"), "delete me");
+    assert.equal(existsSync(path.join(candidate.root, "new/c.ts")), false);
+  });
+  test("manual candidate edits conflict before any patch writes", async () => {
     writeFileSync(path.join(candidate.root, "b.ts"), "manual");
-    assert.equal(candidate.apply({ commandId: "patch", proposal: proposal() }).kind, "conflict");
+    assert.equal((await candidate.apply({ commandId: "patch", proposal: proposal() })).kind, "conflict");
     assert.equal(readFileSync(path.join(candidate.root, "a.ts"), "utf8"), "\uFEFForiginal\r\n");
     assert.equal(readFileSync(path.join(candidate.root, "b.ts"), "utf8"), "manual");
   });
-  test("interrupted journal survives restart and finishes only safe before images", () => {
-    assert.equal(candidate.apply({ commandId: "patch", proposal: proposal(), afterStep: () => { throw new Error("crash"); } }).kind, "partial");
+  test("interrupted patch without a canonical target receipt retains ownership for reviewed recovery", async () => {
+    assert.equal((await candidate.apply({ commandId: "patch", proposal: proposal(), afterStep: () => { throw new Error("crash"); } })).kind, "partial");
     assert.equal(readFileSync(path.join(candidate.root, "b.ts"), "utf8"), "delete me");
     const restarted = reopen();
-    assert.equal(restarted.reconcile({ commandId: "patch" }).kind, "changed");
-    assert.equal(restarted.diff().length, 3);
+    assert.equal((await restarted.reconcile({ commandId: "patch" })).kind, "conflict");
+    assert.equal(readFileSync(path.join(candidate.root, "b.ts"), "utf8"), "delete me");
+    assert.equal(existsSync(path.join(candidate.root, "new/c.ts")), false);
+    assert.equal(restarted.diff().length, 1);
     writeFileSync(path.join(candidate.root, "a.ts"), "later manual work");
-    assert.equal(restarted.reconcile({ commandId: "patch" }).kind, "current");
+    assert.equal((await restarted.reconcile({ commandId: "patch" })).kind, "conflict");
     assert.equal(readFileSync(path.join(candidate.root, "a.ts"), "utf8"), "later manual work");
   });
-  test("restart recovery exposes divergent files without overwriting them", () => {
-    candidate.apply({ commandId: "patch", proposal: proposal(), afterStep: () => { throw new Error("crash"); } });
+  test("restart recovery exposes divergent files without overwriting them", async () => {
+    await candidate.apply({ commandId: "patch", proposal: proposal(), afterStep: () => { throw new Error("crash"); } });
     writeFileSync(path.join(candidate.root, "b.ts"), "new manual");
-    assert.equal(reopen().reconcile({ commandId: "patch" }).kind, "conflict");
+    assert.equal((await reopen().reconcile({ commandId: "patch" })).kind, "conflict");
     assert.equal(readFileSync(path.join(candidate.root, "b.ts"), "utf8"), "new manual");
   });
-  test("restore previews current changes, preserves all newer scoped bytes and keeps unrelated files", () => {
-    candidate.apply({ commandId: "patch", proposal: proposal() });
+  test("restore previews current changes, preserves all newer scoped bytes and keeps unrelated files", async () => {
+    await candidate.apply({ commandId: "patch", proposal: proposal() });
     writeFileSync(path.join(candidate.root, "untracked.txt"), "leave alone");
     const preview = candidate.previewRestore({ checkpointId: "baseline" });
     assert.notEqual(preview.targetManifestHash, preview.currentManifestHash);
     assert.deepEqual(preview.changes.map(change => change.kind), ["replace", "create", "delete"]);
-    assert.equal(candidate.restore({ commandId: "restore", checkpointId: "baseline", expectedManifestHash: preview.currentManifestHash }).kind, "changed");
+    assert.equal((await candidate.restore({ commandId: "restore", checkpointId: "baseline", expectedManifestHash: preview.currentManifestHash })).kind, "changed");
     assert.equal(candidate.manifestHash(), preview.targetManifestHash);
     assert.equal(readFileSync(path.join(candidate.root, "a.ts"), "utf8"), "\uFEFForiginal\r\n");
     assert.equal(readFileSync(path.join(candidate.root, "untracked.txt"), "utf8"), "leave alone");
     assert.equal(candidate.previewRestore({ checkpointId: "preserved:restore" }).changes.length, 3);
     writeFileSync(path.join(candidate.root, "a.ts"), "later edit");
-    assert.equal(reopen().restore({ commandId: "restore", checkpointId: "baseline", expectedManifestHash: preview.currentManifestHash }).kind, "current");
+    assert.equal((await reopen().restore({ commandId: "restore", checkpointId: "baseline", expectedManifestHash: preview.currentManifestHash })).kind, "current");
     assert.equal(readFileSync(path.join(candidate.root, "a.ts"), "utf8"), "later edit");
   });
-  test("stale restore preview blocks and partial restore recovers with preserved newer checkpoint", () => {
-    candidate.apply({ commandId: "patch", proposal: proposal() });
+  test("stale restore preview blocks and partial restore recovers with preserved newer checkpoint", async () => {
+    await candidate.apply({ commandId: "patch", proposal: proposal() });
     const preview = candidate.previewRestore({ checkpointId: "baseline" });
     writeFileSync(path.join(candidate.root, "a.ts"), "newer manual");
-    assert.equal(candidate.restore({ commandId: "stale", checkpointId: "baseline", expectedManifestHash: preview.currentManifestHash }).kind, "conflict");
+    assert.equal((await candidate.restore({ commandId: "stale", checkpointId: "baseline", expectedManifestHash: preview.currentManifestHash })).kind, "conflict");
     const fresh = candidate.previewRestore({ checkpointId: "baseline" });
-    assert.equal(candidate.restore({ commandId: "restore", checkpointId: "baseline", expectedManifestHash: fresh.currentManifestHash, afterStep: () => { throw new Error("crash"); } }).kind, "partial");
+    const parentIdentityHash = digest(JSON.stringify(fresh.changes.map(change => publicationParents(candidate.root, change.relativePath))));
+    assert.equal((await candidate.restore({ commandId: "restore", checkpointId: "baseline", expectedManifestHash: fresh.currentManifestHash, parentIdentityHash, afterStep: () => { throw new Error("crash"); } })).kind, "partial");
     const restarted = reopen();
-    assert.equal(restarted.reconcile({ commandId: "restore" }).kind, "changed");
+    assert.equal((await restarted.restore({ commandId: "restore", checkpointId: "baseline", expectedManifestHash: fresh.currentManifestHash, targetManifestHash: fresh.targetManifestHash, parentIdentityHash })).kind, "changed");
     assert.equal(restarted.previewRestore({ checkpointId: "preserved:restore" }).changes[0]?.after, "newer manual");
   });
-  test("unchanged proposal files still enforce the full disclosed baseline", () => {
+  test("unchanged proposal files still enforce the full disclosed baseline", async () => {
     const first = candidate.files[0];
     assert.ok(first);
     const partial = parsePatchProposal({ files: candidate.files.map(file => file.baseline), value: { summary: "one change", operations: [{ fileId: first.baseline.fileId, content: "change" }] } });
     writeFileSync(path.join(candidate.root, "b.ts"), "manual context change");
-    assert.equal(candidate.apply({ commandId: "patch", proposal: partial }).kind, "conflict");
+    assert.equal((await candidate.apply({ commandId: "patch", proposal: partial })).kind, "conflict");
     assert.equal(readFileSync(path.join(candidate.root, "a.ts"), "utf8"), "\uFEFForiginal\r\n");
   });
-  test("hard links and parent symlink swaps cannot redirect candidate writes", () => {
+  test("hard links and parent symlink swaps cannot redirect candidate writes", async () => {
     unlinkSync(path.join(candidate.root, "a.ts"));
     linkSync(path.join(repository, "a.ts"), path.join(candidate.root, "a.ts"));
     assert.throws(() => candidate.manifestHash());
     unlinkSync(path.join(candidate.root, "a.ts"));
     writeFileSync(path.join(candidate.root, "a.ts"), "\uFEFForiginal\r\n");
     symlinkSync(repository, path.join(candidate.root, "new"));
-    assert.throws(() => candidate.apply({ commandId: "patch", proposal: proposal() }));
+    await assert.rejects(() => candidate.apply({ commandId: "patch", proposal: proposal() }));
     assert.equal(existsSync(path.join(repository, "c.ts")), false);
   });
-  test("rejects symlink and directory swaps and cannot reopen outside owned storage", () => {
+  test("rejects symlink and directory swaps and cannot reopen outside owned storage", async () => {
     unlinkSync(path.join(candidate.root, "a.ts"));
     symlinkSync(path.join(repository, "a.ts"), path.join(candidate.root, "a.ts"));
-    assert.throws(() => candidate.apply({ commandId: "patch", proposal: proposal() }));
+    await assert.rejects(() => candidate.apply({ commandId: "patch", proposal: proposal() }));
     assert.equal(readFileSync(path.join(repository, "a.ts"), "utf8"), "\uFEFForiginal\r\n");
     assert.throws(() => CandidateWorkspace.reopen({ controlDirectory: candidate.controlDirectory, storageDirectory: repository, expectedCaptureHash: candidate.captureHash }));
     assert.throws(() => CandidateWorkspace.reopen({ controlDirectory: candidate.controlDirectory, storageDirectory: storage, expectedCaptureHash: "wrong" }));
     unlinkSync(path.join(candidate.root, "a.ts")); mkdirSync(path.join(candidate.root, "a.ts"));
     assert.throws(() => candidate.manifestHash());
   });
-  test("parent relocation after the final durable step cannot complete against a replacement root", () => {
+  test("parent relocation after the final durable step cannot complete against a replacement root", async () => {
     const selected = candidate.files[0]; assert.ok(selected);
     const change = parsePatchProposal({ files: candidate.files.map(file => file.baseline), value: { summary: "One file", operations: [{ fileId: selected.baseline.fileId, content: "changed" }] } });
-    const result = candidate.apply({ commandId: "move-at-completion", proposal: change, afterStep: () => {
+    const result = await candidate.apply({ commandId: "move-at-completion", proposal: change, afterStep: () => {
       renameSync(candidate.root, `${candidate.root}-moved`); mkdirSync(candidate.root);
       writeFileSync(path.join(candidate.root, "a.ts"), "changed"); writeFileSync(path.join(candidate.root, "b.ts"), "delete me");
     } });
     assert.equal(result.kind, "partial");
     assert.equal(readFileSync(path.join(candidate.root, "a.ts"), "utf8"), "changed");
-    assert.equal(candidate.reconcile({ commandId: "move-at-completion" }).kind, "partial");
+    assert.equal((await candidate.reconcile({ commandId: "move-at-completion" })).kind, "conflict");
   });
 
 });

@@ -113,6 +113,21 @@ export function parseJournal(value: unknown): Journal {
   }
   return { commandId: value.commandId, completed: value.completed, changes, ...(parents ? { parents } : {}) };
 }
+export interface JournalAuthority {
+  readonly before: readonly FileImage[];
+  readonly target: readonly FileImage[];
+  readonly expectedManifestHash: string;
+  readonly targetManifestHash: string;
+  readonly parentIdentityHash: string | undefined;
+}
+export function assertJournalAuthority(root: string, journal: Journal, authority: JournalAuthority): void {
+  if (imageHash(authority.before) !== authority.expectedManifestHash || imageHash(authority.target) !== authority.targetManifestHash ||
+    JSON.stringify(journal.changes) !== JSON.stringify(imageChanges(authority.before, authority.target)) ||
+    !authority.parentIdentityHash || digest(JSON.stringify(journal.parents)) !== authority.parentIdentityHash) throw new Error("Journal differs from the authorized images or directory identities; no replay writes.");
+  for (const [index, change] of journal.changes.entries()) {
+    if (JSON.stringify(publicationParents(root, change.relativePath)) !== JSON.stringify(journal.parents?.[index])) throw new Error("Recorded parent identity changed; review recovery before replay.");
+  }
+}
 function assertJournalParents(root: string, control: string, filename: string, journal: Journal): void {
   for (const [index, change] of journal.changes.entries()) {
     const expected = journal.parents?.[index];
@@ -126,16 +141,18 @@ function assertJournalParents(root: string, control: string, filename: string, j
     if (JSON.stringify(expected.map((entry, offset) => entry ?? established[offset])) !== JSON.stringify(actual)) throw new Error("Publication parent relocated; replacement parent untouched.");
   }
 }
-export function replayJournal({ root, controlDirectory, filename, journal, snapshot, afterStep }: {
+export async function replayJournal({ root, controlDirectory, filename, journal, snapshot, afterStep, shouldContinue }: {
   readonly root: string; readonly controlDirectory: string; readonly filename: string; readonly journal: Journal;
-  readonly snapshot: () => readonly FileImage[]; readonly afterStep?: (index: number) => void;
-}): JournalResult {
+  readonly snapshot: () => readonly FileImage[]; readonly shouldContinue?: () => boolean; readonly afterStep?: (index: number) => void;
+}): Promise<JournalResult> {
   if (existsSync(path.join(controlDirectory, `superseded-${digest(journal.commandId)}.json`))) return { kind: "conflict", paths: [], reason: "This journal has a reviewed successor and cannot replay." };
   let changed = false;
   try {
     assertJournalParents(root, controlDirectory, filename, journal);
     if (journal.completed) return { kind: "current", manifestHash: imageHash(snapshot()) };
     for (const [index, change] of journal.changes.entries()) {
+      if (shouldContinue && !shouldContinue()) return { kind: "partial", paths: journal.changes.slice(index).map(change => change.relativePath), reason: "Publication stopped between durable file steps; ownership retained for reviewed recovery." };
+      if (existsSync(path.join(controlDirectory, `superseded-${digest(journal.commandId)}.json`))) return { kind: "conflict", paths: [], reason: "This journal has a reviewed successor and cannot continue." };
       const hasIntent = existsSync(path.join(controlDirectory, `escrow-${digest(`${filename}:${String(index)}`)}`, "intent.json"));
       if (!hasIntent) {
         const current = readImage(root, change.relativePath);
@@ -144,7 +161,7 @@ export function replayJournal({ root, controlDirectory, filename, journal, snaps
       }
       const parents = journal.parents?.[index];
       if (!parents) throw new Error("Legacy journal lacks reviewed directory identities; use reviewed recovery.");
-      publishScopedChange(root, controlDirectory, digest(`${filename}:${String(index)}`), change, parents);
+      await publishScopedChange(root, controlDirectory, journal.commandId, digest(`${filename}:${String(index)}`), change, parents);
       changed = true; afterStep?.(index);
     }
     assertJournalParents(root, controlDirectory, filename, journal);

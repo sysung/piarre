@@ -94,15 +94,19 @@ function evidence(value: unknown): CheckEvidence {
     exitCode: row.exitCode === null ? null : integer(row.exitCode, -255, 255), signal: row.signal === null ? null : text(row.signal, 256),
     stdout: row.stdout, stderr: row.stderr, manifestHash: sha(row.manifestHash), observedAt: epoch(row.observedAt) };
 }
+function workspaceWriter(value: unknown): NonNullable<WorkspaceRequest["writer"]> {
+  const row = fields(value, ["ownerId", "ownerPid"]);
+  return { ownerId: text(row.ownerId), ownerPid: integer(row.ownerPid) };
+}
 function workspaceRequest(value: unknown): WorkspaceRequest {
   if (!isRecord(value)) invalid();
   if (value.kind === "integrate") {
-    const row = fields(value, ["kind", "resultId", "resultRevision", "expectedManifestHash", "targetManifestHash"]);
-    return { kind: "integrate", resultId: text(row.resultId), resultRevision: integer(row.resultRevision), expectedManifestHash: sha(row.expectedManifestHash), targetManifestHash: sha(row.targetManifestHash) };
+    const row = fields(value, ["kind", "resultId", "resultRevision", "expectedManifestHash", "targetManifestHash", ...("parentIdentityHash" in value ? ["parentIdentityHash"] : []), ...("writer" in value ? ["writer"] : [])]);
+    return { kind: "integrate", resultId: text(row.resultId), resultRevision: integer(row.resultRevision), expectedManifestHash: sha(row.expectedManifestHash), targetManifestHash: sha(row.targetManifestHash), ...("parentIdentityHash" in row ? { parentIdentityHash: sha(row.parentIdentityHash) } : {}), ...("writer" in row ? { writer: workspaceWriter(row.writer) } : {}) };
   }
-  const row = fields(value, ["kind", "target", "checkpointId", "expectedManifestHash", "targetManifestHash"]);
+  const row = fields(value, ["kind", "target", "checkpointId", "expectedManifestHash", "targetManifestHash", ...("parentIdentityHash" in value ? ["parentIdentityHash"] : []), ...("writer" in value ? ["writer"] : [])]);
   if (row.kind !== "restore") invalid();
-  return { kind: "restore", target: enumeration(row.target, ["source", "candidate"]), checkpointId: text(row.checkpointId), expectedManifestHash: sha(row.expectedManifestHash), targetManifestHash: sha(row.targetManifestHash) };
+  return { kind: "restore", target: enumeration(row.target, ["source", "candidate"]), checkpointId: text(row.checkpointId), expectedManifestHash: sha(row.expectedManifestHash), targetManifestHash: sha(row.targetManifestHash), ...("parentIdentityHash" in row ? { parentIdentityHash: sha(row.parentIdentityHash) } : {}), ...("writer" in row ? { writer: workspaceWriter(row.writer) } : {}) };
 }
 function recoverySelection(value: unknown): RecoverySelection {
   if (!isRecord(value)) invalid();

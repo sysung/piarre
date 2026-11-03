@@ -3,6 +3,8 @@ import json
 import os
 import subprocess
 import tempfile
+import time
+import sys
 import unittest
 from pathlib import Path
 
@@ -26,7 +28,37 @@ class PublicationTest(unittest.TestCase):
     def request(self, before='\ufeffbefore\r\n', after='\ufeffafter\r\n', relative='file', key='a'):
         fd, _, parents = publication.chain(str(self.root), relative)
         os.close(fd)
-        return {'root': str(self.root), 'control': str(self.control), 'key': key * 64, 'parents': parents, 'change': {'relativePath': relative, 'before': before, 'after': after, 'beforeMode': None if before is None else 0o755, 'afterMode': None if after is None else 0o755}}
+        return {'root': str(self.root), 'control': str(self.control), 'key': key * 64, 'commandId': key, 'parents': parents, 'change': {'relativePath': relative, 'before': before, 'after': after, 'beforeMode': None if before is None else 0o755, 'afterMode': None if after is None else 0o755}}
+    def test_orphan_helper_excludes_other_keys_and_recovery_until_it_releases_control(self):
+        request = self.request()
+        marker = self.base / 'orphan-started'
+        done = self.base / 'orphan-done'
+        worker = self.base / 'worker.py'
+        worker.write_text("import importlib.util,json,time,sys\nfrom pathlib import Path\n"
+            "spec=importlib.util.spec_from_file_location('pub',sys.argv[1]);pub=importlib.util.module_from_spec(spec);spec.loader.exec_module(pub)\n"
+            "def hook(phase):\n if phase=='prepared': Path(sys.argv[3]).write_text('locked');time.sleep(0.6)\n"
+            "result=pub.publish(json.loads(sys.argv[2]),hook);Path(sys.argv[4]).write_text(json.dumps(result))\n")
+        launcher = "import subprocess,os,sys;subprocess.Popen(sys.argv[1:],stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True);os._exit(0)"
+        parent = subprocess.Popen([sys.executable, '-c', launcher, sys.executable, str(worker), str(Path(publication.__file__)), json.dumps(request), str(marker), str(done)])
+        self.assertEqual(parent.wait(timeout=3), 0)
+        try:
+            deadline = time.monotonic() + 3
+            while not marker.exists() and time.monotonic() < deadline: time.sleep(0.01)
+            self.assertTrue(marker.exists(), 'Orphan must hold the native lock after its parent exited')
+            with self.assertRaises(BlockingIOError): publication.publish(request)
+            with self.assertRaises(BlockingIOError): publication.publish(self.request(key='b'))
+            with self.assertRaises(BlockingIOError): publication.supersede({'control': str(self.control), 'commandId': 'a', 'successorId': 'new', 'previewId': 'review'})
+            self.assertEqual(self.file.read_bytes(), '\ufeffbefore\r\n'.encode())
+            self.assertFalse((self.control / ('escrow-' + 'b' * 64)).exists())
+        finally:
+            deadline = time.monotonic() + 3
+            while not done.exists() and time.monotonic() < deadline: time.sleep(0.01)
+        self.assertTrue(done.exists())
+        self.assertEqual(json.loads(done.read_text())['kind'], 'complete')
+        publication.supersede({'control': str(self.control), 'commandId': 'a', 'successorId': 'new', 'previewId': 'review'})
+        with self.assertRaisesRegex(ValueError, 'reviewed successor'): publication.publish(request)
+        self.assertEqual(self.file.read_bytes(), '\ufeffafter\r\n'.encode())
+
     def test_replace_preserves_actual_open_inode_and_exact_bytes_mode(self):
         with self.file.open('r+b') as writer:
             old = os.fstat(writer.fileno()).st_ino

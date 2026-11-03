@@ -47,7 +47,7 @@ export class RecoveryUi {
     this.pending.add(runId);
     let previewId: string | undefined;
     try {
-      const preview = this.coordinator.previewRecovery({ runId, selection }); previewId = preview.previewId;
+      const preview = await this.coordinator.previewRecovery({ runId, selection }); previewId = preview.previewId;
       const disclosure = `Run: ${runId}\nTarget: ${selection.target}\nSelection: ${JSON.stringify(selection)}\nSupersedes: ${preview.supersedes ?? "no pending operation"}\nProject revision: ${String(preview.projectRevision)}\nCurrent manifest: ${preview.currentManifestHash}\nIntended manifest: ${preview.intendedManifestHash}\nBinding: ${preview.bindingHash}\n\n${preview.current.map((image, index) => `State: ${preview.states[index]?.kind ?? "unavailable"}\nCURRENT\n${preview.states[index]?.kind === "unavailable" ? `${image.relativePath}: unavailable; absence is not established` : imageText(image)}\n\nINTENDED\n${imageText(preview.intended[index] ?? image)}`).join("\n\n")}\n\nAll files default to Keep current. Before any replacement, the entire current scope is durably preserved and registered as a saved version. Replacement also retains the actual displaced inode in private escrow; older open descriptors may still write there. Earlier checks and acceptance become historical. No checks, provider request, process stop, or external-effect rollback is authorized.`;
       if (preview.blockers.length) { await this.dialogs.inspect("Recovery blocked", `${preview.blockers.join("\n")}\n\n${disclosure}`); return; }
       await this.dialogs.inspect("Full scoped recovery preview", disclosure);
@@ -67,7 +67,7 @@ export class RecoveryUi {
       const final = preview.current.map((image, index) => { const selected = intendedPaths.includes(image.relativePath) ? preview.intended[index] ?? image : image; return `${intendedPaths.includes(image.relativePath) ? "USE INTENDED" : "KEEP CURRENT"}\n${imageText(selected)}`; }).join("\n\n");
       const approved = await this.dialogs.review("Approve this recovery resolution?", `${final}\n\nSaved version: preserved:${operationId}\nThe full inspected current scope will be available in Saved versions before any target write. Displaced original inodes remain inspectable there, including later writes from older open descriptors. This successor permanently supersedes ${preview.supersedes ?? "no pending journal"}. Keep-current files will not be rewritten. Prior checks and acceptance remain historical; fresh planning and verification are required. Cancellation changes no target files.\n\nPreview ${preview.previewId}`, ["Approve recovery", "Cancel"]);
       if (approved !== "Approve recovery" || !this.current()) return;
-      this.coordinator.recover({ previewId: preview.previewId, intendedPaths, operationId });
+      await this.coordinator.recover({ previewId: preview.previewId, intendedPaths, operationId });
       this.showResult(runId);
     } finally { if (previewId) this.coordinator.cancelRecovery(previewId); this.pending.delete(runId); }
   }

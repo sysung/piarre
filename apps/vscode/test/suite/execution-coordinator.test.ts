@@ -45,6 +45,32 @@ suite("Execution coordinator actual backend", () => {
     const first = repository.read().tasks[0]; assert.ok(first); taskId = first.taskId;
   });
   teardown(() => { shared?.dispose(); repository.close(); rmSync(directory, { recursive: true, force: true }); });
+  test("Stop All runs during native candidate publication, retains the lease and cannot start a check", async () => {
+    let checksStarted = false;
+    let stopCompletion: Promise<void> | undefined;
+    const control = new ExecutionCoordinator({ repository, storageDirectory: storage, createClient, confirmSpending: () => Promise.resolve("consent"),
+      createRunner: () => ({ capability: () => Promise.resolve({ kind: "unsupported", reason: "Fixture must stop before checking" }), interrupt: () => Promise.resolve({ kind: "not-running" }), run: () => { checksStarted = true; throw new Error("Stopped publication cannot start a check"); } }),
+      publish: snapshot => {
+        if (!stopCompletion && snapshot.executionRuns.some(run => run.state.kind === "applying")) {
+          stopCompletion = new Promise<void>((resolve, reject) => setImmediate(() => {
+            try {
+              const run = repository.read().executionRuns.at(-1); assert.ok(run);
+              assert.equal(run.state.kind, "applying"); assert.equal(ownsExecutionLease(run), true);
+              void control.stopAll().then(resolve, reject);
+            } catch (error) { reject(error instanceof Error ? error : new Error("Control callback failed")); }
+          }));
+        }
+      },
+    });
+    shared = control;
+    const prepared = await control.prepare({ taskId, relativePaths: ["refund.txt"], objective: "Responsive publication", criteria: [{ criterionId: "days", text: "45 days" }], checks: [{ checkId: "never", argv: [nodeExecutable, "-e", "process.exit(0)"], criterionIds: ["days"] }] });
+    const result = await control.approveAndRun({ planId: prepared.plan.planId, planRevision: prepared.plan.recordedAtRevision, approvalId: "stop-native-publication" });
+    assert.ok(stopCompletion); await stopCompletion;
+    assert.equal(repository.read().schedulingPaused, true); assert.equal(checksStarted, false);
+    assert.equal(result.state.kind, "unknown"); assert.equal(ownsExecutionLease(result), true);
+    assert.equal(requests, 1);
+    assert.equal(readFileSync(path.join(source, "refund.txt"), "utf8"), "30\n");
+  });
   for (const acceptBeforeCorrection of [false, true]) {
     test(`confirmed correction replaces ${acceptBeforeCorrection ? "accepted" : "unaccepted"} 30-day evidence through fresh 45-day approval`, async function () {
       this.timeout(8000);
@@ -212,7 +238,7 @@ suite("Execution coordinator actual backend", () => {
     writeFileSync(path.join(source, "refund.txt"), "new manual work");
     await control.applyAndAccept(review); assert.equal(readFileSync(path.join(source, "refund.txt"), "utf8"), "new manual work");
     const preview = control.previewRestore({ runId: run.runId, target: "source", checkpointId: "integration-before:apply" });
-    const restored = control.restore({ runId: run.runId, target: "source", checkpointId: "integration-before:apply", expectedManifestHash: preview.currentManifestHash, targetManifestHash: preview.targetManifestHash, operationId: "restore" });
+    const restored = await control.restore({ runId: run.runId, target: "source", checkpointId: "integration-before:apply", expectedManifestHash: preview.currentManifestHash, targetManifestHash: preview.targetManifestHash, operationId: "restore" });
     assert.equal(restored.reviewFreshness.kind, "stale"); assert.equal(readFileSync(path.join(source, "refund.txt"), "utf8"), "30\n");
     assert.equal(readFileSync(path.join(source, "private.txt"), "utf8"), "private undisclosed");
   });
