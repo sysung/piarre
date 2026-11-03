@@ -40,8 +40,20 @@ jobs:
       - run: node --test test/release-package.test.mjs
       - run: npm run build
       - run: npm run package
+      - run: npm run package:candidate
+      - run: npm run test:candidate
       - run: xvfb-run -a npm test
       - run: xvfb-run -a npm run test:package --workspace apps/vscode
+      - run: xvfb-run -a npm run test:package --workspace apps/vscode
+        env:
+          PIARRE_PACKAGE_CHANNEL: candidate
+      - name: Upload isolated candidate
+        uses: actions/upload-artifact@v5
+        with:
+          name: piarre-candidate-${{ github.sha }}-${{ github.run_attempt }}
+          path: apps/vscode/dist-package/candidate/*
+          if-no-files-found: error
+          retention-days: 7
       - name: Upload installable extension
         id: package
         uses: actions/upload-artifact@v5

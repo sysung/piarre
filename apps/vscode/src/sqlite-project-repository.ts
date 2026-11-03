@@ -56,6 +56,15 @@ export class SqliteProjectRepository {
   }
 
   read(throughRevision = Number.MAX_SAFE_INTEGER): ProjectSnapshot {
+    return replay(this.readEvents(throughRevision));
+  }
+
+  readDiagnosticSnapshot(): { readonly snapshot: ProjectSnapshot; readonly events: readonly ProjectEvent[] } {
+    const events = this.readEvents(Number.MAX_SAFE_INTEGER);
+    return { snapshot: replay(events), events };
+  }
+
+  private readEvents(throughRevision: number): readonly ProjectEvent[] {
     const rows = this.database
       .prepare(
         "SELECT revision, schema_version, payload FROM events WHERE revision <= ? ORDER BY revision",
@@ -74,7 +83,7 @@ export class SqliteProjectRepository {
         throw new Error("Invalid project history: malformed event");
       }
     });
-    return replay(events);
+    return events;
   }
 
   dispatch(inputCommand: unknown): CommandResult {

@@ -40,6 +40,21 @@
         "command": "piarre.stopAll",
         "title": "Piarre: Stop All Work",
         "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "piarre.createDiagnosticBundle",
+        "title": "Piarre: Create Diagnostic Bundle",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "piarre.exportDiagnosticBundle",
+        "title": "Piarre: Export Diagnostic Bundle",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "piarre.deleteDiagnosticBundle",
+        "title": "Piarre: Delete Diagnostic Bundle",
+        "enablement": "isWorkspaceTrusted"
       }
     ],
     "configuration": {

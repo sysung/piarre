@@ -9,6 +9,8 @@ import { vscodeVersion } from "../../../config/vscode-version.mjs";
 const temporaryProfile = await mkdtemp(path.join(tmpdir(), "piarre-package-"));
 try {
   const manifest = JSON.parse(await readFile("package.json", "utf8"));
+  const candidate = process.env.PIARRE_PACKAGE_CHANNEL === "candidate";
+  if (candidate) manifest.name = "piarre-candidate";
   const executable = await downloadAndUnzipVSCode(vscodeVersion);
   const [cli] = resolveCliArgsFromVSCodeExecutablePath(executable);
   const profile = [
@@ -16,7 +18,7 @@ try {
     "--extensions-dir", path.join(temporaryProfile, "extensions"),
   ];
   const options = { encoding: "utf8", shell: process.platform === "win32" };
-  const vsix = path.resolve("dist-package", `piarre-${manifest.version}.vsix`);
+  const vsix = path.resolve("dist-package", ...(candidate ? ["candidate"] : []), `${manifest.name}-${manifest.version}.vsix`);
   console.log(execFileSync(cli, [...profile, "--install-extension", vsix], options));
   const installed = execFileSync(cli, [...profile, "--list-extensions", "--show-versions"], options);
   const expected = `${manifest.publisher}.${manifest.name}@${manifest.version}`;
@@ -30,7 +32,7 @@ try {
     extensionDevelopmentPath: path.join(temporaryProfile, "extensions", `${manifest.publisher}.${manifest.name}-${manifest.version}`),
     extensionTestsPath: path.resolve("dist-test/suite/index.js"),
     version: vscodeVersion,
-    extensionTestsEnv: { PIARRE_PACKAGE_TEST: "1" },
+    extensionTestsEnv: { PIARRE_PACKAGE_TEST: "1", PIARRE_PACKAGE_ID: `${manifest.publisher}.${manifest.name}` },
     launchArgs: [repository, "--disable-workspace-trust", "--disable-extensions", ...profile],
   });
   console.log("Packaged extension opened a real repository successfully.");

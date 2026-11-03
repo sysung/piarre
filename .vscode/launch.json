@@ -6,6 +6,8 @@
       "type": "extensionHost",
       "request": "launch",
       "args": [
+        "--user-data-dir=${env:TMPDIR}/piarre-contributor-user-data",
+        "--extensions-dir=${env:TMPDIR}/piarre-contributor-extensions",
         "${workspaceFolder}",
         "--disable-extensions",
         "--extensionDevelopmentPath=${workspaceFolder}/apps/vscode"

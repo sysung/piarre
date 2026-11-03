@@ -1,5 +1,5 @@
 .artifacts/
-node_modules/
+node_modules
 dist/
 dist-test/
 dist-package/

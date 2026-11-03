@@ -1,3 +1,4 @@
+import { registerDiagnosticCommands } from "./diagnostic-commands.js";
 import { ExecutionCoordinator } from "./execution-coordinator.js";
 import { ExecutionUi } from "./execution-ui.js";
 import { canonicalWorkspacePath } from "./workspace-path.js";
@@ -177,6 +178,7 @@ export function activate(context: vscode.ExtensionContext): void {
     return opening;
   };
   context.subscriptions.push(
+    registerDiagnosticCommands(context, () => repository),
     view,
     output,
     stopWork,
