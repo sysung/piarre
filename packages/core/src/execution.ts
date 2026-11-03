@@ -74,8 +74,8 @@ export type RunState =
   | { readonly kind: "unknown"; readonly reason: string }
   | { readonly kind: "terminal"; readonly result: ExecutionResult };
 export type WorkspaceRequest =
-  | { readonly kind: "integrate"; readonly resultId: string; readonly resultRevision: number; readonly expectedManifestHash: string; readonly targetManifestHash: string }
-  | { readonly kind: "restore"; readonly target: "source" | "candidate"; readonly checkpointId: string; readonly expectedManifestHash: string; readonly targetManifestHash: string };
+  | { readonly kind: "integrate"; readonly resultId: string; readonly resultRevision: number; readonly expectedManifestHash: string; readonly targetManifestHash: string; readonly parentIdentityHash?: string; readonly writer?: { readonly ownerId: string; readonly ownerPid: number } }
+  | { readonly kind: "restore"; readonly target: "source" | "candidate"; readonly checkpointId: string; readonly expectedManifestHash: string; readonly targetManifestHash: string; readonly parentIdentityHash?: string; readonly writer?: { readonly ownerId: string; readonly ownerPid: number } };
 export type WorkspaceState =
   | { readonly kind: "not-integrated" }
   | { readonly kind: "writing"; readonly operationId: string; readonly request: WorkspaceRequest }

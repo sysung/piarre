@@ -4,6 +4,8 @@ The caller owns a stable, private control directory outside the movable trees.
 Each operation has durable intent before rename; this is preservation, not CAS.
 """
 import json
+import fcntl
+import hashlib
 import os
 import stat
 import secrets
@@ -181,6 +183,28 @@ def move_to_escrow(parent, name, escrow):
         raise OSError(error, os.strerror(error))
 
 
+def lock_control(anchor):
+    owner = os.fstat(anchor)
+    if owner.st_uid != os.getuid() or stat.S_IMODE(owner.st_mode) & 0o077:
+        raise ValueError('Escrow anchor must be private and owned')
+    # The directory inode is shared by every operation key, including orphan helpers.
+    fcntl.flock(anchor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+
+def supersede(request):
+    anchor = open_directory(request['control'])
+    try:
+        lock_control(anchor)
+        command = request['commandId']
+        if not isinstance(command, str) or not command or len(command) > 10000:
+            raise ValueError('Invalid superseded command identity')
+        record(anchor, 'superseded-' + hashlib.sha256(command.encode()).hexdigest() + '.json',
+               {'successorId': request['successorId'], 'previewId': request['previewId']})
+        return {'kind': 'complete'}
+    finally:
+        os.close(anchor)
+
+
 def publish(request, hook=lambda phase: None):
     root, control, key, change = request['root'], request['control'], request['key'], request['change']
     if len(key) != 64 or any(c not in '0123456789abcdef' for c in key):
@@ -196,9 +220,12 @@ def publish(request, hook=lambda phase: None):
     anchor = open_directory(control)
     parent = step = None
     try:
-        owner = os.fstat(anchor)
-        if owner.st_uid != os.getuid() or stat.S_IMODE(owner.st_mode) & 0o077:
-            raise ValueError('Escrow anchor must be private and owned')
+        lock_control(anchor)
+        command = request['commandId']
+        if not isinstance(command, str) or not command or len(command) > 10000:
+            raise ValueError('Invalid publication command identity')
+        if load(anchor, 'superseded-' + hashlib.sha256(command.encode()).hexdigest() + '.json') is not None:
+            raise ValueError('Publication command has a reviewed successor; no target writes')
         try:
             os.mkdir('escrow-' + key, 0o700, dir_fd=anchor)
             os.fsync(anchor)
@@ -319,10 +346,13 @@ def main():
         if not all(f in os.supports_dir_fd for f in (os.open, os.rename, os.link, os.stat, os.unlink)):
             raise ValueError('Descriptor relative filesystem calls unavailable')
         print(json.dumps({'kind': 'supported', 'platform': sys.platform, 'version': 1}))
+    elif request.get('kind') == 'supersede':
+        print(json.dumps(supersede(request)))
     elif request.get('kind') == 'preflight':
         anchor = open_directory(request['control'])
         root = open_directory(request['root'])
         try:
+            lock_control(anchor)
             if identity(anchor)[0] != identity(root)[0] or request['control'].startswith(request['root'] + '/') or request['root'].startswith(request['control'] + '/') or request['control'] == request['root']:
                 raise ValueError('Stable same-filesystem escrow outside target tree required')
             if os.fstat(anchor).st_uid != os.getuid() or stat.S_IMODE(os.fstat(anchor).st_mode) & 0o077:
