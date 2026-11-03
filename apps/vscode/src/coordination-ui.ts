@@ -1,3 +1,4 @@
+import { selectSharedFiles } from "./source-sharing.js";
 import * as vscode from "vscode";
 import { randomUUID } from "node:crypto";
 import type { ProjectSnapshot } from "../../../packages/core/src/index.js";
@@ -57,7 +58,9 @@ export class CoordinationUi {
         if (!model?.trim()) return;
         const count = await vscode.window.showQuickPick(["1", "2", "3"], { title: "Read-only workers (one investigation, optional independent reviews)", ignoreFocusOut: true });
         if (!count) return;
-        this.controller.prepare({ ...(idea ? { ideaId: idea.ideaId } : {}), requestId: message.requestId, parentTaskId: task.taskId, purpose, scope, model, workers: Number(count), durationMs: 120_000, maxTokens: 4_000 });
+        const fileSources = await selectSharedFiles(this.read());
+        if (!fileSources) return;
+        this.controller.prepare({ fileSources, ...(idea ? { ideaId: idea.ideaId } : {}), requestId: message.requestId, parentTaskId: task.taskId, purpose, scope, model, workers: Number(count), durationMs: 120_000, maxTokens: 4_000 });
       }
     } catch (error) {
       await vscode.window.showErrorMessage(`Assignment action was not completed: ${error instanceof Error ? error.message : "unknown error"}`);

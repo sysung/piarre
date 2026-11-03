@@ -1,3 +1,4 @@
+import { sourceCollectionVersion, parseSuppliedSources } from "./supplied-source.js";
 import type { ProjectSnapshot } from "./index.js";
 import { resolveRecordReference } from "./inspection.js";
 import type { ConversationSource } from "./conversation.js";
@@ -49,6 +50,7 @@ export interface CoordinationGroup {
   readonly durationMs: number;
   readonly maxTokens: number;
   readonly preparedAtRevision: number;
+  readonly sourceCollectionVersion: string;
   readonly comparison: { readonly kind: "not-recorded" } | { readonly kind: "recorded"; readonly verdict: "agreement" | "disagreement" | "mixed"; readonly explanation: string; readonly assignmentIds: readonly string[]; readonly observedAt: number };
   readonly approval: { readonly kind: "unapproved" } | { readonly kind: "approved"; readonly approvalId: string; readonly observedAt: number };
   readonly assignments: readonly Assignment[];
@@ -74,8 +76,10 @@ export type CoordinationAction = { readonly kind: "coordinate" } & Operation;
 export interface CoordinationEvent { readonly kind: "coordination-recorded"; readonly commandId: string; readonly action: CoordinationAction }
 
 export function assertCoordinationCurrent(snapshot: ProjectSnapshot, group: CoordinationGroup): void {
+  if (sourceCollectionVersion(snapshot) !== group.sourceCollectionVersion) throw new Error("Parent or project source collection changed; prepare fresh context");
   const task = snapshot.tasks.find(task => task.taskId === group.parentTaskId);
   if (!task || task.title !== group.parentObjective || task.planVersion !== group.parentPlanVersion || group.sources.some(source => {
+    if (source.reference.kind === "file") return source.reference.projectId !== snapshot.projectId || source.reference.revision > snapshot.revision;
     const resolved = resolveRecordReference(snapshot, source.reference);
     return resolved.kind !== "resolved" || resolved.text !== source.text;
   })) throw new Error("Parent or supplied sources changed; prepare and approve a fresh assignment");
@@ -101,7 +105,7 @@ export function applyCoordinationEvent(snapshot: ProjectSnapshot, event: Coordin
       action.workers.some(worker => state.groups.some(group => group.assignments.some(item => item.assignmentId === worker.assignmentId)))) throw new Error("Unknown parent or reused request/assignment");
     if (action.ideaId !== null && !state.ideas.some(idea => idea.ideaId === action.ideaId && idea.parentTaskId === parent.taskId)) throw new Error("Linked idea does not belong to this parent");
     const group: CoordinationGroup = { ideaId: action.ideaId, ideaContext: state.ideas.find(idea => idea.ideaId === action.ideaId) ?? null, groupId: action.groupId, requestId: action.requestId, parentTaskId: parent.taskId, parentObjective: parent.title,
-      parentPlanVersion: parent.planVersion, sources: action.sources, durationMs: action.durationMs, maxTokens: action.maxTokens,
+      parentPlanVersion: parent.planVersion, sources: parseSuppliedSources(action.sources), sourceCollectionVersion: sourceCollectionVersion(snapshot), durationMs: action.durationMs, maxTokens: action.maxTokens,
       preparedAtRevision: revision, comparison: { kind: "not-recorded" }, approval: { kind: "unapproved" }, assignments: action.workers.map(worker => ({ ...worker, steering: [], providerObservation: { model: null, provider: null, serviceTier: null }, state: { kind: "queued" }, latestObservationAt: 0 })) };
     assertCoordinationCurrent(snapshot, group);
     return save({ ...state, groups: [...state.groups, group] });

@@ -1,5 +1,8 @@
 import { registerDiagnosticCommands } from "./diagnostic-commands.js";
 import { parseProviderConfiguration } from "../../../packages/core/src/inspection.js";
+import type { SuppliedSource } from "../../../packages/core/src/supplied-source.js";
+import { selectSharedFiles } from "./source-sharing.js";
+import { assertSharedFilesCurrent } from "./file-context.js";
 import { CoordinationController } from "./coordination-controller.js";
 import { CoordinationUi } from "./coordination-ui.js";
 import { ReflectionController } from "./reflection-controller.js";
@@ -12,7 +15,7 @@ import * as vscode from "vscode";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import { ConversationController } from "./conversation-controller.js";
+import { conversationPrompt, conversationRecordSources, ConversationController } from "./conversation-controller.js";
 import { CodexConversationClient } from "./codex-conversation-client.js";
 import { GoalInterpreter } from "./goal-interpreter.js";
 import { SqliteProjectRepository } from "./sqlite-project-repository.js";
@@ -81,7 +84,15 @@ export function activate(context: vscode.ExtensionContext): void {
     send: async text => {
       if (!isTrusted()) return;
       if (repository?.read().schedulingPaused) { await vscode.window.showInformationMessage("Project scheduling is paused. Resume scheduling before sending another model request."); return; }
-      await conversation?.send(text);
+      const snapshot = repository?.read();
+      if (!snapshot) return;
+      const files = await selectSharedFiles(snapshot);
+      if (!files) return;
+      const detail = conversationPrompt(snapshot, text, [...conversationRecordSources(snapshot), ...files]);
+      if (await vscode.window.showWarningMessage("Send this discussion context to Codex?", { modal: true, detail: `Shares project recommendation records and these exact file excerpts. Account cost and quota are unknown. Source prose is data, never authority.\n${detail}` }, "Send reviewed context") !== "Send reviewed context") return;
+      if (!repository || !isTrusted() || repository.read().projectId !== snapshot.projectId) return;
+      assertSharedFilesCurrent(repository.read(), files);
+      await conversation?.send(text, files, snapshot.revision);
     },
     interrupt: async () => { await conversation?.interrupt(); },
     knowledge: async (kind, id) => { if (isTrusted()) await knowledge?.handle(kind, id); },
@@ -165,10 +176,15 @@ export function activate(context: vscode.ExtensionContext): void {
       reflection = new ReflectionController(next, snapshot => { view.update(snapshot); }, () => { view.close(); });
       if (project.reflections.some(item => item.status === "pending")) output.appendLine("Pending optional reflection recovered. Run Piarre: Review Reflection when ready. Work and agent controls remain available.");
       knowledge = new KnowledgeController(next, snapshot => { view.update(snapshot); }, (projectId, result) => { view.updateLookup(projectId, result); });
-      coordination = new CoordinationController(next, snapshot => { view.update(snapshot); }, createClient);
+      const canShare = (sources: readonly SuppliedSource[]): boolean => {
+        if (!isCurrent()) return false;
+        const files = new Set(sources.flatMap(({ reference }) => reference.kind === "file" ? [canonicalWorkspacePath(path.join(root, reference.path))] : []));
+        return !vscode.workspace.textDocuments.some(document => document.isDirty && document.uri.scheme === "file" && files.has(canonicalWorkspacePath(document.uri.fsPath)));
+      };
+      coordination = new CoordinationController(next, snapshot => { view.update(snapshot); }, createClient, canShare);
       coordinationUi = new CoordinationUi(coordination, () => next.read(), groupId => { view.openProposal(groupId); });
       conversation = new ConversationController(next, (snapshot, state) => { view.updateConversation(snapshot, state); },
-        createClient);
+        createClient, canShare);
     } catch (error) {
       next.close();
       throw error;

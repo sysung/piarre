@@ -1,3 +1,5 @@
+import { assertSharedFilesCurrent } from "./file-context.js";
+import type { SuppliedSource } from "../../../packages/core/src/supplied-source.js";
 import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import type { CoordinationAction, CoordinationGroup, ProjectSnapshot } from "../../../packages/core/src/index.js";
@@ -7,13 +9,14 @@ import { CodexConversationClient } from "./codex-conversation-client.js";
 import type { SqliteProjectRepository } from "./sqlite-project-repository.js";
 
 type Client = Pick<CodexConversationClient, "connect" | "respond" | "interrupt" | "dispose">;
-type Prepare = { readonly ideaId?: string; readonly requestId: string; readonly parentTaskId: string; readonly purpose: string; readonly scope: string; readonly model: string; readonly workers: number; readonly durationMs: number; readonly maxTokens: number };
+type Prepare = { readonly fileSources?: readonly SuppliedSource[]; readonly ideaId?: string; readonly requestId: string; readonly parentTaskId: string; readonly purpose: string; readonly scope: string; readonly model: string; readonly workers: number; readonly durationMs: number; readonly maxTokens: number };
 export class CoordinationController {
   private readonly clients = new Map<string, Client>();
   private disposed = false;
   constructor(private readonly repository: Pick<SqliteProjectRepository, "read" | "dispatch">,
     private readonly publish: (project: ProjectSnapshot) => void,
-    private readonly createClient: () => Client = () => new CodexConversationClient()) {
+    private readonly createClient: () => Client = () => new CodexConversationClient(),
+    private readonly canShare: (sources: readonly SuppliedSource[]) => boolean = () => true) {
     for (const group of repository.read().coordination.groups) for (const assignment of group.assignments) {
       if (assignment.state.kind === "active") this.record({ kind: "coordinate", operation: "finish", groupId: group.groupId,
         assignmentId: assignment.assignmentId, outcome: "unknown", observation: "Piarre restarted without terminal evidence. Remote completion and usage remain unknown. No request was retried.", sourceIndexes: [], observedAt: Date.now() });
@@ -44,7 +47,10 @@ export class CoordinationController {
       return existing;
     }
     if (!Number.isSafeInteger(input.workers) || input.workers < 1 || input.workers > 3) throw new Error("Bound fanout to 1–3 read-only workers");
-    const sources = inspectProject(snapshot).recommendation.filter(entry => entry.text.length <= 10_000).slice(0, 10).map(({ reference, text }) => ({ reference, text }));
+    const recordSources = inspectProject(snapshot).recommendation.filter(entry => entry.text.length <= 10_000).slice(0, 10).map(({ reference, text }) => ({ reference, text }));
+    const sources = [...recordSources, ...(input.fileSources ?? [])];
+    if (!this.canShare(sources)) throw new Error("Source access, project trust or saved file state changed");
+    assertSharedFilesCurrent(snapshot, sources);
     const groupId = randomUUID();
     const workers = Array.from({ length: input.workers }, (_, index) => ({ assignmentId: randomUUID(), role: index === 0 ? "investigation" : "review", purpose: input.purpose, scope: input.scope, requestedModel: input.model, provider: "codex-read-only", serviceTierForTurn: "default", permissions: "supplied-sources-only" } satisfies WorkerSpec));
     if (!this.record({ kind: "coordinate", operation: "prepare", groupId, ideaId: input.ideaId ?? null, requestId: input.requestId, parentTaskId: input.parentTaskId, sources, workers, durationMs: input.durationMs, maxTokens: input.maxTokens })) throw new Error("Assignment preparation was not saved");
@@ -65,6 +71,10 @@ export class CoordinationController {
   }
   async approveAndRun(groupId: string, preparedAtRevision: number, approvalId: string): Promise<void> {
     if (this.disposed) return;
+    const prepared = this.repository.read().coordination.groups.find(group => group.groupId === groupId);
+    if (!prepared) return;
+    if (!this.canShare(prepared.sources)) throw new Error("Source access or project trust changed");
+    assertSharedFilesCurrent(this.repository.read(), prepared.sources);
     if (!this.record({ kind: "coordinate", operation: "approve", groupId, preparedAtRevision, approvalId, observedAt: Date.now(), consent: "unknown-cost-and-shared-context" })) return;
     const group = this.repository.read().coordination.groups.find(group => group.groupId === groupId);
     if (!group) return;
@@ -92,6 +102,8 @@ export class CoordinationController {
       if (this.clients.get(assignmentId) !== client || this.repository.read().schedulingPaused) { finish("unknown", "Scheduling paused or local connection ended before request; no automatic resumption."); return; }
       const snapshot = this.repository.read();
       assertCoordinationCurrent(snapshot, group);
+      if (!this.canShare(group.sources)) throw new Error("Source access or project trust changed");
+      assertSharedFilesCurrent(snapshot, group.sources);
       let metadata: { model: string | null; modelProvider: string | null } = { model: null, modelProvider: null };
       let serviceTier: string | null = null;
       const observe = () => {
@@ -114,6 +126,8 @@ export class CoordinationController {
           if (this.clients.get(assignmentId) !== client) throw new Error("Assignment disconnected before outbound turn");
           this.record({ kind: "coordinate", operation: "session", groupId: group.groupId, assignmentId, session: { kind: "thread", threadId }, observedAt: Date.now() });
           assertCoordinationCurrent(this.repository.read(), group);
+          if (!this.canShare(group.sources)) throw new Error("Source access or project trust changed");
+          assertSharedFilesCurrent(this.repository.read(), group.sources);
           if (this.repository.read().schedulingPaused) throw new Error("Assignment paused before outbound turn");
         },
         onTurnStarted: (threadId, turnId) => { if (this.clients.get(assignmentId) === client) this.record({ kind: "coordinate", operation: "session", groupId: group.groupId, assignmentId, session: { kind: "turn", threadId, turnId }, observedAt: Date.now() }); } });

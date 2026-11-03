@@ -1,3 +1,4 @@
+import { lookupCompilerReferences } from "./technical-lookup.js";
 import { knowledgeWorkImpact } from "../../../packages/core/src/resumption.js";
 import { fileURLToPath } from "node:url";
 import { lookupProjectSources, type RetrievalResult } from "./project-retrieval.js";
@@ -26,7 +27,14 @@ export class KnowledgeController {
   }
 
   private async lookup(): Promise<void> {
-    const query = await vscode.window.showInputBox({ prompt: "Look up exact identifiers or words in project sources and recorded knowledge", ignoreFocusOut: true,
+    const route = await vscode.window.showQuickPick(["Current code, declarations and recorded rationale", "Compiler references for active saved symbol"], { title: "Route lookup to its owning source", ignoreFocusOut: true });
+    if (!route || !this.isCurrent()) return;
+    if (route === "Compiler references for active saved symbol") {
+      const project = this.repository.read();
+      this.publishLookup?.(project.projectId, await lookupCompilerReferences(project));
+      return;
+    }
+    const query = await vscode.window.showInputBox({ prompt: "Look up exact identifiers, module paths, infrastructure declarations or recorded business/decision wording", ignoreFocusOut: true,
       validateInput: value => value.trim() && value.length <= 1000 ? undefined : "Enter 1 to 1,000 characters." });
     if (query === undefined || !this.isCurrent()) return;
     const project = this.repository.read();

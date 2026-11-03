@@ -1,3 +1,4 @@
+import { parseSuppliedReference, parseSuppliedSources } from "./supplied-source.js";
 import { parseCoordinationAction, parseCoordinationEvent } from "./coordination-contracts.js";
 import { parseReflectionAction, parseReflectionEvent } from "./reflection.js";
 import { parseExecutionAction, parseExecutionEvent } from "./execution-contracts.js";
@@ -14,8 +15,7 @@ import type {
   ProposedTask,
 } from "./index.js";
 import { parseSubmittedStatement } from "./context.js";
-import type { ConversationSource, ConversationEvent } from "./conversation.js";
-import type { RecordReference } from "./inspection.js";
+import type { ConversationEvent } from "./conversation.js";
 
 function invalid(): never {
   throw new Error("Invalid interpreter output");
@@ -47,24 +47,11 @@ function positiveInteger(value: unknown): number {
   return value;
 }
 
-function sourceReference(value: unknown): RecordReference {
-  if (!isObject(value) || !hasOnlyKeys(value, ["projectId", "kind", "recordId", "revision"]) ||
-      !("projectId" in value) || !("kind" in value) || !("recordId" in value) || !("revision" in value) ||
-      (value.kind !== "proposal" && value.kind !== "task" && value.kind !== "knowledge")) invalid();
-  return { projectId: nonblank(value.projectId), kind: value.kind, recordId: nonblank(value.recordId), revision: positiveInteger(value.revision) };
-}
-
-function conversationSources(value: unknown): readonly ConversationSource[] {
-  if (!Array.isArray(value)) invalid();
-  return value.map((source: unknown) => {
-    if (!isObject(source) || !hasOnlyKeys(source, ["reference", "text"]) || !("reference" in source) || !("text" in source)) invalid();
-    return { reference: sourceReference(source.reference), text: nonblank(source.text) };
-  });
-}
+const conversationSources = parseSuppliedSources;
 
 function replyFields(value: object) {
   if (!("requestId" in value) || !("text" in value) || !("citations" in value) || !("providerThreadId" in value) || !("providerTurnId" in value) || !Array.isArray(value.citations)) invalid();
-  return { requestId: nonblank(value.requestId), text: nonblank(value.text), citations: value.citations.map(sourceReference),
+  return { requestId: nonblank(value.requestId), text: nonblank(value.text), citations: value.citations.map(parseSuppliedReference),
     providerThreadId: nonblank(value.providerThreadId), providerTurnId: nonblank(value.providerTurnId) };
 }
 

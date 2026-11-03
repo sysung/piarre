@@ -1,5 +1,6 @@
+import { ProjectRetrieval } from "../../src/project-retrieval.js";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -18,10 +19,11 @@ suite("Read-only assignment actual Host journey", () => {
   test("clicks target independent assignments and preserves private input through stop and idea return", async function () {
     this.timeout(35_000);
     const directory = mkdtempSync(path.join(tmpdir(), "piarre-coordination-workspace-"));
-    const dbPath = path.join(directory, "project.sqlite"); const repository = new SqliteProjectRepository(dbPath);
+    const dbPath = path.join(directory, ".project.sqlite"); const repository = new SqliteProjectRepository(dbPath);
     const initial = repository.open({ repositoryUri: pathToFileURL(directory).href, name: "Coordination Host fixture" });
     const draft = await new GoalInterpreter().propose("Set refund policy to 45 days");
     repository.dispatch({ commandId: "parent", projectId: initial.projectId, expectedProjectRevision: initial.revision, action: { kind: "propose-tasks", draft } });
+    writeFileSync(path.join(directory, "refund.ts"), "export const refundDays = 45;\n");
     const parent = repository.read(); const task = parent.tasks[0]; assert.ok(task);
     const calls: CoordinationMessage[] = []; const prompts: string[] = []; const interruptions: number[] = [];
     let releaseFirst: () => void = () => { throw new Error("First worker not requested"); };
@@ -55,7 +57,9 @@ suite("Read-only assignment actual Host journey", () => {
       calls.push(message);
       try {
         if (message.action === "prepare") {
-          controller.prepare({ requestId: message.requestId, parentTaskId: task.taskId, purpose: "Review the refund requirement", scope: "Supplied project records", model: "fixture-model", workers: 2, durationMs: 120_000, maxTokens: 100 });
+          const sourceIndex = new ProjectRetrieval({ projectId: parent.projectId, root: directory });
+          const captured = sourceIndex.captureFile("refund.ts", repository.read().revision, 1, 1); sourceIndex.dispose();
+          controller.prepare({ fileSources: [captured], requestId: message.requestId, parentTaskId: task.taskId, purpose: "Review the refund requirement", scope: "Supplied project records", model: "fixture-model", workers: 2, durationMs: 120_000, maxTokens: 100 });
           assert.equal(prompts.length, 0);
         } else if (message.action === "steer" && message.id && message.assignmentId) {
           controller.steer(message.id, message.assignmentId, message.requestId, "Look for contradictory requirements");
@@ -83,7 +87,8 @@ suite("Read-only assignment actual Host journey", () => {
       panel.webview.html = panel.webview.html.replace("</script>", `${journeyScript()}</script>`);
       assert.deepEqual(await observed, { kind: "coordination-journey-result", ok: true });
       await completion;
-      assert.equal(prompts.length, 2); assert.deepEqual(interruptions, [1]);
+      assert.equal(prompts.length, 2); assert.ok(prompts.every(prompt => prompt.includes("refundDays = 45")));
+      assert.ok(panel.webview.html.includes("Exact shared source context")); assert.deepEqual(interruptions, [1]);
       assert.ok(prompts[0]?.includes("Look for contradictory requirements")); assert.equal(prompts[1]?.includes("Look for contradictory requirements"), false);
       assert.equal(prompts.some(prompt => prompt.includes("private unsent fixture")), false);
       const group = repository.read().coordination.groups[0]; assert.ok(group);

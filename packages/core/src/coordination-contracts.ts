@@ -1,5 +1,5 @@
+import { parseSuppliedSources } from "./supplied-source.js";
 import type { CoordinationAction, CoordinationEvent, WorkerSession, WorkerSpec } from "./coordination.js";
-import type { ConversationSource } from "./conversation.js";
 
 function object(value: unknown): Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) throw new Error("Invalid coordination object");
@@ -16,15 +16,8 @@ function integer(value: unknown, min: number, max: number): number {
   if (typeof value !== "number" || !Number.isSafeInteger(value) || value < min || value > max) throw new Error("Invalid coordination limit");
   return value;
 }
-function sources(value: unknown): readonly ConversationSource[] {
-  if (!Array.isArray(value) || value.length < 1 || value.length > 10) throw new Error("Supply 1–10 source records");
-  return value.map((entry: unknown) => {
-    const source = object(entry); fields(source, ["reference", "text"]);
-    const reference = object(source.reference); fields(reference, ["projectId", "kind", "recordId", "revision"]);
-    if (reference.kind !== "proposal" && reference.kind !== "task" && reference.kind !== "knowledge") throw new Error("Invalid source reference");
-    return { reference: { projectId: text(reference.projectId, 512), kind: reference.kind, recordId: text(reference.recordId, 2048), revision: integer(reference.revision, 1, Number.MAX_SAFE_INTEGER) }, text: text(source.text) };
-  });
-}
+const sources = parseSuppliedSources;
+
 function workers(value: unknown): readonly WorkerSpec[] {
   if (!Array.isArray(value) || value.length < 1 || value.length > 3) throw new Error("Bound fanout to 1–3 read-only assignments");
   const result = value.map((entry: unknown): WorkerSpec => {
