@@ -1,3 +1,6 @@
+import type { ProviderConfiguration } from "../../../../packages/core/src/inspection.js";
+import type { CodexExecutionContext } from "../../../../packages/core/src/provider-account-context.js";
+import type { CalibrationSample } from "../../../../packages/core/src/execution-forecast.js";
 import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -15,10 +18,11 @@ const nodeExecutable = process.env.PIARRE_TEST_NODE ?? process.execPath;
 type Client = Pick<CodexConversationClient, "connect" | "readExecutionContext" | "proposePatch" | "interrupt" | "dispose">;
 suite("Execution coordinator actual backend", () => {
   let directory: string; let source: string; let storage: string; let repository: SqliteProjectRepository; let taskId: string;
+  let shared: ExecutionCoordinator | undefined;
   let requests: number; let dirty: boolean; let loseAcknowledgment: boolean; let desiredWindow: "30" | "45";
   const createClient = (): Client => ({
     connect: () => Promise.resolve({ kind: "ready", authType: "unknown" }),
-    readExecutionContext: () => Promise.resolve({ observedAt: new Date().toISOString(), model: { kind: "resolved-default", model: "fixture-model" }, usage: { kind: "unknown" }, taskForecast: { kind: "unknown" } }),
+    readExecutionContext: () => Promise.resolve({ observedAt: new Date().toISOString(), model: { kind: "resolved-default", model: "fixture-model" }, usage: { kind: "unknown" } }),
     proposePatch: input => {
       requests++; input.onThreadMetadata?.({ model: "fixture-model", modelProvider: "openai" }); input.onThreadStarted?.("fixture-thread");
       if (loseAcknowledgment) throw new Error("Fixture lost acknowledgment");
@@ -30,17 +34,17 @@ suite("Execution coordinator actual backend", () => {
       return Promise.resolve({ status: "completed", threadId: "fixture-thread", turnId: "fixture-turn", output: { summary: `Change refund window to ${desiredWindow} days`, operations: [{ fileId: baseline.fileId, content: `${desiredWindow}\n` }] } });
     }, interrupt: () => Promise.resolve(), dispose: () => undefined,
   });
-  const coordinator = () => new ExecutionCoordinator({ repository, storageDirectory: storage, createClient, publish: () => undefined, hasDirtyDocuments: () => dirty });
+  const coordinator = () => shared ??= new ExecutionCoordinator({ confirmSpending: () => Promise.resolve("consent"), repository, storageDirectory: storage, createClient, publish: () => undefined, hasDirtyDocuments: () => dirty });
   const prepare = () => coordinator().prepare({ taskId, relativePaths: ["refund.txt"], objective: "Set refund window to 45 days", criteria: [{ criterionId: "days", text: "Window is 45 days" }], checks: [{ checkId: "value", argv: [nodeExecutable, "-e", "require('node:assert/strict').equal(require('node:fs').readFileSync('refund.txt','utf8'),'45\\n')"], criterionIds: ["days"] }] });
   setup(async () => {
-    requests = 0; dirty = false; loseAcknowledgment = false; desiredWindow = "45";
+    shared = undefined; requests = 0; dirty = false; loseAcknowledgment = false; desiredWindow = "45";
     directory = mkdtempSync(path.join(tmpdir(), "piarre-coordinator-")); source = path.join(directory, "source"); storage = path.join(directory, "storage"); mkdirSync(source); mkdirSync(storage);
     writeFileSync(path.join(source, "refund.txt"), "30\n"); writeFileSync(path.join(source, "private.txt"), "private undisclosed");
     repository = new SqliteProjectRepository(path.join(directory, "project.sqlite")); const project = repository.open({ repositoryUri: pathToFileURL(source).href, name: "Fixture" });
     const draft = await new GoalInterpreter().propose("Implement refund policy"); repository.dispatch({ commandId: "proposal", projectId: project.projectId, expectedProjectRevision: project.revision, action: { kind: "propose-tasks", draft } });
     const first = repository.read().tasks[0]; assert.ok(first); taskId = first.taskId;
   });
-  teardown(() => { repository.close(); rmSync(directory, { recursive: true, force: true }); });
+  teardown(() => { shared?.dispose(); repository.close(); rmSync(directory, { recursive: true, force: true }); });
   for (const acceptBeforeCorrection of [false, true]) {
     test(`confirmed correction replaces ${acceptBeforeCorrection ? "accepted" : "unaccepted"} 30-day evidence through fresh 45-day approval`, async function () {
       this.timeout(8000);
@@ -90,13 +94,59 @@ suite("Execution coordinator actual backend", () => {
       assert.equal(accepted.acceptance.kind, "accepted"); assert.equal(readFileSync(path.join(source, "refund.txt"), "utf8"), "45\n");
       if (acceptBeforeCorrection) await control.applyAndAccept(oldReview);
       assert.equal(readFileSync(path.join(source, "refund.txt"), "utf8"), "45\n", "Replaying old review cannot restore obsolete behavior");
-      const durable = repository.read(); control.dispose(); repository.close(); repository = new SqliteProjectRepository(path.join(directory, "project.sqlite"));
+      const durable = repository.read(); control.dispose(); shared = undefined; repository.close(); repository = new SqliteProjectRepository(path.join(directory, "project.sqlite"));
       assert.deepEqual(repository.read(), durable); assert.match(renderExecutionResult(repository.read(), oldRun.runId), /Historical evidence/);
     });
   }
+  for (const route of ["apiKey", "chatgpt"] as const) test(`configured ${route} scenario is shown in native consent and retained unchanged in SQLite result`, async () => {
+    const now = Date.now(); const accountHash = "b".repeat(64);
+    const sample: CalibrationSample = { kind: "reviewed-v1", sampleId: "isolated", provider: "codex", accountHash, plan: "plus", model: "fixture-model", profile: { kind: "named", effort: "medium" }, serviceTier: "default", contextMethod: "serialized-prompt-utf8-v1", contextBand: "up-to-16KiB", bucketId: "codex", durationMins: 90, before: { observedAt: now - 120000, resetsAt: Math.floor(now / 1000) + 3600, usedPercent: 10 }, after: { observedAt: now - 60000, resetsAt: Math.floor(now / 1000) + 3600, usedPercent: 12 }, tokensUsed: 8000, attribution: "reviewed-isolated", provenance: "User-reviewed isolated fixture" };
+    const billing = route === "apiKey" ? { kind: "api", name: "Configured API", inputUsdPerMillion: 2, outputUsdPerMillion: 8 } as const : { kind: "subscription", name: "plus", samples: [sample] } as const;
+    const configuration: ProviderConfiguration = { kind: "valid", selections: [{ role: "coding", provider: "codex", model: "fixture-model", billing }] };
+    let disclosure = ""; let count = 0;
+    const context = (): CodexExecutionContext => ({ observedAt: new Date().toISOString(), authType: route, model: { kind: "resolved-default", model: "fixture-model" }, modelProfiles: [{ model: "fixture-model", defaultEffort: "medium", supportedEfforts: ["medium"] }], facts: { accountHash, planType: "plus", bucketId: "codex", ordinaryUsageAllowed: true }, usage: { kind: "observed", source: "account/rateLimits/read", windows: [{ source: "primary", usedPercent: 23, windowDurationMins: 90, resetsAt: Math.floor(now / 1000) + 3600 }] } });
+    const control = new ExecutionCoordinator({ repository, storageDirectory: storage, publish: () => undefined, readProviderConfiguration: () => configuration, confirmSpending: detail => { disclosure = detail; return Promise.resolve("consent"); }, createClient: () => ({ ...createClient(), connect: () => Promise.resolve({ kind: "ready", authType: route }), readExecutionContext: () => Promise.resolve(context()), proposePatch: input => {
+      count++; assert.equal(input.serviceTierForTurn, "default"); assert.equal(input.effort, "medium");
+      input.onThreadMetadata?.({ model: "fixture-model", modelProvider: "openai", reasoningEffort: "medium", serviceTier: "fast" }); input.onThreadStarted?.("thread"); input.onTurnStarted?.("thread", "turn"); return Promise.resolve({ threadId: "thread", turnId: "turn", status: "completed", output: { summary: "No change", operations: [] } });
+    } }) });
+    const { plan } = await control.prepare({ taskId, relativePaths: ["refund.txt"], objective: "Inspect", criteria: [{ criterionId: "criterion", text: "Inspect" }], checks: [], maxTokens: 16000 });
+    assert.equal(plan.forecast.kind, "configured-v1"); assert.equal(plan.forecast.estimate.kind, route === "apiKey" ? "api" : "subscription");
+    if (plan.forecast.estimate.kind === "subscription") assert.equal(plan.forecast.estimate.windows[0]?.kind, "scenario");
+    const frozen = JSON.stringify(plan.forecast);
+    const run = await control.approveAndRun({ planId: plan.planId, planRevision: plan.recordedAtRevision, approvalId: `consent-${route}` });
+    assert.equal(count, 1); assert.equal(run.state.kind, "terminal"); assert.equal(run.state.result.outcome, "no-change"); assert.equal(run.grant.spendingConsent?.kind, "native-uncertain-one-attempt"); assert.equal(run.accountObservations.length, 2);
+    assert.equal(JSON.stringify(run.grant.plan.forecast), frozen); assert.match(disclosure, /No monetary cap/); assert.match(disclosure, /provider has no supported per-turn included-only/); assert.match(disclosure, /Exact files: refund.txt/);
+    if (route === "apiKey") assert.match(disclosure, /0.032.*0.128/); else assert.match(disclosure, /4 to 4 percentage points/);
+    const rendered = renderExecutionResult(repository.read(), run.runId); assert.match(rendered, /Actual per-task cost and isolated allowance consumption remain unknown/); assert.match(rendered, /inherited thread tier fast/);
+    const snapshot = repository.read(); control.dispose(); repository.close(); repository = new SqliteProjectRepository(path.join(directory, "project.sqlite")); assert.deepEqual(repository.read(), snapshot);
+  });
+  for (const change of ["cancel", "configuration", "account", "reset", "pause", "dirty", "model-profile"] as const) test(`native spending review refuses ${change} before any generation request`, async () => {
+    let reviewed = false; let generated = 0;
+    const now = Date.now(); let config: ProviderConfiguration = { kind: "valid", selections: [] };
+    const observed = (): CodexExecutionContext => ({ observedAt: new Date().toISOString(), authType: "chatgpt", model: { kind: "resolved-default", model: "fixture-model" }, modelProfiles: reviewed && change === "model-profile" ? [{ model: "fixture-model", defaultEffort: "high", supportedEfforts: ["high"] }] : [], facts: { accountHash: (reviewed && change === "account" ? "c" : "b").repeat(64), planType: "plus", bucketId: "codex", ordinaryUsageAllowed: true }, usage: { kind: "observed", source: "account/rateLimits/read", windows: [{ source: "primary", usedPercent: 23, windowDurationMins: 90, resetsAt: Math.floor(now / 1000) + (reviewed && change === "reset" ? 120 : 60) }] } });
+    const control = new ExecutionCoordinator({ repository, storageDirectory: storage, publish: () => undefined, hasDirtyDocuments: () => dirty, readProviderConfiguration: () => config, confirmSpending: detail => {
+      assert.match(detail, /attempt run:review/); reviewed = true;
+      if (change === "configuration") config = { kind: "valid", selections: [{ role: "coding", provider: "codex", model: "fixture-model", billing: { kind: "api", name: "changed", inputUsdPerMillion: 1, outputUsdPerMillion: 1 } }] };
+      if (change === "pause") void control.stopAll();
+      if (change === "dirty") dirty = true;
+      return Promise.resolve(change === "cancel" ? "cancel" : "consent");
+    }, createClient: () => ({ ...createClient(), connect: () => Promise.resolve({ kind: "ready", authType: "chatgpt" }), readExecutionContext: () => Promise.resolve(observed()), proposePatch: () => { generated++; return Promise.reject(new Error("Must not generate")); } }) });
+    const { plan } = await control.prepare({ taskId, relativePaths: ["refund.txt"], objective: "Inspect", criteria: [{ criterionId: "criterion", text: "Inspect" }], checks: [] });
+    await assert.rejects(control.approveAndRun({ planId: plan.planId, planRevision: plan.recordedAtRevision, approvalId: "review" }));
+    assert.equal(reviewed, true); assert.equal(generated, 0); assert.equal(repository.read().executionRuns.length, 0); control.dispose();
+  });
+  test("configuration changes after thread capability await cannot submit generation", async () => {
+    let count = 0; let changed = false;
+    const config = (): ProviderConfiguration => ({ kind: "valid", selections: changed ? [{ role: "coding", provider: "codex", model: "fixture-model", billing: { kind: "api", name: "different-tier-provenance", inputUsdPerMillion: 1, outputUsdPerMillion: 1 } }] : [] });
+    const control = new ExecutionCoordinator({ repository, storageDirectory: storage, publish: () => undefined, readProviderConfiguration: config, confirmSpending: () => Promise.resolve("consent"), createClient: () => ({ ...createClient(), proposePatch: input => {
+      assert.equal(input.serviceTierForTurn, "default"); input.onThreadMetadata?.({ model: "fixture-model", modelProvider: "openai" }); changed = true; input.onThreadStarted?.("thread"); count++; return Promise.reject(new Error("Must not request turn"));
+    } }) });
+    const { plan } = await control.prepare({ taskId, relativePaths: ["refund.txt"], objective: "Inspect", criteria: [{ criterionId: "criterion", text: "Inspect" }], checks: [] });
+    const run = await control.approveAndRun({ planId: plan.planId, planRevision: plan.recordedAtRevision, approvalId: "boundary" }); assert.equal(count, 0); assert.equal(run.state.kind, "terminal"); control.dispose();
+  });
   test("missing default model requires an explicit selection before persisting approval scope", async () => {
-    const control = new ExecutionCoordinator({ repository, storageDirectory: storage, publish: () => undefined,
-      createClient: () => ({ ...createClient(), readExecutionContext: () => Promise.resolve({ observedAt: new Date().toISOString(), model: { kind: "unknown" }, usage: { kind: "unknown" }, taskForecast: { kind: "unknown" } }) }) });
+    const control = new ExecutionCoordinator({ confirmSpending: () => Promise.resolve("consent"), repository, storageDirectory: storage, publish: () => undefined,
+      createClient: () => ({ ...createClient(), readExecutionContext: () => Promise.resolve({ observedAt: new Date().toISOString(), model: { kind: "unknown" }, usage: { kind: "unknown" } }) }) });
     const input: Parameters<ExecutionCoordinator["prepare"]>[0] = { taskId, relativePaths: ["refund.txt"], objective: "45 days", criteria: [{ criterionId: "days", text: "45 days" }], checks: [{ checkId: "value", argv: [nodeExecutable, "--version"], criterionIds: ["days"] }] };
     await assert.rejects(control.prepare(input), /explicit coding model/);
     assert.equal(repository.read().executionPlans.length, 0); assert.equal(requests, 0);
@@ -106,12 +156,13 @@ suite("Execution coordinator actual backend", () => {
     assert.equal(requests, 0);
   });
   test("provider model mismatch is recorded without starting a turn or applying source", async () => {
-    const { plan } = await prepare(); let turnStarted = false;
-    const control = new ExecutionCoordinator({ repository, storageDirectory: storage, publish: () => undefined,
+    let turnStarted = false;
+    const control = new ExecutionCoordinator({ confirmSpending: () => Promise.resolve("consent"), repository, storageDirectory: storage, publish: () => undefined,
       createClient: () => ({ ...createClient(), proposePatch: input => {
         input.onThreadMetadata?.({ model: "different-model", modelProvider: "openai" });
         turnStarted = true; return Promise.reject(new Error("Generation must not start"));
       } }) });
+    const { plan } = await control.prepare({ taskId, relativePaths: ["refund.txt"], objective: "45 days", criteria: [{ criterionId: "days", text: "45 days" }], checks: [] });
     const run = await control.approveAndRun({ planId: plan.planId, planRevision: plan.recordedAtRevision, approvalId: "mismatch" });
     assert.equal(turnStarted, false); assert.equal(run.providerObservation.kind, "unobserved");
     assert.equal(run.state.kind, "terminal"); assert.match(run.state.result.summary, /differs from the approved plan/);
@@ -132,7 +183,7 @@ suite("Execution coordinator actual backend", () => {
     assert.equal(requests, 1); assert.equal(run.state.kind, "unknown");
     assert.equal(ownsExecutionLease(run), true);
     assert.equal(readFileSync(path.join(source, "refund.txt"), "utf8"), "30\n");
-    control.dispose(); repository.close(); repository = new SqliteProjectRepository(path.join(directory, "project.sqlite"));
+    control.dispose(); shared = undefined; repository.close(); repository = new SqliteProjectRepository(path.join(directory, "project.sqlite"));
     const recovered = coordinator(); await recovered.reconcile();
     assert.equal(repository.read().executionRuns[0]?.state.kind, "unknown");
     await recovered.approveAndRun(input); assert.equal(requests, 1);
@@ -144,7 +195,8 @@ suite("Execution coordinator actual backend", () => {
     assert.equal(resolved.state.result.outcome, "unknown"); assert.equal(ownsExecutionLease(resolved), false);
     assert.match(resolved.state.result.summary, /Remote activity and charges may continue/);
     assert.throws(() => recovered.abandonProvider({ runId: run.runId, reason: "Repeated consent" }));
-    const replacement = await recovered.approveAndRun({ ...input, approvalId: "explicit-replacement" });
+    const fresh = await prepare();
+    const replacement = await recovered.approveAndRun({ planId: fresh.plan.planId, planRevision: fresh.plan.recordedAtRevision, approvalId: "explicit-replacement" });
     assert.equal(requests, 2); assert.equal(replacement.state.kind, "unknown");
   });
   test("real sandbox checks gate review, integration preserves source until approval, restore protects newer bytes", async function () {
@@ -167,7 +219,7 @@ suite("Execution coordinator actual backend", () => {
   test("stop reaches the real running watchdog and records interruption without passing evidence", async function () {
     if ((await new CandidateCheckRunner().capability()).kind === "unsupported") { this.skip(); return; }
     let requestedStop = false;
-    const control = new ExecutionCoordinator({ repository, storageDirectory: storage, createClient,
+    const control = new ExecutionCoordinator({ confirmSpending: () => Promise.resolve("consent"), repository, storageDirectory: storage, createClient,
       publish: snapshot => {
         const running = snapshot.executionRuns.find(run => run.process.kind === "running");
         if (running && !requestedStop) { requestedStop = true; queueMicrotask(() => { void control.stop({ runId: running.runId }); }); }
@@ -192,13 +244,13 @@ suite("Execution coordinator actual backend", () => {
     assert.equal(readFileSync(path.join(source, "refund.txt"), "utf8"), "30\n");
   });
   test("disposal persists uncertain ownership and late provider rejection does not access a closed database", async () => {
-    const { plan } = await prepare();
     let rejectTurn: (error: Error) => void = () => undefined;
     let started: () => void = () => undefined;
     const ready = new Promise<void>(resolve => { started = resolve; });
     const pending = new Promise<never>((_, reject) => { rejectTurn = reject; });
-    const control = new ExecutionCoordinator({ repository, storageDirectory: storage, publish: () => undefined,
+    const control = new ExecutionCoordinator({ confirmSpending: () => Promise.resolve("consent"), repository, storageDirectory: storage, publish: () => undefined,
       createClient: () => ({ ...createClient(), proposePatch: input => { input.onThreadMetadata?.({ model: "fixture-model", modelProvider: "openai" }); input.onThreadStarted?.("pending-thread"); started(); return pending; }, dispose: () => { rejectTurn(new Error("Disposed provider")); } }) });
+    const { plan } = await control.prepare({ taskId, relativePaths: ["refund.txt"], objective: "45 days", criteria: [{ criterionId: "days", text: "45 days" }], checks: [] });
     const completion = control.approveAndRun({ planId: plan.planId, planRevision: plan.recordedAtRevision, approvalId: "disposing" });
     await ready; control.dispose();
     const before = repository.read(); assert.equal(before.executionRuns[0]?.state.kind, "unknown");
@@ -212,7 +264,7 @@ suite("Execution coordinator actual backend", () => {
     assert.equal(requests, 0);
   });
   test("pause survives restart and blocks a prepared approval", async () => {
-    const { plan } = await prepare(); await coordinator().stopAll(); repository.close(); repository = new SqliteProjectRepository(path.join(directory, "project.sqlite"));
+    const { plan } = await prepare(); await coordinator().stopAll(); shared?.dispose(); shared = undefined; repository.close(); repository = new SqliteProjectRepository(path.join(directory, "project.sqlite"));
     assert.equal(repository.read().schedulingPaused, true);
     await assert.rejects(coordinator().approveAndRun({ planId: plan.planId, planRevision: plan.recordedAtRevision, approvalId: "paused" })); assert.equal(requests, 0);
     coordinator().resume(); assert.equal(repository.read().schedulingPaused, false);

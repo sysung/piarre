@@ -48,7 +48,7 @@
         "piarre.providers": {
           "type": "array",
           "default": [],
-          "description": "Requested provider identifiers only. Connections and model calls are not implemented; these settings do not authorize spending or data sharing. Do not enter credentials.",
+          "description": "Requested provider/model and configured cost scenarios. Explicit connection, scope review and native per-attempt spending consent are required. Do not enter credentials.",
           "items": {
             "type": "object",
             "additionalProperties": false,
@@ -76,7 +76,7 @@
                 "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._/-]{0,127}$"
               },
               "billing": {
-                "description": "Plan used for estimates only; this does not detect your authenticated billing route or connect the provider. API rates are user supplied. Subscription samples are past usage measurements, not official token quotas.",
+                "description": "Configured assumptions, not provider prices or a spend cap. Execution checks the observed auth route. Legacy subscription samples remain historical; execution requires reviewed-v1 isolated samples with matching account/model/effort/context/window bindings.",
                 "oneOf": [
                   {
                     "type": "object",
@@ -115,6 +115,46 @@
                       "outputUsdPerMillion": {
                         "type": "number",
                         "minimum": 0
+                      },
+                      "provenance": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "provider",
+                          "model",
+                          "serviceTier",
+                          "configuredAt",
+                          "expiresAt"
+                        ],
+                        "properties": {
+                          "provider": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 512
+                          },
+                          "model": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 512
+                          },
+                          "serviceTier": {
+                            "const": "default"
+                          },
+                          "configuredAt": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "expiresAt": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "minimum": 0
+                          }
+                        }
                       }
                     }
                   },
@@ -137,74 +177,257 @@
                       "samples": {
                         "type": "array",
                         "items": {
-                          "type": "object",
-                          "additionalProperties": false,
-                          "required": [
-                            "model",
-                            "window",
-                            "tokensUsed",
-                            "usedPercentagePoints"
-                          ],
-                          "properties": {
-                            "model": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 128
-                            },
-                            "window": {
-                              "enum": [
-                                "five-hour",
-                                "weekly"
-                              ]
-                            },
-                            "tokensUsed": {
-                              "type": "integer",
-                              "minimum": 1
-                            },
-                            "usedPercentagePoints": {
-                              "type": "number",
-                              "exclusiveMinimum": 0,
-                              "maximum": 100
-                            },
-                            "provider": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 128,
-                              "description": "Provider identifier when the sample was recorded. Must match the selected provider."
-                            },
-                            "plan": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 100,
-                              "description": "Subscription plan name when recorded. Must match billing.name."
-                            }
-                          },
                           "oneOf": [
                             {
+                              "type": "object",
+                              "additionalProperties": false,
                               "required": [
-                                "provider",
-                                "plan"
+                                "model",
+                                "window",
+                                "tokensUsed",
+                                "usedPercentagePoints"
+                              ],
+                              "properties": {
+                                "model": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 128
+                                },
+                                "window": {
+                                  "enum": [
+                                    "five-hour",
+                                    "weekly"
+                                  ]
+                                },
+                                "tokensUsed": {
+                                  "type": "integer",
+                                  "minimum": 1
+                                },
+                                "usedPercentagePoints": {
+                                  "type": "number",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 100
+                                },
+                                "provider": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 128,
+                                  "description": "Provider identifier when the sample was recorded. Must match the selected provider."
+                                },
+                                "plan": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 100,
+                                  "description": "Subscription plan name when recorded. Must match billing.name."
+                                }
+                              },
+                              "oneOf": [
+                                {
+                                  "required": [
+                                    "provider",
+                                    "plan"
+                                  ]
+                                },
+                                {
+                                  "not": {
+                                    "anyOf": [
+                                      {
+                                        "required": [
+                                          "provider"
+                                        ]
+                                      },
+                                      {
+                                        "required": [
+                                          "plan"
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                }
                               ]
                             },
                             {
-                              "not": {
-                                "anyOf": [
-                                  {
-                                    "required": [
-                                      "provider"
-                                    ]
-                                  },
-                                  {
-                                    "required": [
-                                      "plan"
-                                    ]
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "kind",
+                                "sampleId",
+                                "provider",
+                                "accountHash",
+                                "plan",
+                                "model",
+                                "profile",
+                                "serviceTier",
+                                "contextMethod",
+                                "contextBand",
+                                "bucketId",
+                                "durationMins",
+                                "before",
+                                "after",
+                                "tokensUsed",
+                                "attribution",
+                                "provenance"
+                              ],
+                              "properties": {
+                                "kind": {
+                                  "const": "reviewed-v1"
+                                },
+                                "sampleId": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                },
+                                "provider": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                },
+                                "accountHash": {
+                                  "type": "string",
+                                  "pattern": "^[a-f0-9]{64}$"
+                                },
+                                "plan": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                },
+                                "model": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                },
+                                "profile": {
+                                  "oneOf": [
+                                    {
+                                      "type": "object",
+                                      "additionalProperties": false,
+                                      "required": [
+                                        "kind",
+                                        "effort"
+                                      ],
+                                      "properties": {
+                                        "kind": {
+                                          "const": "named"
+                                        },
+                                        "effort": {
+                                          "enum": [
+                                            "none",
+                                            "minimal",
+                                            "low",
+                                            "medium",
+                                            "high",
+                                            "xhigh"
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "type": "object",
+                                      "additionalProperties": false,
+                                      "required": [
+                                        "kind",
+                                        "configurationHash"
+                                      ],
+                                      "properties": {
+                                        "kind": {
+                                          "const": "default"
+                                        },
+                                        "configurationHash": {
+                                          "type": "string",
+                                          "pattern": "^[a-f0-9]{64}$"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                },
+                                "serviceTier": {
+                                  "const": "default"
+                                },
+                                "contextMethod": {
+                                  "const": "serialized-prompt-utf8-v1"
+                                },
+                                "contextBand": {
+                                  "enum": [
+                                    "up-to-16KiB",
+                                    "up-to-64KiB",
+                                    "larger"
+                                  ]
+                                },
+                                "bucketId": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                },
+                                "durationMins": {
+                                  "type": "integer",
+                                  "minimum": 1
+                                },
+                                "before": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "observedAt",
+                                    "resetsAt",
+                                    "usedPercent"
+                                  ],
+                                  "properties": {
+                                    "observedAt": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    },
+                                    "resetsAt": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    },
+                                    "usedPercent": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "maximum": 100
+                                    }
                                   }
-                                ]
+                                },
+                                "after": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "observedAt",
+                                    "resetsAt",
+                                    "usedPercent"
+                                  ],
+                                  "properties": {
+                                    "observedAt": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    },
+                                    "resetsAt": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    },
+                                    "usedPercent": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "maximum": 100
+                                    }
+                                  }
+                                },
+                                "tokensUsed": {
+                                  "type": "integer",
+                                  "minimum": 1
+                                },
+                                "attribution": {
+                                  "const": "reviewed-isolated"
+                                },
+                                "provenance": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                }
                               }
                             }
                           ]
                         },
-                        "description": "Measurements are bound to their original provider, plan and model. Legacy samples without provider/plan remain unbound and cannot estimate a percentage."
+                        "description": "Measurements are bound to their original provider, plan and model. Legacy samples without provider/plan remain unbound and cannot estimate a percentage.",
+                        "maxItems": 100
                       }
                     }
                   }

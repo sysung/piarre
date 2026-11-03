@@ -1,3 +1,4 @@
+import { consentMatches, type ExecutionForecast, type SpendingConsent } from "./execution-forecast.js";
 import type { CodexExecutionContext } from "./provider-account-context.js";
 import type { KnowledgeVersion } from "./context.js";
 import { currentKnowledge, knowledgeConflicts } from "./knowledge.js";
@@ -24,12 +25,14 @@ export interface ExecutionPlanDraft {
   readonly sourceRoot: string;
   readonly provider: { readonly kind: "codex-readonly-patch"; readonly authType: "chatgpt" | "apiKey" | "unknown"; readonly requestedModel: string };
   readonly accountContext: CodexExecutionContext;
+  readonly forecast: ExecutionForecast;
   readonly durationMs: number;
   readonly maxTokens: number;
 }
 export interface ExecutionPlan extends ExecutionPlanDraft { readonly planId: string; readonly recordedAtRevision: number }
 export interface ExecutionGrant {
   readonly approvalId: string;
+  readonly spendingConsent?: SpendingConsent;
   readonly plan: ExecutionPlan;
   readonly approvedAt: number;
   readonly expiresAt: number;
@@ -87,18 +90,20 @@ export interface ExecutionRun {
   readonly state: RunState;
   readonly providerTurn: ProviderTurn;
   readonly providerOutcome: { readonly kind: "unobserved" } | { readonly kind: "observed"; readonly status: "completed" | "interrupted" | "failed"; readonly observedAt: number } | { readonly kind: "abandoned"; readonly commandId: string; readonly reason: string; readonly abandonedAt: number };
-  readonly providerObservation: { readonly kind: "unobserved" } | { readonly kind: "observed"; readonly model: string; readonly modelProvider: string; readonly observedAt: number };
+  readonly providerObservation: { readonly kind: "unobserved" } | { readonly kind: "observed"; readonly model: string; readonly modelProvider: string; readonly observedAt: number; readonly reasoningEffort: string | null; readonly threadServiceTier: string | null };
   readonly process: CheckProcess;
   readonly evidence: readonly CheckEvidence[];
+  readonly accountObservations: readonly CodexExecutionContext[];
   readonly workspace: WorkspaceState;
   readonly reviewFreshness: { readonly kind: "current" } | { readonly kind: "stale"; readonly reason: string };
   readonly acceptance: { readonly kind: "unreviewed" } | { readonly kind: "accepted"; readonly resultId: string; readonly resultRevision: number; readonly commandId: string };
 }
 export type ExecutionAction =
   | { readonly kind: "prepare-execution-plan"; readonly plan: ExecutionPlanDraft }
-  | { readonly kind: "approve-execution"; readonly planId: string; readonly planRevision: number; readonly runId: string; readonly approvedAt: number; readonly expiresAt: number; readonly ownerPid: number; readonly ownerId: string }
+  | { readonly kind: "approve-execution"; readonly planId: string; readonly planRevision: number; readonly runId: string; readonly approvedAt: number; readonly expiresAt: number; readonly ownerPid: number; readonly ownerId: string; readonly spendingConsent?: SpendingConsent }
   | { readonly kind: "request-execution"; readonly runId: string; readonly requestedAt: number }
-  | { readonly kind: "observe-execution-provider"; readonly runId: string; readonly model: string; readonly modelProvider: string; readonly observedAt: number }
+  | { readonly kind: "record-execution-account-observation"; readonly runId: string; readonly context: CodexExecutionContext }
+  | { readonly kind: "observe-execution-provider"; readonly runId: string; readonly model: string; readonly modelProvider: string; readonly observedAt: number; readonly reasoningEffort?: string | null; readonly threadServiceTier?: string | null }
   | { readonly kind: "bind-execution-thread"; readonly runId: string; readonly threadId: string }
   | { readonly kind: "bind-execution-turn"; readonly runId: string; readonly threadId: string; readonly turnId: string }
   | { readonly kind: "observe-execution-terminal"; readonly runId: string; readonly threadId: string; readonly turnId: string; readonly status: "completed" | "interrupted" | "failed"; readonly observedAt: number }
@@ -183,23 +188,27 @@ export function applyExecutionEvent(project: ProjectSnapshot, event: ExecutionEv
     if (project.schedulingPaused || project.executionRuns.some(ownsExecutionLease) || project.executionRuns.some(run => run.runId === action.runId)) invalid();
     const plan = project.executionPlans.find(item => item.planId === action.planId && item.recordedAtRevision === action.planRevision);
     if (!plan || currentExecutionPlan(project, plan.taskId)?.planId !== plan.planId || planFreshness(project, plan) !== "current" || action.expiresAt <= action.approvedAt) invalid();
+    if (action.spendingConsent?.kind !== "legacy-unconfirmed" && !consentMatches(action.spendingConsent, plan, action.runId, action.approvedAt)) invalid();
     const task = project.tasks.find(item => item.taskId === plan.taskId);
     if (!task || !executionDependenciesReady(project, task.taskId)) invalid();
-    const run: ExecutionRun = { runId: action.runId, ownerPid: action.ownerPid, ownerId: action.ownerId, grant: { approvalId: event.commandId, plan, approvedAt: action.approvedAt,
+    const run: ExecutionRun = { runId: action.runId, ownerPid: action.ownerPid, ownerId: action.ownerId, grant: { approvalId: event.commandId, plan, spendingConsent: action.spendingConsent, approvedAt: action.approvedAt,
       expiresAt: action.expiresAt, deadlineAt: action.approvedAt + plan.durationMs }, state: { kind: "reserved" },
-      providerTurn: { kind: "not-requested" }, providerOutcome: { kind: "unobserved" }, providerObservation: { kind: "unobserved" }, process: { kind: "none" }, evidence: [], workspace: { kind: "not-integrated" }, reviewFreshness: { kind: "current" }, acceptance: { kind: "unreviewed" } };
+      providerTurn: { kind: "not-requested" }, providerOutcome: { kind: "unobserved" }, providerObservation: { kind: "unobserved" }, process: { kind: "none" }, evidence: [], accountObservations: [], workspace: { kind: "not-integrated" }, reviewFreshness: { kind: "current" }, acceptance: { kind: "unreviewed" } };
     return { ...project, revision, executionRuns: [...project.executionRuns, run] };
   }
   const run = project.executionRuns.find(item => item.runId === action.runId);
   if (!run) invalid();
   let next: ExecutionRun;
   switch (action.kind) {
+    case "record-execution-account-observation":
+      if (run.accountObservations.length >= 4) invalid();
+      next = { ...run, accountObservations: [...run.accountObservations, action.context] }; break;
     case "request-execution":
       if (run.state.kind !== "reserved" || project.schedulingPaused || action.requestedAt < run.grant.approvedAt || action.requestedAt >= run.grant.expiresAt || action.requestedAt >= run.grant.deadlineAt || (planFreshness(project, run.grant.plan) !== "current" || !executionDependenciesReady(project, run.grant.plan.taskId))) invalid();
       next = { ...run, state: { kind: "generating" }, providerTurn: { kind: "unacknowledged" } }; break;
     case "observe-execution-provider":
       if (project.schedulingPaused || planFreshness(project, run.grant.plan) !== "current" || !executionDependenciesReady(project, run.grant.plan.taskId) || run.state.kind !== "generating" || run.providerObservation.kind !== "unobserved" || action.model !== run.grant.plan.provider.requestedModel || action.modelProvider !== "openai" || action.observedAt < run.grant.approvedAt || action.observedAt >= run.grant.deadlineAt) invalid();
-      next = { ...run, providerObservation: { kind: "observed", model: action.model, modelProvider: action.modelProvider, observedAt: action.observedAt } }; break;
+      next = { ...run, providerObservation: { kind: "observed", model: action.model, modelProvider: action.modelProvider, observedAt: action.observedAt, reasoningEffort: action.reasoningEffort ?? null, threadServiceTier: action.threadServiceTier ?? null } }; break;
     case "bind-execution-thread":
       if (project.schedulingPaused || planFreshness(project, run.grant.plan) !== "current" || !executionDependenciesReady(project, run.grant.plan.taskId) || run.state.kind !== "generating" || run.providerObservation.kind !== "observed" || run.providerTurn.kind !== "unacknowledged") invalid();
       next = { ...run, providerTurn: { kind: "thread", threadId: action.threadId } }; break;

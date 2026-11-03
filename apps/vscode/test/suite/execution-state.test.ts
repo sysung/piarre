@@ -1,3 +1,5 @@
+import { DatabaseSync } from "node:sqlite";
+import { forecastFixture, consentFixture } from "./forecast-fixture.js";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -18,10 +20,10 @@ suite("Durable execution authority and freshness", () => {
     knowledge: currentKnowledge(repository.read()).map(entry => ({ projectId: entry.projectId, knowledgeId: entry.knowledgeId, recordedAtRevision: entry.recordedAtRevision })),
     files: [{ kind: "absent", fileId: "file-1", relativePath: "refunds.ts" }],
     checks: [{ checkId: "refund-check", argv: ["/usr/bin/node", "test.js"], criterionIds: ["refund-days"] }],
-    candidateRoot: "/tmp/run-candidate", controlDirectory: "/tmp/capture-control", captureHash: hash, baselineCheckpoint: { checkpointId: "before-run", manifestHash: hash }, sourceRoot: "/tmp/project", provider: { kind: "codex-readonly-patch", authType: "unknown", requestedModel: "fixture-model" }, accountContext: { observedAt: "2026-11-02T00:00:00.000Z", model: { kind: "resolved-default", model: "fixture-model" }, usage: { kind: "unknown" }, taskForecast: { kind: "unknown" } }, durationMs: 120_000, maxTokens: 4000 });
+    candidateRoot: "/tmp/run-candidate", controlDirectory: "/tmp/capture-control", captureHash: hash, baselineCheckpoint: { checkpointId: "before-run", manifestHash: hash }, sourceRoot: "/tmp/project", provider: { kind: "codex-readonly-patch", authType: "unknown", requestedModel: "fixture-model" }, forecast: forecastFixture(), accountContext: { observedAt: "2026-11-02T00:00:00.000Z", model: { kind: "resolved-default", model: "fixture-model" }, usage: { kind: "unknown" } }, durationMs: 120_000, maxTokens: 4000 });
   const plan = () => { const found = currentExecutionPlan(repository.read(), taskId); if (!found) throw new Error("Missing test plan"); return found; };
   const prepare = () => { send({ kind: "prepare-execution-plan", plan: draft() }); return plan(); };
-  const approve = (runId = "run-1") => { const prepared = plan(); return send({ kind: "approve-execution", planId: prepared.planId, planRevision: prepared.recordedAtRevision, runId, approvedAt: 1000, expiresAt: 5000, ownerPid: 12345, ownerId: "owner" }); };
+  const approve = (runId = "run-1") => { const prepared = plan(); return send({ kind: "approve-execution", planId: prepared.planId, planRevision: prepared.recordedAtRevision, runId, spendingConsent: consentFixture(prepared, runId), approvedAt: 1000, expiresAt: 5000, ownerPid: 12345, ownerId: "owner" }); };
   const generating = () => {
     prepare(); approve(); send({ kind: "request-execution", runId: "run-1", requestedAt: 1100 });
     send({ kind: "observe-execution-provider", runId: "run-1", model: "fixture-model", modelProvider: "openai", observedAt: 1101 });
@@ -45,6 +47,29 @@ suite("Durable execution authority and freshness", () => {
   });
   teardown(() => { repository.close(); rmSync(directory, { recursive: true, force: true }); });
 
+  test("historical events migrate once to unknown forecasts and cannot acquire new generation authority", () => {
+    prepare(); approve(); repository.close();
+    const database = new DatabaseSync(path.join(directory, "project.sqlite"));
+    const rows = database.prepare("SELECT revision, payload FROM events ORDER BY revision").all();
+    for (const row of rows) {
+      assert.ok(typeof row.payload === "string" && typeof row.revision === "number"); const payload: unknown = JSON.parse(row.payload);
+      if (typeof payload !== "object" || payload === null || !("action" in payload) || typeof payload.action !== "object" || payload.action === null || !("kind" in payload.action)) continue;
+      if (payload.action.kind === "prepare-execution-plan" && "plan" in payload.action && typeof payload.action.plan === "object" && payload.action.plan !== null) Reflect.deleteProperty(payload.action.plan, "forecast");
+      if (payload.action.kind === "approve-execution") Reflect.deleteProperty(payload.action, "spendingConsent");
+      database.prepare("UPDATE events SET payload = ? WHERE revision = ?").run(JSON.stringify(payload), row.revision);
+    }
+    database.close(); repository = new SqliteProjectRepository(path.join(directory, "project.sqlite"));
+    assert.deepEqual(plan().forecast, { kind: "legacy-unknown" }); assert.deepEqual(repository.read().executionRuns[0]?.grant.spendingConsent, { kind: "legacy-unconfirmed" });
+    const before = repository.read(); assert.throws(() => send({ kind: "request-execution", runId: "run-1", requestedAt: 1100 }), /Historical spending authority/); assert.deepEqual(repository.read(), before);
+    assert.throws(() => send({ kind: "approve-execution", planId: plan().planId, planRevision: plan().recordedAtRevision, runId: "new", approvedAt: 1000, expiresAt: 5000, ownerPid: 1, ownerId: "owner", spendingConsent: { kind: "legacy-unconfirmed" } }));
+  });
+  test("financial consent cannot be replayed for another forecast, plan revision, route or attempt", () => {
+    const prepared = prepare(); const base = consentFixture(prepared, "run-1"); assert.equal(base.kind, "native-uncertain-one-attempt");
+    for (const change of [{ forecastId: "other" }, { configurationHash: "b".repeat(64) }, { planRevision: prepared.recordedAtRevision + 1 }, { runId: "other" }, { route: "api" } as const]) {
+      assert.throws(() => send({ kind: "approve-execution", planId: prepared.planId, planRevision: prepared.recordedAtRevision, runId: "run-1", approvedAt: 1000, expiresAt: 5000, ownerPid: 1, ownerId: "owner", spendingConsent: { ...base, ...change } }));
+    }
+    assert.equal(repository.read().executionRuns.length, 0); approve(); assert.equal(repository.read().executionRuns.length, 1);
+  });
   test("unknown or changed provider metadata cannot authorize a generation turn", () => {
     prepare(); approve(); send({ kind: "request-execution", runId: "run-1", requestedAt: 1100 });
     assert.throws(() => send({ kind: "bind-execution-thread", runId: "run-1", threadId: "thread" }));
@@ -67,7 +92,7 @@ suite("Durable execution authority and freshness", () => {
   test("duplicate approval receipts cannot reserve another attempt and retain the historical snapshot", () => {
     const prepared = prepare(); const before = repository.read();
     const command = { commandId: "one-approval", projectId: before.projectId, expectedProjectRevision: before.revision,
-      action: { kind: "approve-execution", planId: prepared.planId, planRevision: prepared.recordedAtRevision, runId: "run-1", approvedAt: 1000, expiresAt: 5000, ownerPid: 12345, ownerId: "owner" } };
+      action: { kind: "approve-execution", planId: prepared.planId, planRevision: prepared.recordedAtRevision, runId: "run-1", spendingConsent: consentFixture(prepared, "run-1"), approvedAt: 1000, expiresAt: 5000, ownerPid: 12345, ownerId: "owner" } };
     const applied = repository.dispatch(command); assert.equal(applied.kind, "applied");
     send({ kind: "request-execution", runId: "run-1", requestedAt: 1100 });
     const duplicate = repository.dispatch(command); assert.equal(duplicate.kind, "duplicate");
@@ -92,7 +117,7 @@ suite("Durable execution authority and freshness", () => {
       const observed = second.read(); approve();
       const prepared = plan();
       assert.equal(second.dispatch({ commandId: "racing-approval", projectId: observed.projectId, expectedProjectRevision: observed.revision,
-        action: { kind: "approve-execution", planId: prepared.planId, planRevision: prepared.recordedAtRevision, runId: "run-2", approvedAt: 1000, expiresAt: 5000, ownerPid: 12345, ownerId: "owner" } }).kind, "stale");
+        action: { kind: "approve-execution", planId: prepared.planId, planRevision: prepared.recordedAtRevision, runId: "run-2", spendingConsent: consentFixture(prepared, "run-2"), approvedAt: 1000, expiresAt: 5000, ownerPid: 12345, ownerId: "owner" } }).kind, "stale");
     } finally { second.close(); }
   });
   test("expiry and elapsed deadlines block outbound generation and late file application", () => {

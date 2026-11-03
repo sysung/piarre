@@ -1,3 +1,4 @@
+import { parseProviderConfiguration } from "../../../packages/core/src/inspection.js";
 import { ExecutionCoordinator } from "./execution-coordinator.js";
 import { ExecutionUi } from "./execution-ui.js";
 import { canonicalWorkspacePath } from "./workspace-path.js";
@@ -140,6 +141,8 @@ export function activate(context: vscode.ExtensionContext): void {
       repository = next;
       view.show(project);
       const coordinator = new ExecutionCoordinator({ repository: next, storageDirectory: executionStorage, createClient, publish: publishExecution,
+        readProviderConfiguration: () => parseProviderConfiguration(vscode.workspace.getConfiguration("piarre").get<unknown>("providers", [])),
+        confirmSpending: async detail => await vscode.window.showWarningMessage("Authorize possible paid usage for this attempt?", { modal: true, detail }, "Authorize this attempt") === "Authorize this attempt" ? "consent" : "cancel",
         hasDirtyDocuments: paths => {
           const scoped = new Set(paths.map(canonicalWorkspacePath));
           return vscode.workspace.textDocuments.some(document => document.isDirty && document.uri.scheme === "file" && scoped.has(canonicalWorkspacePath(document.uri.fsPath)));

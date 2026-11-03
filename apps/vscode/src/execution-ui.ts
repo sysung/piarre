@@ -1,10 +1,11 @@
+import { executionForecastText } from "../../../packages/core/src/execution-forecast.js";
 import * as vscode from "vscode";
 import { randomUUID } from "node:crypto";
 import { currentKnowledge, currentExecutionPlan, executionDependenciesReady, ownsExecutionLease, planFreshness, type ProjectSnapshot } from "../../../packages/core/src/index.js";
 import { parseProviderConfiguration } from "../../../packages/core/src/inspection.js";
 import { resolveCheckExecutable } from "./candidate-check-runner.js";
 import { accountContextText } from "./codex-account-context.js";
-import { ExecutionCoordinator } from "./execution-coordinator.js";
+import { ExecutionCoordinator, ExecutionReviewCancelled } from "./execution-coordinator.js";
 import type { ExecutionMessage } from "./execution-actions.js";
 
 const escape = (value: string): string => value.replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character] ?? character);
@@ -56,6 +57,7 @@ export class ExecutionUi {
         }
       }
     } catch (error) {
+      if (error instanceof ExecutionReviewCancelled) return;
       if (this.current()) await vscode.window.showWarningMessage(`Piarre could not complete this operation. ${error instanceof Error ? error.message : "Review the current work state and try again."}`);
     }
   }
@@ -95,7 +97,7 @@ export class ExecutionUi {
         const plan = prepared.plan;
         const dependenciesReady = executionDependenciesReady(this.snapshot(), taskId);
         const canStart = dependenciesReady && !this.snapshot().schedulingPaused && !this.snapshot().executionRuns.some(ownsExecutionLease);
-        const detail = `Goal: ${plan.objective}\n\nCriteria:\n${plan.criteria.map(item => `• ${item.text}`).join("\n")}\n\nShared and candidate-writable files:\n${plan.files.map(file => `${file.relativePath} (${file.kind === "existing" ? `${String(file.bytes)} bytes; SHA-256 ${file.sha256}` : "new file"})`).join("\n")}\n\nChecks:\n${plan.checks.map(check => JSON.stringify(check.argv)).join("\n")}\n\nProvider: Codex; ${plan.provider.authType} authentication; ${plan.provider.requestedModel}. ${accountContextText(plan.accountContext)} One attempt; ${String(plan.durationMs / 1000)} seconds for local execution. Remote completion and continued usage may remain unconfirmed after disconnection; ${String(plan.maxTokens)} token target is soft.\n\nPiarre supplies this goal, criteria, captured files and linked knowledge. Codex’s own configured instructions and account context may also apply. Checks can read local files and write the isolated working copy; network and child processes are denied. Package-manager subprocesses need a separately supported runner. Output stays local.\n\nExisting Unix permission bits are preserved; new files use 0600. Special permission bits are unsupported. Changes are prepared in an isolated working copy. Applying repository changes needs separate result review. Stop can leave partial work; an unknown state requires reconciliation. Snapshots preserve scoped files; external services and provider charges cannot be rolled back.\n\nPlan ${plan.planId}, revision ${String(plan.recordedAtRevision)}. ${!dependenciesReady ? "Prerequisite acceptance or evidence is missing or stale. This plan can be kept for later review." : canStart ? "" : "New execution is currently paused or another run still owns work; this plan can be kept for later review."}`;
+        const detail = `Goal: ${plan.objective}\n\nCriteria:\n${plan.criteria.map(item => `• ${item.text}`).join("\n")}\n\nShared and candidate-writable files:\n${plan.files.map(file => `${file.relativePath} (${file.kind === "existing" ? `${String(file.bytes)} bytes; SHA-256 ${file.sha256}` : "new file"})`).join("\n")}\n\nChecks:\n${plan.checks.map(check => JSON.stringify(check.argv)).join("\n")}\n\nProvider: Codex; ${plan.provider.authType} authentication; ${plan.provider.requestedModel}. ${accountContextText(plan.accountContext)} ${executionForecastText(plan.forecast)} One attempt; ${String(plan.durationMs / 1000)} seconds for local execution. Remote completion and continued usage may remain unconfirmed after disconnection; ${String(plan.maxTokens)} token target is soft.\n\nPiarre supplies this goal, criteria, captured files and linked knowledge. Codex’s own configured instructions and account context may also apply. Checks can read local files and write the isolated working copy; network and child processes are denied. Package-manager subprocesses need a separately supported runner. Output stays local.\n\nExisting Unix permission bits are preserved; new files use 0600. Special permission bits are unsupported. Changes are prepared in an isolated working copy. Applying repository changes needs separate result review. Stop can leave partial work; an unknown state requires reconciliation. Snapshots preserve scoped files; external services and provider charges cannot be rolled back.\n\nPlan ${plan.planId}, revision ${String(plan.recordedAtRevision)}. ${!dependenciesReady ? "Prerequisite acceptance or evidence is missing or stale. This plan can be kept for later review." : canStart ? "" : "New execution is currently paused or another run still owns work; this plan can be kept for later review."}`;
         const startLabel = "Approve and run";
         const choice = await vscode.window.showWarningMessage("Review scoped agent work", { modal: true, detail }, ...(canStart ? [startLabel, "Edit plan"] : ["Keep plan", "Edit plan"]));
         if (!this.current()) return;

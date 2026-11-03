@@ -211,6 +211,7 @@ export function decideProjectEvent(command: ProjectCommand): ProjectEvent {
     case "prepare-execution-plan":
     case "approve-execution":
     case "request-execution":
+    case "record-execution-account-observation":
     case "observe-execution-provider":
     case "bind-execution-thread":
     case "bind-execution-turn":

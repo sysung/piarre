@@ -1,3 +1,4 @@
+import { forecastFixture, consentFixture } from "./forecast-fixture.js";
 import assert from "node:assert/strict";
 import { replay, executionDependenciesReady, type ExecutionAction, type ExecutionPlanDraft, type ProjectEvent, type ProjectSnapshot } from "../../../../packages/core/src/index.js";
 import { applyExecutionEvent } from "../../../../packages/core/src/execution.js";
@@ -9,7 +10,7 @@ suite("Execution review rendering", () => {
     { kind: "project-created", projectId: "project", repositoryUri: "file:///tmp/source", name: "Test" },
     { kind: "proposal-created", group: { groupId: "group", goal: "Goal", source: "deterministic-draft", taskIds: ["task"] }, tasks: [{ taskId: "task", groupId: "group", planVersion: 1, state: { kind: "unapproved" }, title: "Fix <script> & policy", requirements: [{ key: "criterion", text: "Require 45 days" }], proposedScope: { included: [], excluded: [] }, checks: [], proposedBudget: { maxAttempts: 1, maxElapsedMinutes: 2, maxTokens: 4000 }, dependsOn: [] }] },
   ];
-  const draft: ExecutionPlanDraft = { taskId: "task", objective: "45-day <policy>", criteria: [{ criterionId: "criterion", text: "45 days <required>" }], knowledge: [], files: [{ kind: "existing", fileId: "file-1", relativePath: "a&b.ts", sha256: hash, bytes: 8 }], checks: [{ checkId: "check", argv: ["node", "test.js"], criterionIds: ["criterion"] }], candidateRoot: "/tmp/candidate", sourceRoot: "/tmp/source", controlDirectory: "/tmp/control", captureHash: hash, baselineCheckpoint: { checkpointId: "before-run", manifestHash: hash }, provider: { kind: "codex-readonly-patch", authType: "unknown", requestedModel: "fixture-model" }, accountContext: { observedAt: "2026-11-02T00:00:00.000Z", model: { kind: "resolved-default", model: "fixture-model" }, usage: { kind: "unknown" }, taskForecast: { kind: "unknown" } }, durationMs: 120000, maxTokens: 4000 };
+  const draft: ExecutionPlanDraft = { taskId: "task", objective: "45-day <policy>", criteria: [{ criterionId: "criterion", text: "45 days <required>" }], knowledge: [], files: [{ kind: "existing", fileId: "file-1", relativePath: "a&b.ts", sha256: hash, bytes: 8 }], checks: [{ checkId: "check", argv: ["node", "test.js"], criterionIds: ["criterion"] }], candidateRoot: "/tmp/candidate", sourceRoot: "/tmp/source", controlDirectory: "/tmp/control", captureHash: hash, baselineCheckpoint: { checkpointId: "before-run", manifestHash: hash }, provider: { kind: "codex-readonly-patch", authType: "unknown", requestedModel: "fixture-model" }, forecast: forecastFixture(), accountContext: { observedAt: "2026-11-02T00:00:00.000Z", model: { kind: "resolved-default", model: "fixture-model" }, usage: { kind: "unknown" } }, durationMs: 120000, maxTokens: 4000 };
   let history: ProjectEvent[];
   let project: ProjectSnapshot;
   const send = (action: ExecutionAction): void => {
@@ -19,7 +20,7 @@ suite("Execution review rendering", () => {
   const approve = (): void => {
     send({ kind: "prepare-execution-plan", plan: draft });
     const plan = project.executionPlans[0]; assert.ok(plan);
-    send({ kind: "approve-execution", planId: plan.planId, planRevision: plan.recordedAtRevision, runId: "run", approvedAt: 1000, expiresAt: 5000, ownerPid: 1, ownerId: "owner" });
+    send({ kind: "approve-execution", planId: plan.planId, planRevision: plan.recordedAtRevision, runId: "run", spendingConsent: consentFixture(plan, "run"), approvedAt: 1000, expiresAt: 5000, ownerPid: 1, ownerId: "owner" });
   };
   const complete = (outcome: "needs-review" | "failed" = "needs-review", manifestHash = hash): void => {
     approve();
@@ -54,7 +55,7 @@ suite("Execution review rendering", () => {
     assert.match(html, /Passed scoped checks/); assert.match(html, /Acceptance: unreviewed/);
     assert.match(html, /data-execution-action="apply-accept"/); assert.match(html, /Apply and accept/);
     assert.match(html, /&lt;img src=x onerror=&quot;bad\(\)&quot;&gt;/); assert.doesNotMatch(html, /<img|<script>/);
-    assert.match(html, /a&amp;b.ts/); assert.match(html, /soft and not enforced/); assert.match(html, /cost and actual token usage are unknown/);
+    assert.match(html, /a&amp;b.ts/); assert.match(html, /soft and not enforced/); assert.match(html, /Cost scenario unknown/);
     assert.match(html, /result:event-/); assert.match(html, /SHA-256/);
   });
   test("check evidence for other bytes cannot mark a criterion passed", () => {

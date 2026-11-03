@@ -1,3 +1,4 @@
+import { parseRateProvenance, parseCalibrationSample, type RateProvenance, type CalibrationSample } from "./execution-forecast.js";
 import type { ProposedBudget } from "./index.js";
 
 export type UsageWindow = "five-hour" | "weekly";
@@ -13,8 +14,8 @@ export type UsageSample = UsageMeasurement & (
 );
 export type BillingPlan =
   | { readonly kind: "unknown" }
-  | { readonly kind: "api"; readonly name: string; readonly inputUsdPerMillion: number; readonly outputUsdPerMillion: number }
-  | { readonly kind: "subscription"; readonly name: string; readonly samples: readonly UsageSample[] };
+  | { readonly kind: "api"; readonly name: string; readonly inputUsdPerMillion: number; readonly outputUsdPerMillion: number; readonly provenance?: RateProvenance }
+  | { readonly kind: "subscription"; readonly name: string; readonly samples: readonly (UsageSample | CalibrationSample)[] };
 
 function object(value: unknown): value is object {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -34,16 +35,19 @@ export function parseBillingPlan(value: unknown): BillingPlan | undefined {
   if (!object(value) || !("kind" in value)) return undefined;
   if (value.kind === "unknown" && keys(value, ["kind"])) return { kind: "unknown" };
   if (!("name" in value) || !name(value.name)) return undefined;
-  if (value.kind === "api" && keys(value, ["kind", "name", "inputUsdPerMillion", "outputUsdPerMillion"]) &&
+  if (value.kind === "api" && (keys(value, ["kind", "name", "inputUsdPerMillion", "outputUsdPerMillion"]) || keys(value, ["kind", "name", "inputUsdPerMillion", "outputUsdPerMillion", "provenance"])) &&
       "inputUsdPerMillion" in value && "outputUsdPerMillion" in value &&
       rate(value.inputUsdPerMillion) && rate(value.outputUsdPerMillion))
-    return { kind: "api", name: value.name, inputUsdPerMillion: value.inputUsdPerMillion, outputUsdPerMillion: value.outputUsdPerMillion };
+    {
+      try { return { kind: "api", name: value.name, inputUsdPerMillion: value.inputUsdPerMillion, outputUsdPerMillion: value.outputUsdPerMillion, ...("provenance" in value ? { provenance: parseRateProvenance(value.provenance) } : {}) }; } catch { return undefined; }
+    }
   if (value.kind !== "subscription") return undefined;
   if (keys(value, ["kind", "name"])) return { kind: "subscription", name: value.name, samples: [] };
-  if (!keys(value, ["kind", "name", "samples"]) || !("samples" in value) || !Array.isArray(value.samples)) return undefined;
-  const samples: UsageSample[] = [];
+  if (!keys(value, ["kind", "name", "samples"]) || !("samples" in value) || !Array.isArray(value.samples) || value.samples.length > 100) return undefined;
+  const samples: (UsageSample | CalibrationSample)[] = [];
   const rawSamples: readonly unknown[] = value.samples;
   for (const sample of rawSamples) {
+    if (object(sample) && "kind" in sample && sample.kind === "reviewed-v1") { try { samples.push(parseCalibrationSample(sample)); continue; } catch { return undefined; } }
     if (!object(sample) ||
         !("model" in sample) || !("window" in sample) || !("tokensUsed" in sample) || !("usedPercentagePoints" in sample) ||
         !name(sample.model, 128) || (sample.window !== "five-hour" && sample.window !== "weekly") ||
@@ -88,10 +92,9 @@ export function estimateBudget(input: {
   }
   const windows: UsageWindow[] = ["five-hour", "weekly"];
   return { kind: "subscription", plan: billing.name, tokens, windows: windows.map((window) => {
-    const percentages = billing.samples.filter((sample) => sample.kind === "bound" &&
+    const percentages = billing.samples.flatMap((sample) => sample.kind === "bound" &&
         sample.provider === input.provider && sample.plan === billing.name &&
-        sample.window === window && sample.model === input.model)
-      .map((sample) => tokens / sample.tokensUsed * sample.usedPercentagePoints);
+        sample.window === window && sample.model === input.model ? [tokens / sample.tokensUsed * sample.usedPercentagePoints] : []);
     if (percentages.length === 0 || percentages.some((percentage) => !Number.isFinite(percentage))) return { kind: "unknown", window };
     return { kind: "calibrated", window, minimumPercent: percentages.reduce((minimum, value) => Math.min(minimum, value), Infinity), maximumPercent: percentages.reduce((maximum, value) => Math.max(maximum, value), 0), sampleCount: percentages.length };
   }) };

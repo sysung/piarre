@@ -38,7 +38,7 @@ suite("Agent workspace actual execution journey", () => {
       let interruptProvider: () => void = () => undefined;
       const createClient = (): Client => ({
         connect: () => Promise.resolve({ kind: "ready", authType: "unknown" }),
-        readExecutionContext: () => Promise.resolve({ model: { kind: "resolved-default", model: "fixture-model" }, usage: { kind: "unknown" }, observedAt: new Date().toISOString(), taskForecast: { kind: "unknown" } }),
+        readExecutionContext: () => Promise.resolve({ model: { kind: "resolved-default", model: "fixture-model" }, usage: { kind: "unknown" }, observedAt: new Date().toISOString() }),
         proposePatch: input => {
           requests++;
           input.onThreadMetadata?.({ model: "fixture-model", modelProvider: "openai" });
@@ -65,7 +65,7 @@ suite("Agent workspace actual execution journey", () => {
       let finish: (value: unknown) => void = () => undefined;
       const observed = new Promise<unknown>(resolve => { finish = resolve; });
       const deadline = setTimeout(() => { finish({ kind: "journey-result", ok: false, error: "Agent workspace host journey timed out" }); }, 30_000);
-      const coordinator = new ExecutionCoordinator({ repository, storageDirectory: storage, createClient, publish: snapshot => { view.update(snapshot); } });
+      const coordinator = new ExecutionCoordinator({ repository, storageDirectory: storage, createClient, confirmSpending: detail => { assert.match(detail, /provider has no supported per-turn included-only/); assert.match(detail, /Exact files: refund.txt/); return Promise.resolve("consent"); }, publish: snapshot => { view.update(snapshot); } });
       const fail = (error: unknown): void => { finish({ kind: "journey-result", ok: false, error: String(error) }); };
       const handle = async (message: ExecutionMessage): Promise<void> => {
         calls.push(message);
