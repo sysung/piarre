@@ -54,15 +54,19 @@ Models can propose actions while deterministic code owns authorization and execu
 
 ## P08. Let memory evolve while preserving provenance and authority
 
-Piarre should retrieve prior experiments, technical contracts, business decisions, and user preferences with their sources and validity intact. Distinguish historical evidence, tentative conclusions, current decisions, superseded decisions, and authoritative constraints. Age alone does not decide authority.
+Retrieve knowledge according to relevance, applicability, and authority. Use recency and usage to improve selection without redefining what is true. An older accepted business decision can remain current; a new agent proposal cannot silently replace it. Distinguish when a claim applied from when Piarre recorded it. Keep confirmed, inferred, disputed, superseded, stale, and unavailable records distinct.
 
-Knowledge graphs, text search, vector retrieval, and other retrieval-augmented generation methods are alternatives to test. No database structure is mandated here. Investigate corrections, conflicting records, user-authorized changes, and which records remain authoritative until explicitly revised. Measure grounding, freshness, cost, and the user's ability to understand why a record informed an answer.
+Keep business knowledge and technical decisions as sourced, versioned records. Keep code grounded in the current worktree, including uncommitted edits. Infrastructure declarations describe intent; current deployed-state claims need appropriately scoped, authorized live observations. Historical questions deliberately retrieve historical versions. Conflicting accepted sources remain visible until resolved through the existing approval process.
 
-Anthropic's [Contextual Retrieval](https://www.anthropic.com/research/contextual-retrieval) adds short, chunk-specific context before embedding and lexical indexing. It combines semantic retrieval with BM25 exact-term matching and explores reranking. This is a concrete candidate for Piarre's memory experiments, not a requirement for a knowledge graph.
+Start with exact identifiers and SQLite full-text search. Route code questions to current files and compiler references where available; use bounded sourced relationships for impact questions. Retrieve applicable constraints alongside direct matches, then expand evidence only to resolve a specific gap. Preserve original passages, qualifiers, source revisions, and coverage limits within a bounded context budget.
 
-For example, an isolated "one writer" statement needs its repository, release, source revision, and decision status to be interpreted correctly. Those fields are a proposed Piarre extension. Keep source text and generated explanatory context distinguishable. Generated context cannot confirm a decision or turn historical guidance into current authority. Rebuild affected derived context and indexes when sources change.
+Treat indexes, summaries, and caches as replaceable derivatives. Cache retrieval work before generated final answers. Validate source changes, additions, deletion, permission changes, and collection membership. An unchanged old hit can still miss a newly accepted constraint. Keep evidence consistent across revisions and distinguish no match from partial, failed, stale, or conflicting lookup. Incomplete constraint coverage cannot establish policy compliance. Bound total calls, bytes, retries, model work, and elapsed time separately from final evidence tokens.
 
-Compare plain text search, ordinary hybrid retrieval, contextualized hybrid retrieval, and optional reranking on the same questions. Include exact code identifiers, similarly named projects, superseded decisions, contradictions, and unanswerable questions. Measure retrieval recall and grounded answer correctness separately, alongside indexing cost, update cost, query latency, and prompt tokens. Anthropic's reported gains are specific to its evaluation; Piarre must establish its own results.
+Usage may warm relevant caches and reveal retrieval misses. Frequency must not promote authority or turn inferred preferences into confirmed knowledge. Respect retention, deletion, project isolation, and approved spending. Retrieved prose remains untrusted data rather than instructions.
+
+Anthropic's [Contextual Retrieval](https://www.anthropic.com/research/contextual-retrieval) is a candidate for restoring meaning lost when documents are split into chunks. Test deterministic source headers first. Add lexical-plus-semantic retrieval for demonstrated paraphrase misses, generated contextualization for missing chunk meaning, and reranking for noisy candidates. Graph-assisted synthesis and bounded whole-document context serve different question types; no graph database or model is mandated. Generated context remains separate from source evidence and cannot confirm a decision.
+
+Use [controlled retrieval comparisons, issue #79](https://github.com/sysung/piarre/issues/79), to select additions. Compare identical versioned tasks and source snapshots, preserving an untouched baseline and changing one component at a time. Measure grounded correctness, evidence recall, stale or unauthorized admissions, user effort, end-to-end latency, and total ingestion/update/query cost separately. Keep held-out cases for temporal updates, conflicts, missing evidence, and abstention. A benchmark gain elsewhere does not establish Piarre gains; retaining the simpler baseline is a valid result.
 
 ## P09. Turn requests into verifiable outcomes and repair misunderstandings
 
@@ -102,3 +106,7 @@ The following references preserve the owner's research trail. They are inspirati
 
 - [Writing effective tools for agents, Anthropic](https://www.anthropic.com/research/writing-tools-for-agents). Informs P02, P05, and P06.
 - [Introducing Contextual Retrieval, Anthropic](https://www.anthropic.com/research/contextual-retrieval). Informs P08.
+
+- [LongMemEval](https://arxiv.org/abs/2410.10813). Informs temporal updates and abstention evaluation in P08.
+- [GraphRAG query overview](https://microsoft.github.io/graphrag/query/overview/). Informs question-specific graph retrieval in P08.
+- [Zep facts documentation](https://help.getzep.com/v4/facts). Informs the distinction between validity time, recording time, and truth in P08.
