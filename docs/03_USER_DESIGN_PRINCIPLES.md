@@ -68,6 +68,8 @@ Anthropic's [Contextual Retrieval](https://www.anthropic.com/research/contextual
 
 Use [controlled retrieval comparisons, issue #79](https://github.com/sysung/piarre/issues/79), to select additions. Compare identical versioned tasks and source snapshots, preserving an untouched baseline and changing one component at a time. Measure grounded correctness, evidence recall, stale or unauthorized admissions, user effort, end-to-end latency, and total ingestion/update/query cost separately. Keep held-out cases for temporal updates, conflicts, missing evidence, and abstention. A benchmark gain elsewhere does not establish Piarre gains; retaining the simpler baseline is a valid result.
 
+[P13](#p13-preserve-human-authority-without-promoting-inference-into-fact) defines decision authority separately from retrieval relevance and evidence confidence.
+
 ## P09. Turn requests into verifiable outcomes and repair misunderstandings
 
 Preserve the original request alongside a proposed interpretation that states the outcome, preserved behavior, scope exclusions, success measure, and unresolved questions. Use available evidence to reduce unnecessary questions. Material ambiguity about intent requires human clarification before dependent execution.
@@ -93,6 +95,18 @@ Explore checkpoints at meaningful changes in scope, authority, or risk. Compare 
 Delegation should preserve enough understanding for a developer to direct, review, maintain, and recover the resulting system. Explore optional explanations of affected components, data flow, constraints, and tradeoffs linked to current code and decisions. Match detail to user preference and prior knowledge without forcing a tutorial into every task.
 
 Evaluate the full collaboration. Start with imperfect intent, form a verifiable proposal, execute within authority, accept a correction, review, and return after an interruption. After a delay, ask the developer to explain the change and make a related modification or diagnose a seeded failure. Compare correctness, assistance needed, total effort, and cost with the existing workflow. Faster initial delivery does not establish improvement if later maintenance becomes harder.
+
+## P13. Preserve human authority without promoting inference into fact
+
+Humans retain authority over goals, requirements, and accepted tradeoffs. Piarre may challenge a decision with evidence and seek clarification. Once the human reaffirms it, the decision governs work within its scope and applicable authorization until explicitly revised. The agent must not silently substitute its preferred decision.
+
+Distinguish human directives or adopted decisions, AI working decisions within delegated scope, and inferred claims. Preserve authorship separately from approval: human adoption records who accepted which proposal version and scope without rewriting its origin. Silence, repeated use, and generic approval of changes do not confirm every underlying assumption.
+
+Human authority establishes intended behavior, not observed reality. A 45-day refund requirement governs implementation; a claim that the code already implements it still needs evidence. Preserve conflicts between intent and observation rather than hiding failed checks.
+
+Confidence describes evidence strength, not decision authority. Start with supported, tentative, or unresolved assessments with reasons, sources, assumptions, and counterevidence. Avoid numerical probabilities without calibration. Multiple summaries of one source are not independent support. Outside research and prior experience need applicability checks rather than a fixed low ranking. A high-confidence inference cannot overrule an accepted requirement.
+
+Memory and sourced relationships should connect requirements, interpretations, working decisions, implementation, and verification. Preserve depends-on, supports, contradicts, and supersedes relationships with provenance and revisions. Changed premises require reconsideration of affected inferences and work, not automatic replacement of confirmed decisions. Graph connections do not establish truth or complete impact coverage.
 
 ## Inspirational Sources
 

@@ -54,6 +54,8 @@ Translation also works from human intent toward agent instructions. Preserve the
 
 Project memory contains business knowledge, technical decisions, requirements, preferences, observations, and unresolved assumptions. Users can inspect sources, confirmation state, changes, and affected work.
 
+Decision authority follows [P13](03_USER_DESIGN_PRINCIPLES.md#p13-preserve-human-authority-without-promoting-inference-into-fact). Separate human directives and explicitly adopted decisions from AI working decisions and inferred claims. Record authorship, approval scope, and evidence strength independently. Reaffirmed human intent governs authorized work; factual claims still require verification. General approval or repeated reuse cannot silently confirm underlying assumptions. Confidence never grants authority.
+
 Important recommendations offer a Recommendation view showing supporting records, assumptions, alternatives, contradictions, and proposed versus completed actions. This is an explanation backed by evidence, not access to hidden model reasoning.
 
 The user wants automatic observation capture and approval of memory changes. The proposed boundary is automatic capture as unconfirmed observations, with approval before replacing confirmed knowledge, promoting inferences to requirements, or resolving contradictions. This policy still needs explicit resolution before dependent behavior ships.

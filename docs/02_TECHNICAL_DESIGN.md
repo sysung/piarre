@@ -36,6 +36,10 @@ Voice input, speech output, turn-taking detection, and speech-specific performan
 
 Knowledge records need identity, content, sources, confirmation state, revisions, supersession, and affected-work links. Observed, inferred, confirmed, disputed, invalid, and stale states must not collapse into a single remembered fact.
 
+Decision records distinguish human directives/adopted decisions, AI working decisions within delegated scope, and inferred claims. Preserve author identity separately from acceptance identity, timestamp, exact revision, and scope. Bind adoption to the reviewed proposal; broad task approval cannot imply acceptance of every premise. Reaffirmed human intent remains authoritative within applicable permissions, while implementation and runtime claims need observed evidence.
+
+Represent evidence assessment separately from authority, initially as supported, tentative, or unresolved with reasons, source revisions, assumptions, and counterevidence. An agent-reported assessment is not a calibrated probability. Preserve dependency provenance so summaries of one source cannot manufacture independent support. When premises change, mark dependent assessments for reconsideration and invalidate affected work through existing revision rules. Graph links cannot establish complete impact coverage or automatic supersession. Retrieval must preserve these distinctions when assembling context.
+
 Retrieve a bounded set of relevant records for each request. Distinguish retrieval failure from no matching record. Recommendation links exact supporting sources and revisions and exposes unconfirmed premises. Test whether sources support the answer, not merely whether links render.
 
 Approved corrections invalidate affected plans and evidence while preserving unrelated work. Contradictory confirmed sources need a visible resolution proposal. Reflection and repeated interactions cannot silently grant authority or confirm requirements.
