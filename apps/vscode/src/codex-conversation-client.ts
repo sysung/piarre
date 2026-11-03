@@ -18,7 +18,7 @@ const PATCH_SCHEMA = {
       properties: { fileId: { type: "string", minLength: 1, maxLength: 128 }, content: { anyOf: [{ type: "string", maxLength: 100_000 }, { type: "null" }] } } } } },
 };
 type TerminalObservation = { readonly threadId: string; readonly turnId: string; readonly status: "completed" | "interrupted" | "failed" };
-type TurnInput = { readonly prompt: string; readonly cwd: string; readonly model?: string; readonly serviceTierForTurn?: "default"; readonly effort?: string; readonly onBeforeTurnStart?: (context: CodexExecutionContext) => void; readonly onProgress?: (text: string) => void; readonly onThreadStarted?: (threadId: string) => void; readonly onThreadMetadata?: (metadata: CodexThreadMetadata) => void; readonly onTurnTerminal?: (observation: TerminalObservation) => void; readonly onTurnStarted?: (threadId: string, turnId: string) => void };
+type TurnInput = { readonly prompt: string; readonly cwd: string; readonly model?: string; readonly serviceTierForTurn?: "default"; readonly effort?: string; readonly onServiceTier?: (tier: string | null) => void; readonly onBeforeTurnStart?: (context: CodexExecutionContext) => void; readonly onProgress?: (text: string) => void; readonly onThreadStarted?: (threadId: string) => void; readonly onThreadMetadata?: (metadata: CodexThreadMetadata) => void; readonly onTurnTerminal?: (observation: TerminalObservation) => void; readonly onTurnStarted?: (threadId: string, turnId: string) => void };
 
 type ConnectResult = { kind: "ready"; authType: "chatgpt" | "apiKey" | "unknown" } | { kind: "login-required" };
 type Response = { output: unknown; threadId: string; turnId: string; status: "completed" | "interrupted" };
@@ -130,6 +130,7 @@ export class CodexConversationClient {
       }));
       const threadId = identifier(object(started.thread).id);
       input.onThreadMetadata?.(parseThreadMetadata(started));
+      input.onServiceTier?.(typeof started.serviceTier === "string" ? started.serviceTier : null);
       const sandbox = object(started.sandbox);
       if (sandbox.type !== "readOnly" || sandbox.networkAccess === true || started.approvalPolicy !== "never") throw new Error("Codex did not confirm read-only policy.");
       await this.checkTools(threadId);

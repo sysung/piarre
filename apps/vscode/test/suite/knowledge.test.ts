@@ -98,10 +98,12 @@ suite("Sourced knowledge and corrections", () => {
     dispatch({ kind: "observe-knowledge", topic: "Second topic", category: "decision", submitted: statement("Original B"), affectedTaskIds: [] });
     const second = currentKnowledge(repository.read())[1]; assert.ok(second);
     dispatch({ kind: "confirm-knowledge", target: { projectId: second.projectId, knowledgeId: second.knowledgeId, recordedAtRevision: second.recordedAtRevision } });
+    const prior = repository.read();
     dispatch({ kind: "correct-knowledge", target: target(), submitted: statement("Corrected A"), affectedTaskIds: [] });
-    const brief = renderSessionBrief(repository.read());
-    assert.match(brief, new RegExp(`First topic · recorded revision ${String(latest().recordedAtRevision)}`));
-    assert.doesNotMatch(brief, /Second topic · recorded revision/);
+    const brief = renderSessionBrief(repository.read(), { kind: "previous-visit", snapshot: prior });
+    assert.match(brief, /First topic: Corrected A/);
+    assert.match(brief, new RegExp(`revision ${String(latest().recordedAtRevision)}`));
+    assert.doesNotMatch(brief, /Second topic: Original B/);
   });
 
   test("a delayed reply retains its frozen source but visibly becomes historical after correction", () => {

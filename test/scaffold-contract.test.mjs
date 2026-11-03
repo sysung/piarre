@@ -48,6 +48,9 @@ test("the extension exposes the Piarre: Open activation seam", async () => {
       enablement: "isWorkspaceTrusted",
     },
     ...[ ["createDiagnosticBundle", "Create Diagnostic Bundle"], ["exportDiagnosticBundle", "Export Diagnostic Bundle"], ["deleteDiagnosticBundle", "Delete Diagnostic Bundle"] ].map(([command, title]) => ({ command: `piarre.${command}`, title: `Piarre: ${title}`, enablement: "isWorkspaceTrusted" })),
+    { command: "piarre.endSession", title: "Piarre: End Session (Optional Reflection)", enablement: "isWorkspaceTrusted" },
+    { command: "piarre.reviewReflection", title: "Piarre: Review Reflection", enablement: "isWorkspaceTrusted" },
+    { command: "piarre.explanationPreference", title: "Piarre: Explanation Preference", enablement: "isWorkspaceTrusted" },
   ]);
 });
 

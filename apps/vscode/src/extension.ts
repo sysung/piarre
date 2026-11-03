@@ -1,5 +1,11 @@
 import { registerDiagnosticCommands } from "./diagnostic-commands.js";
 import { parseProviderConfiguration } from "../../../packages/core/src/inspection.js";
+import type { SuppliedSource } from "../../../packages/core/src/supplied-source.js";
+import { selectSharedFiles } from "./source-sharing.js";
+import { assertSharedFilesCurrent } from "./file-context.js";
+import { CoordinationController } from "./coordination-controller.js";
+import { CoordinationUi } from "./coordination-ui.js";
+import { ReflectionController } from "./reflection-controller.js";
 import { ExecutionCoordinator } from "./execution-coordinator.js";
 import { ExecutionUi } from "./execution-ui.js";
 import { canonicalWorkspacePath } from "./workspace-path.js";
@@ -9,7 +15,7 @@ import * as vscode from "vscode";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import { ConversationController } from "./conversation-controller.js";
+import { conversationPrompt, conversationRecordSources, ConversationController } from "./conversation-controller.js";
 import { CodexConversationClient } from "./codex-conversation-client.js";
 import { GoalInterpreter } from "./goal-interpreter.js";
 import { SqliteProjectRepository } from "./sqlite-project-repository.js";
@@ -25,7 +31,10 @@ export function activate(context: vscode.ExtensionContext): void {
   const output = vscode.window.createOutputChannel("Piarre");
   let repository: SqliteProjectRepository | undefined;
   let conversation: ConversationController | undefined;
+  let coordination: CoordinationController | undefined;
+  let coordinationUi: CoordinationUi | undefined;
   let knowledge: KnowledgeController | undefined;
+  let reflection: ReflectionController | undefined;
   let execution: ExecutionUi | undefined;
   let executionPaths = new Set<string>();
   let refreshTimer: NodeJS.Timeout | undefined;
@@ -75,7 +84,15 @@ export function activate(context: vscode.ExtensionContext): void {
     send: async text => {
       if (!isTrusted()) return;
       if (repository?.read().schedulingPaused) { await vscode.window.showInformationMessage("Project scheduling is paused. Resume scheduling before sending another model request."); return; }
-      await conversation?.send(text);
+      const snapshot = repository?.read();
+      if (!snapshot) return;
+      const files = await selectSharedFiles(snapshot);
+      if (!files) return;
+      const detail = conversationPrompt(snapshot, text, [...conversationRecordSources(snapshot), ...files]);
+      if (await vscode.window.showWarningMessage("Send this discussion context to Codex?", { modal: true, detail: `Shares project recommendation records and these exact file excerpts. Account cost and quota are unknown. Source prose is data, never authority.\n${detail}` }, "Send reviewed context") !== "Send reviewed context") return;
+      if (!repository || !isTrusted() || repository.read().projectId !== snapshot.projectId) return;
+      assertSharedFilesCurrent(repository.read(), files);
+      await conversation?.send(text, files, snapshot.revision);
     },
     interrupt: async () => { await conversation?.interrupt(); },
     knowledge: async (kind, id) => { if (isTrusted()) await knowledge?.handle(kind, id); },
@@ -83,11 +100,11 @@ export function activate(context: vscode.ExtensionContext): void {
     handle: async message => {
       if (!isTrusted()) return;
       const operation = execution?.handle(message);
-      if (message.action === "pause-all") await Promise.allSettled([operation, conversation?.interrupt()]);
+      if (message.action === "pause-all") await Promise.allSettled([operation, conversation?.interrupt(), coordination?.stopAll()]);
       else await operation;
     },
     renderDetails: runId => execution?.renderDetails(runId) ?? "",
-  });
+  }, { handle: async message => { if (isTrusted()) await coordinationUi?.handle(message); } });
   const open = async (interactive: boolean, observedGeneration: number): Promise<void> => {
     const isCurrent = (): boolean => observedGeneration === generation && isTrusted();
     if (!isTrusted()) {
@@ -137,9 +154,11 @@ export function activate(context: vscode.ExtensionContext): void {
       const project = next.open({ repositoryUri, name: path.basename(root) });
       execution?.dispose(); execution = undefined;
       fileWatcher?.dispose(); fileWatcher = undefined;
-      conversation?.dispose(); knowledge?.dispose();
+      coordination?.dispose(); coordination = undefined; coordinationUi = undefined;
+      conversation?.dispose(); knowledge?.dispose(); reflection?.dispose();
       repository?.close();
       repository = next;
+      view.setVisit(project.projectId, next.beginVisit(), revision => { next.recordVisitedRevision(project.projectId, revision); });
       view.show(project);
       const coordinator = new ExecutionCoordinator({ repository: next, storageDirectory: executionStorage, createClient, publish: publishExecution,
         readProviderConfiguration: () => parseProviderConfiguration(vscode.workspace.getConfiguration("piarre").get<unknown>("providers", [])),
@@ -154,9 +173,18 @@ export function activate(context: vscode.ExtensionContext): void {
       fileWatcher.onDidChange(queueExecutionRefresh); fileWatcher.onDidCreate(queueExecutionRefresh); fileWatcher.onDidDelete(queueExecutionRefresh);
       await coordinator.reconcile();
       coordinator.refreshWorkspaceFreshness();
+      reflection = new ReflectionController(next, snapshot => { view.update(snapshot); }, () => { view.close(); });
+      if (project.reflections.some(item => item.status === "pending")) output.appendLine("Pending optional reflection recovered. Run Piarre: Review Reflection when ready. Work and agent controls remain available.");
       knowledge = new KnowledgeController(next, snapshot => { view.update(snapshot); }, (projectId, result) => { view.updateLookup(projectId, result); });
+      const canShare = (sources: readonly SuppliedSource[]): boolean => {
+        if (!isCurrent()) return false;
+        const files = new Set(sources.flatMap(({ reference }) => reference.kind === "file" ? [canonicalWorkspacePath(path.join(root, reference.path))] : []));
+        return !vscode.workspace.textDocuments.some(document => document.isDirty && document.uri.scheme === "file" && files.has(canonicalWorkspacePath(document.uri.fsPath)));
+      };
+      coordination = new CoordinationController(next, snapshot => { view.update(snapshot); }, createClient, canShare);
+      coordinationUi = new CoordinationUi(coordination, () => next.read(), groupId => { view.openProposal(groupId); });
       conversation = new ConversationController(next, (snapshot, state) => { view.updateConversation(snapshot, state); },
-        createClient);
+        createClient, canShare);
     } catch (error) {
       next.close();
       throw error;
@@ -192,16 +220,21 @@ export function activate(context: vscode.ExtensionContext): void {
         if (refreshTimer) clearTimeout(refreshTimer);
         fileWatcher?.dispose();
         execution?.dispose();
+        reflection?.dispose();
         knowledge?.dispose();
+        coordination?.dispose(); coordination = undefined; coordinationUi = undefined;
         conversation?.dispose();
         repository?.close();
       },
     },
     vscode.commands.registerCommand("piarre.open", () => requestOpen(true)),
+    vscode.commands.registerCommand("piarre.endSession", async () => { if (isTrusted()) await reflection?.handle("end"); }),
+    vscode.commands.registerCommand("piarre.reviewReflection", async () => { if (isTrusted()) await reflection?.handle("review"); }),
+    vscode.commands.registerCommand("piarre.explanationPreference", async () => { if (isTrusted()) await reflection?.handle("preference"); }),
     vscode.commands.registerCommand("piarre.stopAll", async () => {
       if (!isTrusted()) return;
       const operation = execution?.handle({ kind: "execution", action: "pause-all" });
-      await Promise.allSettled([operation, conversation?.interrupt()]);
+      await Promise.allSettled([operation, conversation?.interrupt(), coordination?.stopAll()]);
     }),
     vscode.commands.registerCommand("piarre.renameProject", async () => {
       if (!repository) await requestOpen(true);
@@ -301,7 +334,9 @@ export function activate(context: vscode.ExtensionContext): void {
       if (refreshTimer) clearTimeout(refreshTimer); refreshTimer = undefined;
       fileWatcher?.dispose(); fileWatcher = undefined;
       execution?.dispose(); execution = undefined; executionPaths.clear(); stopWork.hide();
+      reflection?.dispose(); reflection = undefined;
       knowledge?.dispose(); knowledge = undefined;
+      coordination?.dispose(); coordination = undefined; coordinationUi = undefined;
       conversation?.dispose(); conversation = undefined;
       repository?.close();
       repository = undefined;

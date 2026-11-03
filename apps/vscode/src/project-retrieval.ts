@@ -1,5 +1,7 @@
+import { execFileSync } from "node:child_process";
+import type { SuppliedSource } from "../../../packages/core/src/supplied-source.js";
 import { createHash } from "node:crypto";
-import { constants, closeSync, fstatSync, lstatSync, openSync, readFileSync, readdirSync, realpathSync } from "node:fs";
+import { constants, accessSync, closeSync, fstatSync, lstatSync, openSync, readFileSync, readdirSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
@@ -26,7 +28,7 @@ export interface RetrievalHit {
   readonly source: RetrievalSource;
   readonly text: string;
   readonly contentHash: string;
-  readonly method: "exact" | "fts5";
+  readonly method: "exact" | "fts5" | "compiler-reference";
 }
 export type RetrievalResult =
   | { readonly kind: "matched" | "no-match"; readonly hits: readonly RetrievalHit[]; readonly coverage: RetrievalCoverage }
@@ -39,7 +41,7 @@ const MAX_FILES = 500;
 const MAX_BYTES = 2_000_000;
 const MAX_FILE_BYTES = 100_000;
 const MAX_RECORDS = 500;
-const limitation = "Bounded literal and Unicode full-text lookup only; no semantic understanding, automatic contradiction resolution, runtime evidence, or complete dependency coverage. Hidden, secret-named, generated, unsupported and oversized files are excluded. Results are source excerpts, not verified facts.";
+const limitation = "Bounded literal and Unicode full-text lookup only; no semantic understanding, automatic contradiction resolution, runtime evidence, or complete dependency coverage. Hidden, secret-named, generated, unsupported and oversized files are excluded. Directory checks cover identity, ownership, mode and effective read/search access, not an identical ACL metadata snapshot. Results are source excerpts, not verified facts.";
 const hash = (text: string): string => createHash("sha256").update(text).digest("hex");
 
 export class ProjectRetrieval {
@@ -72,9 +74,11 @@ export class ProjectRetrieval {
     try {
       const before = fstatSync(descriptor);
       if (!before.isFile() || before.size > MAX_FILE_BYTES) throw new Error("Source is not a supported bounded file.");
-      const text = readFileSync(descriptor, "utf8");
+      const bytes = readFileSync(descriptor);
+      const text = bytes.toString("utf8");
+      if (!Buffer.from(text, "utf8").equals(bytes)) throw new Error("Unsupported source encoding.");
       const after = fstatSync(descriptor);
-      if (before.mtimeMs !== after.mtimeMs || before.size !== after.size || !realpathSync(absolute).startsWith(this.root + path.sep)) throw new Error("Source changed during retrieval.");
+      if (before.mtimeMs !== after.mtimeMs || before.size !== after.size || before.mode !== after.mode || before.ino !== after.ino || before.dev !== after.dev || before.ctimeMs !== after.ctimeMs || !realpathSync(absolute).startsWith(this.root + path.sep)) throw new Error("Source changed during retrieval.");
       if (text.includes("\u0000") || /^(?:<<<<<<< |=======\s*$|>>>>>>> )/m.test(text)) throw new Error("Binary or conflicted source is excluded.");
       return text;
     } finally { closeSync(descriptor); }
@@ -99,9 +103,12 @@ export class ProjectRetrieval {
     let entries = 0;
     const walk = (directory: string, depth: number): void => {
       const absolute = path.join(this.root, directory);
+      const directoryStat = lstatSync(absolute);
+      manifest.push([directory, directoryStat.mode, directoryStat.uid, directoryStat.gid, directoryStat.dev, directoryStat.ino]);
       if (lstatSync(absolute).isSymbolicLink() || (directory && !realpathSync(absolute).startsWith(this.root + path.sep))) {
         issues.push(`Excluded unsafe directory: ${directory}`); manifest.push([directory, "unsafe"]); return;
       }
+      accessSync(absolute, constants.R_OK | constants.X_OK);
       if (depth > 12) { issues.push(`Directory depth limit: ${directory}`); return; }
       for (const entry of readdirSync(path.join(this.root, directory), { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
         if (++entries > 5000) { issues.push("Directory entry limit reached; coverage is incomplete."); return; }
@@ -111,7 +118,7 @@ export class ProjectRetrieval {
         if (entry.isDirectory()) { if (!excludedDirectories.has(entry.name)) walk(relative, depth + 1); continue; }
         if (!entry.isFile()) continue;
         const stat = lstatSync(path.join(this.root, relative));
-        manifest.push([relative, stat.size, stat.mtimeMs]);
+        manifest.push([relative, stat.size, stat.mtimeMs, stat.mode, stat.uid, stat.gid, stat.dev, stat.ino, stat.ctimeMs]);
         if (!supported.has(path.extname(entry.name).toLowerCase())) { issues.push(`Unsupported source: ${relative}`); continue; }
         paths.push(relative);
       }
@@ -194,6 +201,51 @@ export class ProjectRetrieval {
       }
       return { kind: hits.length ? "matched" : "no-match", hits, coverage: this.coverage };
     } catch { return { kind: "error", reason: "Retrieval failed. No context may be inferred from this result.", hits: [], coverage: this.coverage }; }
+  }
+
+  captureFile(relative: string, revision: number, startLine = 1, endLine = 200): SuppliedSource {
+    if (!Number.isSafeInteger(startLine) || !Number.isSafeInteger(endLine) || startLine < 1 || endLine < startLine || endLine - startLine > 199) throw new Error("Choose at most 200 lines");
+    const scan = this.scan();
+    if (!scan.paths.includes(relative)) throw new Error("File is excluded from source context");
+    const fullText = this.readFile(relative);
+    const lines = fullText.match(/[^\n]*\n|[^\n]+$/g) ?? [];
+    const text = lines.slice(startLine - 1, endLine).join("");
+    if (!text.trim() || Buffer.byteLength(text) > 10_000) throw new Error("Excerpt is empty or exceeds 10,000 UTF-8 bytes; select fewer lines");
+    const contentHash = hash(fullText);
+    return { text, reference: { kind: "file", projectId: this.options.projectId, recordId: `${relative}:${String(startLine)}:${String(Math.min(endLine, lines.length))}:${contentHash}`, revision,
+      path: relative, startLine, endLine: Math.min(endLine, lines.length), contentHash, inventoryHash: hash(scan.manifest), excerptHash: hash(text), version: "worktree-at-capture", representation: { kind: "file-excerpt" } } };
+  }
+
+  captureDiff(relative: string, revision: number): SuppliedSource {
+    const scan = this.scan();
+    if (!scan.paths.includes(relative)) throw new Error("File is excluded from source context");
+    const current = this.readFile(relative);
+    const contentHash = hash(current);
+    const git = (args: string[]): string => execFileSync("git", ["--no-replace-objects", "-c", "core.fsmonitor=false", ...args], { cwd: this.root, encoding: "utf8", timeout: 2000, maxBuffer: 100_000, stdio: ["ignore", "pipe", "pipe"] });
+    const baseCommit = git(["rev-parse", "HEAD"]).trim();
+    if (!/^[a-f0-9]{40,64}$/.test(baseCommit)) throw new Error("Git base unavailable");
+    const original = git(["show", `${baseCommit}:${relative}`]);
+    if (original === current) throw new Error("No current tracked change against HEAD");
+    const lines = (text: string): string[] => text ? text.replace(/\n$/, "").split("\n") : [];
+    const originalLines = lines(original);
+    const currentLines = lines(current);
+    const changes = (text: string, content: string[], prefix: string): string[] => [...content.map(line => `${prefix}${line}`), ...(text && !text.endsWith("\n") ? ["\\ No newline at end of file"] : [])];
+    const text = [`diff --git ${JSON.stringify(`a/${relative}`)} ${JSON.stringify(`b/${relative}`)}`, `--- ${JSON.stringify(`a/${relative}`)}`, `+++ ${JSON.stringify(`b/${relative}`)}`,
+      `@@ -${originalLines.length ? "1" : "0"},${String(originalLines.length)} +${currentLines.length ? "1" : "0"},${String(currentLines.length)} @@`, ...changes(original, originalLines, "-"), ...changes(current, currentLines, "+")].join("\n");
+    if (!text.trim() || Buffer.byteLength(text) > 10_000 || text.split("\n").length > 200) throw new Error("No tracked diff or diff exceeds 200 lines / 10,000 UTF-8 bytes; choose a file excerpt");
+    const endLine = text.split("\n").length;
+    return { text, reference: { kind: "file", projectId: this.options.projectId, path: relative, revision, contentHash, inventoryHash: hash(scan.manifest), version: "worktree-at-capture", recordId: `${relative}:diff:${baseCommit}:${hash(text)}`, startLine: 1, endLine, excerptHash: hash(text), representation: { kind: "git-diff", baseCommit } } };
+  }
+
+  assertCapturedCurrent(sources: readonly SuppliedSource[]): void {
+    const inventory = hash(this.scan().manifest);
+    for (const source of sources) {
+      const ref = source.reference;
+      if (ref.kind !== "file") continue;
+      if (ref.projectId !== this.options.projectId || ref.inventoryHash !== inventory || ref.excerptHash !== hash(source.text)) throw new Error("Captured source inventory, permissions or bytes changed; select and review fresh context");
+      const current = ref.representation.kind === "git-diff" ? this.captureDiff(ref.path, ref.revision) : this.captureFile(ref.path, ref.revision, ref.startLine, ref.endLine);
+      if (current.reference.kind !== "file" || current.reference.contentHash !== ref.contentHash || JSON.stringify(current.reference.representation) !== JSON.stringify(ref.representation) || current.text !== source.text) throw new Error("Captured source changed; select and review fresh context");
+    }
   }
 
   dispose(): void {
