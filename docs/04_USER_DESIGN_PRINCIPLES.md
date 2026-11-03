@@ -4,55 +4,55 @@ These principles record the product owner's goals for how Piarre should support 
 
 The long-term vision is a product form of p-stack that evolves with the developer's workflows. The central aim is to reduce token costs, repeated corrections, unclear communication, misinformation, and AI fatigue while preserving human understanding and control. Specific interfaces and claimed benefits require experiments. These principles do not add features to the current release or defer requirements already accepted there.
 
-## Keep delegated work visible and individually steerable
+## P01. Keep delegated work visible and individually steerable
 
 Developers should be able to identify each agent's task, activity, outputs, blockers, and pending decisions. Visibility should include agent-to-agent interactions, agreements, disagreements, and handoffs. A developer should be able to direct a specific agent and inspect whether that instruction was received and acted on.
 
 A Slack-like room, post, or session is a candidate interaction. The container and naming remain open. Compare a room with the existing work view and a session timeline. Test whether users understand ownership and intervene correctly without reading every message. Controls must reflect actual provider capabilities and authorization boundaries.
 
-## Make visibility economical
+## P02. Make visibility economical
 
 Displaying progress should not require always-on model activity. Explore rendering recorded events without inference and delivering only relevant context to each agent. A visible message need not enter every agent's context.
 
 Coordination, summaries, and context delivery can still consume tokens. Measure calls, usage, and task quality before claiming savings. Keep the simpler interaction when additional agent communication increases cost or reading burden without improving supervision.
 
-## Ground natural conversation in shared work
+## P03. Ground natural conversation in shared work
 
 Piarre should communicate naturally and refer accurately to prior work, decisions, and corrections. Useful continuity requires inspectable records and honest uncertainty. Human-sounding language alone does not establish reliable memory.
 
 Harness^2 is a proposed approach for prompt and retrieval experiments; its integration remains undefined. Compare relevant history, irrelevant history, corrected decisions, and missing evidence. Evaluate clarity, grounded references, correction burden, and token cost together.
 
-## Preserve intent when execution is unavailable
+## P04. Preserve intent when execution is unavailable
 
 A developer should be able to capture next steps when credits run out or a rate limit blocks work. Explore a durable inbox that accepts messages without a model call and supports later triage without losing the developer's train of thought.
 
 Capture, triage, and execution need distinct states. Queuing a message does not approve its execution. Investigate restart recovery, duplicate prevention, stale instructions, provider availability, and user control over resumption. Integrate with canonical task state rather than creating a competing agenda.
 
-## Use focused skills that fit the repository
+## P05. Use focused skills that fit the repository
 
 Route concrete tasks to focused `SKILL.md` procedures with necessary context, expected outputs, and meaningful verification. Explore global `.piarre` skills with repository-specific versions when local differences affect the work. Directory layout, precedence, versioning, and conflict resolution remain open.
 
 A skill file does not prove reliability or make a smaller model sufficient. Compare generic, global, and repository-specific procedures on repeatable tasks. Measure quality and token use. A generic model may formulate a proposal when no focused skill fits; ambiguous intent still requires human clarification before dependent execution. Repository skills remain subject to trust and authorization boundaries.
 
-## Make adaptation optional and demonstrable
+## P06. Make adaptation optional and demonstrable
 
 Piarre should adapt to the developer without silently changing the rules they rely on. Explore a setting for proposing or automatically updating skills through Harness^2. Automatic application requires explicit opt-in for a defined scope; whether it is appropriate remains open.
 
 Skill changes need a reviewable diff, reason, evaluation evidence, version history, and restoration path. Test the corrected failure and held-out cases, including regressions across repositories. Changes cannot expand authority or bypass clarification of ambiguous intent.
 
-## Make planned steps and actual execution distinguishable
+## P07. Make planned steps and actual execution distinguishable
 
 A developer should be able to inspect a multi-step skill before execution and understand its current stage during work. A flow diagram or plain step list could show planned actions, observed execution, approval waits, failures, deviations, and unknown state.
 
 Models can propose actions while deterministic code owns authorization and execution state. A free-form skill file does not guarantee deterministic behavior. Compare diagrams with lists by testing whether users predict the next action, notice an unintended action, and understand deviations.
 
-## Let memory evolve while preserving provenance and authority
+## P08. Let memory evolve while preserving provenance and authority
 
 Piarre should retrieve prior experiments, technical contracts, business decisions, and user preferences with their sources and validity intact. Distinguish historical evidence, tentative conclusions, current decisions, superseded decisions, and authoritative constraints. Age alone does not decide authority.
 
 Knowledge graphs, text search, vector retrieval, and other retrieval-augmented generation methods are alternatives to test. No database structure is mandated here. Investigate corrections, conflicting records, user-authorized changes, and which records remain authoritative until explicitly revised. Measure grounding, freshness, cost, and the user's ability to understand why a record informed an answer.
 
-## Turn requests into verifiable outcomes and repair misunderstandings
+## P09. Turn requests into verifiable outcomes and repair misunderstandings
 
 Preserve the original request alongside a proposed interpretation that states the outcome, preserved behavior, scope exclusions, success measure, and unresolved questions. Use available evidence to reduce unnecessary questions. Material ambiguity about intent requires human clarification before dependent execution.
 
@@ -60,19 +60,19 @@ For "Optimize this data pipeline", propose output invariants, a baseline, constr
 
 When a user corrects the task, show what changed in the shared understanding and identify stale plans or evidence. The developer should not need to rewrite the specification after every correction. Test routing, scope drift, repeated explanations, output preservation, and whether verification detects a failed outcome.
 
-## Explain consequential actions with evidence
+## P10. Explain consequential actions with evidence
 
 Help developers connect requests and constraints to consequential actions, changed artifacts, and observed results. Provide concise explanations linked to exact evidence, with detailed activity available for investigation. Visibility concerns observable actions and useful explanations, not private model reasoning.
 
 Distinguish observations, assumptions, and inference. A generated explanation is not proof that an action occurred. Test whether a developer can locate the first observed deviation without reading the full transcript.
 
-## Reduce review fatigue without encouraging rubber-stamping
+## P11. Reduce review fatigue without encouraging rubber-stamping
 
 Review should help developers understand what changed, why it matters, what was checked, what failed, and what remains unknown. Fluent language, agent confidence, and another agent's agreement cannot substitute for evidence.
 
 Explore checkpoints at meaningful changes in scope, authority, or risk. Compare them with review at every step. More checkpoints can increase interruption burden and blind acceptance. Use realistic changes with seeded material errors to measure comprehension, missed defects, corrections, review time, perceived workload, and token cost. Faster acceptance and fewer messages alone do not establish success.
 
-## Preserve the developer's ability to own and maintain the result
+## P12. Preserve the developer's ability to own and maintain the result
 
 Delegation should preserve enough understanding for a developer to direct, review, maintain, and recover the resulting system. Explore optional explanations of affected components, data flow, constraints, and tradeoffs linked to current code and decisions. Match detail to user preference and prior knowledge without forcing a tutorial into every task.
 
