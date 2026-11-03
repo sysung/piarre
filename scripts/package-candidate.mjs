@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -14,11 +15,15 @@ try {
   const manifest = JSON.parse(readFileSync(path.join(extension, "package.json"), "utf8"));
   manifest.name = "piarre-candidate";
   manifest.displayName = "Piarre Candidate";
-  mkdirSync(path.join(stage, "dist"));
   mkdirSync(output, { recursive: true });
   writeFileSync(path.join(stage, "package.json"), JSON.stringify(manifest, null, 2) + "\n");
-  copyFileSync(path.join(extension, "dist/extension.js"), path.join(stage, "dist/extension.js"));
-  copyFileSync(path.join(extension, "README.md"), path.join(stage, "README.md"));
+  assert.ok(Array.isArray(manifest.files) && manifest.files.length > 0 && manifest.files.length <= 50, "List exact runtime files in the extension manifest");
+  for (const file of manifest.files) {
+    assert.ok(typeof file === "string" && !path.isAbsolute(file) && !file.includes("\\") && !/[*?{}]/.test(file) && file.split("/").every(part => part && part !== "." && part !== ".."), "Candidate packaging requires exact relative runtime file paths");
+    const target = path.join(stage, file);
+    mkdirSync(path.dirname(target), { recursive: true });
+    copyFileSync(path.join(extension, file), target);
+  }
   const filename = `piarre-candidate-${manifest.version}.vsix`;
   const vsce = path.join(root, "node_modules/@vscode/vsce/vsce");
   execFileSync(process.execPath, [vsce, "package", "--no-dependencies", "--out", path.join(output, filename)], { cwd: stage, stdio: "inherit" });

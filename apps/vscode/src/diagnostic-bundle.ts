@@ -93,7 +93,7 @@ export function createDiagnosticBundle(input: DiagnosticInput): string {
       synchronization: "Snapshot and event order come from one SQLite SELECT. Event revisions are ordering, not wall-clock timestamps. Repository metadata is a separate observation.",
       detail: input.detail, retentionDays: input.retentionDays,
       included: ["ordered event kinds and revisions", "pseudonymous project/task/run/check references", "run states and check outcomes", "approval/check observation times", "workspace hashes", "pseudonymous configured and observed providers/models", ...(input.detail === "reviewable-content" ? ["redacted snapshot, event content, provider configuration"] : [])],
-      omitted: ["credentials and environment", "raw SQLite/WAL", "filesystem contents and arbitrary raw logs", "recording media", ...(input.detail === "metadata" ? ["user statements, prompts, command arguments, output, paths, memory text, configuration strings"] : [])],
+      omitted: ["credentials and environment", "raw SQLite/WAL", "direct filesystem collection and arbitrary raw logs", "recording media", ...(input.detail === "metadata" ? ["user statements, prompts, command arguments, output, paths, memory text, configuration strings"] : [])],
       eventCoverage: { firstRevision: Math.max(1, input.events.length - MAX_EVENTS + 1), lastRevision: input.events.length, omittedEarlierEvents: Math.max(0, input.events.length - MAX_EVENTS) },
       privacy: "Local only. No remote analysis or upload occurs. Content mode uses best-effort secret patterns; review before sharing. Copies and provider retention are separate.",
       limits: { maximumBytes: MAX_BYTES, maximumEvents: MAX_EVENTS, maximumRuns: 500 },
