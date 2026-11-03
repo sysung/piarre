@@ -109,13 +109,15 @@ suite("Typed workspace previews", () => {
   });
 
   test("session brief follows saved records through rename, deletion and replay", async () => {
-    assert.ok(renderSessionBrief(repository.read()).includes("No saved goals yet."));
+    assert.ok(renderSessionBrief(repository.read()).includes("No next action established by recorded plans."));
     const session = controller();
     await session.receive({ kind: "preview", requestId: "brief", goal: "Resume this goal" });
-    assert.ok(renderSessionBrief(repository.read()).includes("No saved goals yet."), "Unpersisted previews are not saved work");
+    assert.ok(renderSessionBrief(repository.read()).includes("No next action established by recorded plans."), "Unpersisted previews are not saved work");
     await session.receive({ kind: "save", requestId: "brief" });
     let project = repository.read();
-    assert.ok(renderSessionBrief(project).includes("1 saved goal. Proposals remain unapproved."));
+    assert.ok(renderSessionBrief(project).includes("Prepare and review an execution plan for"));
+    assert.ok(renderSessionBrief(project).includes(project.tasks[0]?.title ?? "missing task"));
+    assert.ok(renderSessionBrief(project).includes("No accepted result recorded"));
     repository.dispatch({ commandId: "brief-rename", projectId: project.projectId, expectedProjectRevision: project.revision,
       action: { kind: "rename-project", name: "<Project & brief>" } });
     project = repository.read();
@@ -124,8 +126,8 @@ suite("Typed workspace previews", () => {
     repository.dispatch({ commandId: "brief-delete", projectId: project.projectId, expectedProjectRevision: project.revision,
       action: { kind: "delete-proposal", groupId: proposal.groupId } });
     repository.close(); repository = new SqliteProjectRepository(path.join(directory, "project.sqlite"));
-    assert.ok(renderSessionBrief(repository.read()).includes("No saved goals yet."));
-    assert.ok(renderSessionBrief(repository.read()).includes("No recorded approvals or run results."));
+    assert.ok(renderSessionBrief(repository.read()).includes("No next action established by recorded plans."));
+    assert.ok(renderSessionBrief(repository.read()).includes("No accepted result recorded."));
   });
 
   test("saved goal cards are newest first without changing project history", async () => {
@@ -273,7 +275,7 @@ window.addEventListener('message', ({data}) => { if (data.kind === 'test-checked
     }
   };
   try {
-    if (!document.getElementById('session-brief').textContent.includes('No saved goals yet.')) throw new Error('Empty brief invents saved work');
+    if (!document.getElementById('session-brief').textContent.includes('No next action established by recorded plans.')) throw new Error('Empty brief invents saved work');
     const columns = document.querySelector('.workspace-columns');
     const planning = document.querySelector('.planning');
     const desk = document.querySelector('.inspection-desk');
@@ -304,7 +306,7 @@ window.addEventListener('message', ({data}) => { if (data.kind === 'test-checked
     document.getElementById('inspection').append(marker);
     api.postMessage({kind: 'test-refresh'});
     await waitFor(() => !document.getElementById('inspection-marker'));
-    if (!document.getElementById('session-brief').textContent.includes('No saved goals yet.')) throw new Error('Refresh corrupted the project brief');
+    if (!document.getElementById('session-brief').textContent.includes('No next action established by recorded plans.')) throw new Error('Refresh corrupted the project brief');
     if (goal.value !== content || document.activeElement !== goal || goal.selectionStart !== 3) throw new Error('Unsent input or focus lost: ' + JSON.stringify({value: goal.value, active: document.activeElement.tagName, start: goal.selectionStart}));
     window.dispatchEvent(new MessageEvent('message', {data: {kind:'conversation', state:{kind:'ready',message:'Connected for test'},html:'<article>Inferred reply</article>'}}));
     if (goal.value !== content || document.activeElement !== goal || goal.selectionStart !== 3) throw new Error('Conversation update disturbed unsent input');

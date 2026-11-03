@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import type { SuppliedSource } from "../../../packages/core/src/supplied-source.js";
 import { createHash } from "node:crypto";
-import { constants, closeSync, fstatSync, lstatSync, openSync, readFileSync, readdirSync, realpathSync } from "node:fs";
+import { constants, accessSync, closeSync, fstatSync, lstatSync, openSync, readFileSync, readdirSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
@@ -41,7 +41,7 @@ const MAX_FILES = 500;
 const MAX_BYTES = 2_000_000;
 const MAX_FILE_BYTES = 100_000;
 const MAX_RECORDS = 500;
-const limitation = "Bounded literal and Unicode full-text lookup only; no semantic understanding, automatic contradiction resolution, runtime evidence, or complete dependency coverage. Hidden, secret-named, generated, unsupported and oversized files are excluded. Results are source excerpts, not verified facts.";
+const limitation = "Bounded literal and Unicode full-text lookup only; no semantic understanding, automatic contradiction resolution, runtime evidence, or complete dependency coverage. Hidden, secret-named, generated, unsupported and oversized files are excluded. Directory checks cover identity, ownership, mode and effective read/search access, not an identical ACL metadata snapshot. Results are source excerpts, not verified facts.";
 const hash = (text: string): string => createHash("sha256").update(text).digest("hex");
 
 export class ProjectRetrieval {
@@ -104,10 +104,11 @@ export class ProjectRetrieval {
     const walk = (directory: string, depth: number): void => {
       const absolute = path.join(this.root, directory);
       const directoryStat = lstatSync(absolute);
-      manifest.push([directory, directoryStat.mode, directoryStat.uid, directoryStat.gid, directoryStat.dev, directoryStat.ino, directoryStat.ctimeMs]);
+      manifest.push([directory, directoryStat.mode, directoryStat.uid, directoryStat.gid, directoryStat.dev, directoryStat.ino]);
       if (lstatSync(absolute).isSymbolicLink() || (directory && !realpathSync(absolute).startsWith(this.root + path.sep))) {
         issues.push(`Excluded unsafe directory: ${directory}`); manifest.push([directory, "unsafe"]); return;
       }
+      accessSync(absolute, constants.R_OK | constants.X_OK);
       if (depth > 12) { issues.push(`Directory depth limit: ${directory}`); return; }
       for (const entry of readdirSync(path.join(this.root, directory), { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
         if (++entries > 5000) { issues.push("Directory entry limit reached; coverage is incomplete."); return; }

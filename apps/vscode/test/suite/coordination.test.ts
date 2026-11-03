@@ -188,10 +188,13 @@ suite("Canonical bounded read-only coordination", () => {
   test("real fake-process readOnly protocol binds sessions and exact per-turn standard wire key", async () => {
     controller.dispose();
     controller = new CoordinationController(repository, () => undefined, () => new CodexConversationClient({ command: process.env.PIARRE_TEST_NODE ?? process.execPath, args: [path.resolve(__dirname, "../../test/fixtures/fake-codex-conversation.mjs"), "standard-tier"] }));
-    const group = prepare(1); await controller.approveAndRun(group.groupId, group.preparedAtRevision, "fixture-protocol-consent");
+    const group = prepare(1); const assignment = group.assignments[0]; assert.ok(assignment);
+    controller.steer(group.groupId, assignment.assignmentId, "protocol-steering", "Use exact sources");
+    await controller.approveAndRun(group.groupId, readGroup().preparedAtRevision, "fixture-protocol-consent");
     const worker = readGroup().assignments[0]; assert.ok(worker); assert.equal(worker.state.kind, "terminal"); assert.equal(worker.state.outcome, "completed");
     assert.deepEqual(worker.state.session, { kind: "turn", threadId: "thread-1", turnId: "turn-1" });
     assert.equal(worker.state.observation, "Safe answer"); assert.equal(worker.providerObservation.serviceTier, null);
+    assert.deepEqual(worker.state.deliveredMessageIds, ["protocol-steering"]);
   });
   test("provider-observed failure remains failed rather than completion or dropped worker", async () => {
     controller.dispose();
@@ -212,9 +215,50 @@ suite("Canonical bounded read-only coordination", () => {
         return Promise.resolve({ status: "completed", threadId: "forbidden-thread", turnId: "forbidden-turn", output: { summary: "Should never be requested", sourceIndexes: [0] } });
       }, interrupt: () => Promise.resolve(), dispose: () => undefined,
     }));
-    const group = prepare(1); await controller.approveAndRun(group.groupId, group.preparedAtRevision, "pre-turn-explicit");
+    const group = prepare(1); const assignment = group.assignments[0]; assert.ok(assignment);
+    controller.steer(group.groupId, assignment.assignmentId, "blocked-steering", "Use corrected parent");
+    await controller.approveAndRun(group.groupId, readGroup().preparedAtRevision, "pre-turn-explicit");
     assert.equal(turns, 0); const state = readGroup().assignments[0]?.state; assert.equal(state?.kind, "terminal"); assert.equal(state.outcome, "unknown");
     assert.deepEqual(state.session, { kind: "thread", threadId: "thread-created-before-source-correction" });
+    assert.deepEqual(state.deliveredMessageIds, []);
+  });
+  test("failed login retains queued steering without claiming outbound delivery", async () => {
+    controller.dispose(); let outbound = 0;
+    controller = new CoordinationController(repository, () => undefined, () => ({
+      connect: () => Promise.resolve({ kind: "login-required" }),
+      respond: () => { outbound++; return Promise.reject(new Error("No outbound permitted")); },
+      interrupt: () => Promise.resolve(), dispose: () => undefined,
+    }));
+    const group = prepare(1); const worker = group.assignments[0]; assert.ok(worker);
+    controller.steer(group.groupId, worker.assignmentId, "login-steer", "Check uncertainty");
+    await controller.approveAndRun(group.groupId, readGroup().preparedAtRevision, "login-approval");
+    assert.equal(outbound, 0);
+    const state = readGroup().assignments[0]?.state; assert.ok(state?.kind === "terminal");
+    assert.equal(state.outcome, "failed"); assert.deepEqual(state.deliveredMessageIds, []);
+    assert.equal(renderCoordination(repository.read()).includes("Delivered to this request: login-steer"), false);
+  });
+  test("completion remains historical while parent freshness updates during and after work", async () => {
+    const group = prepare(1); const operation = controller.approveAndRun(group.groupId, group.preparedAtRevision, "freshness-approval");
+    await tick();
+    const snapshot = repository.read(); const task = snapshot.tasks.find(task => task.taskId === taskId); assert.ok(task);
+    repository.dispatch({ commandId: "delete-while-pending", projectId: snapshot.projectId, expectedProjectRevision: snapshot.revision,
+      action: { kind: "delete-proposal", groupId: task.groupId } });
+    clients[0]?.complete("Historical correlated finding"); await operation;
+    const state = readGroup().assignments[0]?.state; assert.ok(state?.kind === "terminal"); assert.equal(state.outcome, "completed");
+    const html = renderCoordination(repository.read());
+    assert.ok(html.includes("Historical correlated finding")); assert.ok(html.includes("Parent freshness: stale (changed or missing)"));
+    assert.ok(html.includes("Supplied source freshness: stale"));
+  });
+  test("completed findings become stale after a later parent deletion", async () => {
+    const group = prepare(1); const operation = controller.approveAndRun(group.groupId, group.preparedAtRevision, "completed-approval");
+    await tick(); clients[0]?.complete("Completed before parent change"); await operation;
+    assert.ok(renderCoordination(repository.read()).includes("Parent freshness: current"));
+    const snapshot = repository.read(); const task = snapshot.tasks.find(task => task.taskId === taskId); assert.ok(task);
+    repository.dispatch({ commandId: "delete-after-completion", projectId: snapshot.projectId, expectedProjectRevision: snapshot.revision,
+      action: { kind: "delete-proposal", groupId: task.groupId } });
+    const html = renderCoordination(repository.read()); assert.ok(html.includes("Completed before parent change"));
+    assert.ok(html.includes("Parent freshness: stale"));
+    assert.ok(readGroup().assignments[0]?.state.kind === "terminal");
   });
   test("strict message parser cannot accept authority or private draft payload", () => {
     const message = { kind: "coordination", action: "prepare", requestId: "visible-click-message" };

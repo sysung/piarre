@@ -137,7 +137,7 @@ export function applyCoordinationEvent(snapshot: ProjectSnapshot, event: Coordin
     assertCoordinationCurrent(snapshot, group);
     if (snapshot.schedulingPaused || group.approval.kind !== "approved" || worker.state.kind !== "queued" ||
       state.groups.flatMap(group => group.assignments).filter(worker => worker.state.kind === "active").length >= 3) throw new Error("Assignment is unapproved, already requested, paused or fanout limit reached");
-    next = { ...worker, state: { kind: "active", session: { kind: "unacknowledged" }, stopRequested: false, deliveredMessageIds: worker.steering.map(message => message.messageId) }, latestObservationAt: action.observedAt };
+    next = { ...worker, state: { kind: "active", session: { kind: "unacknowledged" }, stopRequested: false, deliveredMessageIds: [] }, latestObservationAt: action.observedAt };
   } else if (action.operation === "provider") {
     if (worker.state.kind !== "active") throw new Error("Assignment is no longer active");
     next = { ...worker, providerObservation: { model: action.model, provider: action.provider, serviceTier: action.serviceTier }, latestObservationAt: action.observedAt };
@@ -153,7 +153,7 @@ export function applyCoordinationEvent(snapshot: ProjectSnapshot, event: Coordin
       const prior = worker.state.session;
       if (action.session.kind === "unacknowledged" || prior.kind === "turn" ||
         (prior.kind === "thread" && action.session.threadId !== prior.threadId)) throw new Error("Invalid provider session correlation");
-      next = { ...worker, state: { ...worker.state, session: action.session }, latestObservationAt: action.observedAt };
+      next = { ...worker, state: { ...worker.state, session: action.session, deliveredMessageIds: action.session.kind === "turn" ? worker.steering.map(message => message.messageId) : worker.state.deliveredMessageIds }, latestObservationAt: action.observedAt };
     }
   }
   return replace({ ...group, ...(action.operation === "steer" ? { preparedAtRevision: revision } : {}), assignments: group.assignments.map(item => item === worker ? next : item) });

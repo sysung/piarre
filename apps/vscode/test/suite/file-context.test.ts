@@ -4,6 +4,7 @@ import { chmodSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node
 import path from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
+import { renderCoordination } from "../../src/coordination-view.js";
 import { ProjectRetrieval } from "../../src/project-retrieval.js";
 import { assertSharedFilesCurrent } from "../../src/file-context.js";
 import { parseSuppliedSources, type SuppliedSource } from "../../../../packages/core/src/supplied-source.js";
@@ -32,7 +33,7 @@ suite("Frozen file sharing and citations", () => {
   let root: string; let db: SqliteProjectRepository; let index: ProjectRetrieval; let taskId: string; let dbFile: string;
   const capture = () => index.captureFile("refund.ts", db.read().revision, 1, 2);
   setup(async () => {
-    root = mkdtempSync(path.join(tmpdir(), "piarre-file-context-")); dbFile = path.join(tmpdir(), `piarre-source-${path.basename(root)}.sqlite`);
+    root = mkdtempSync(path.join(tmpdir(), "piarre-file-context-")); dbFile = path.join(root, ".project.sqlite");
     writeFileSync(path.join(root, "refund.ts"), "export const days = 45;\n// declaration only\n");
     db = new SqliteProjectRepository(dbFile); const project = db.open({ repositoryUri: pathToFileURL(root).href, name: "source fixture" });
     const draft = await new GoalInterpreter().propose("Keep the refund window at 45 days");
@@ -41,6 +42,31 @@ suite("Frozen file sharing and citations", () => {
   });
   teardown(() => { index.dispose(); db.close(); rmSync(root, { recursive: true, force: true }); for (const suffix of ["", "-wal", "-shm"]) rmSync(dbFile + suffix, { force: true }); });
   const prepare = (controller: CoordinationController, sources = [capture()]) => controller.prepare({ requestId: "review-files", parentTaskId: taskId, purpose: "Locate declaration", scope: "Selected source only", model: "fixture", workers: 1, durationMs: 5000, maxTokens: 100, fileSources: sources });
+  test("hidden journal and canonical dispatch churn preserve frozen files through outbound and completion", async () => {
+    const source = capture();
+    writeFileSync(path.join(root, ".project.sqlite-journal"), "excluded journal");
+    rmSync(path.join(root, ".project.sqlite-journal"));
+    const project = db.read();
+    assert.equal(db.dispatch({ commandId: "sqlite-churn", projectId: project.projectId, expectedProjectRevision: project.revision,
+      action: { kind: "set-explanation-preference", preference: "brief" } }).kind, "applied");
+    assertSharedFilesCurrent(db.read(), [source]);
+    const client = new Fixture(); const controller = new CoordinationController(db, () => undefined, () => client);
+    const group = prepare(controller, [source]);
+    controller.steer(group.groupId, group.assignments[0]?.assignmentId ?? "", "frozen-steer", "Keep original bytes");
+    const reviewed = db.read().coordination.groups[0]; assert.ok(reviewed);
+    await controller.approveAndRun(group.groupId, reviewed.preparedAtRevision, "hidden-journal-approval");
+    assert.equal(client.requests.length, 1);
+    const state = db.read().coordination.groups[0]?.assignments[0]?.state;
+    assert.ok(state?.kind === "terminal"); assert.equal(state.outcome, "completed");
+    assert.deepEqual(state.deliveredMessageIds, ["frozen-steer"]);
+    assert.ok(renderCoordination(db.read()).includes("Supplied source freshness: unknown"));
+    writeFileSync(path.join(root, "refund.ts"), "changed after completed finding\n");
+    const html = renderCoordination(db.read());
+    assert.ok(html.includes("Supplied source freshness: unknown"));
+    assert.ok(html.includes(source.text)); assert.equal(state.outcome, "completed");
+    assert.throws(() => { assertSharedFilesCurrent(db.read(), [source]); });
+    controller.dispose();
+  });
   test("exact bytes survive strict parsing; edits and tampering invalidate but preserve historical bytes", () => {
     const source = capture(); assert.deepEqual(parseSuppliedSources([source]), [source]); assertSharedFilesCurrent(db.read(), [source]);
     assert.throws(() => { assertSharedFilesCurrent(db.read(), [{ ...source, text: "invented" }]); });
