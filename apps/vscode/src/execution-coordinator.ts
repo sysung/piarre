@@ -97,6 +97,7 @@ export class ExecutionCoordinator {
       const prompt = JSON.stringify({ instruction: "Propose only bounded file replacements using disclosed opaque fileId values. Return summary and operations. Do not run tools or checks.", objective: plan.objective, criteria: plan.criteria, knowledge: linked, files: candidate.files, maxTokens: { kind: "soft", value: plan.maxTokens } });
       const response = await Promise.race([client.proposePatch({ prompt, cwd: candidate.root, model: plan.provider.requestedModel,
         onThreadMetadata: metadata => {
+          if (this.stopped(runId)) throw new Error("Run was stopped before generation started.");
           if (metadata.model !== plan.provider.requestedModel || metadata.modelProvider !== "openai") throw new Error("Observed Codex model or provider differs from the approved plan. Generation was not started.");
           this.dispatch({ kind: "observe-execution-provider", runId, model: metadata.model, modelProvider: metadata.modelProvider, observedAt: Date.now() });
         },

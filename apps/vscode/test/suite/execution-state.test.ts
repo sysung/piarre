@@ -50,6 +50,8 @@ suite("Durable execution authority and freshness", () => {
     for (const metadata of [{ model: "other-model", modelProvider: "openai" }, { model: "fixture-model", modelProvider: "other-provider" }]) {
       assert.throws(() => send({ kind: "observe-execution-provider", runId: "run-1", ...metadata, observedAt: 1101 }));
     }
+    send({ kind: "set-scheduling-paused", paused: true });
+    assert.throws(() => send({ kind: "observe-execution-provider", runId: "run-1", model: "fixture-model", modelProvider: "openai", observedAt: 1101 }));
     assert.equal(repository.read().executionRuns[0]?.providerObservation.kind, "unobserved");
     assert.equal(repository.read().executionRuns.some(ownsExecutionLease), true);
   });

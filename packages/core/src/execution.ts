@@ -194,7 +194,7 @@ export function applyExecutionEvent(project: ProjectSnapshot, event: ExecutionEv
       if (run.state.kind !== "reserved" || project.schedulingPaused || action.requestedAt < run.grant.approvedAt || action.requestedAt >= run.grant.expiresAt || action.requestedAt >= run.grant.deadlineAt || (planFreshness(project, run.grant.plan) !== "current" || !executionDependenciesReady(project, run.grant.plan.taskId))) invalid();
       next = { ...run, state: { kind: "generating" }, providerTurn: { kind: "unacknowledged" } }; break;
     case "observe-execution-provider":
-      if (run.state.kind !== "generating" || run.providerObservation.kind !== "unobserved" || action.model !== run.grant.plan.provider.requestedModel || action.modelProvider !== "openai" || action.observedAt < run.grant.approvedAt || action.observedAt >= run.grant.deadlineAt) invalid();
+      if (project.schedulingPaused || planFreshness(project, run.grant.plan) !== "current" || !executionDependenciesReady(project, run.grant.plan.taskId) || run.state.kind !== "generating" || run.providerObservation.kind !== "unobserved" || action.model !== run.grant.plan.provider.requestedModel || action.modelProvider !== "openai" || action.observedAt < run.grant.approvedAt || action.observedAt >= run.grant.deadlineAt) invalid();
       next = { ...run, providerObservation: { kind: "observed", model: action.model, modelProvider: action.modelProvider, observedAt: action.observedAt } }; break;
     case "bind-execution-thread":
       if (run.state.kind !== "generating" || run.providerObservation.kind !== "observed" || run.providerTurn.kind !== "unacknowledged") invalid();

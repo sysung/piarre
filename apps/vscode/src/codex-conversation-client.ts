@@ -84,7 +84,7 @@ export class CodexConversationClient {
     if (this.state !== "ready") throw new Error("Connect Codex explicitly before reading execution context; no turn may be active.");
     this.state = "busy";
     let model: CodexDefaultModel = { kind: "unknown" };
-    let usage: CodexObservedUsage = { kind: "unknown" };
+    let usage: CodexObservedUsage;
     try {
       const pages: unknown[] = [];
       let cursor: string | undefined;
