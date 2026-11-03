@@ -98,9 +98,9 @@ export class CodexConversationClient {
           cursor = result.nextCursor;
           seen.add(cursor);
         }
-      } catch { /* Unsupported or malformed public metadata remains unknown. */ }
+      } catch { model = { kind: "unknown" }; }
       try { usage = parseObservedUsage(await this.request("account/rateLimits/read", {})); }
-      catch { /* Do not expose provider error text or infer a quota. */ }
+      catch { usage = { kind: "unknown" }; }
       return { observedAt: new Date().toISOString(), model, usage, taskForecast: { kind: "unknown" } };
     } finally {
       if (this.process) this.state = "ready";

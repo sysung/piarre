@@ -1,21 +1,5 @@
-/** Public app-server metadata only. Never retain raw account/config/error payloads. */
-export type CodexDefaultModel = { readonly kind: "resolved-default"; readonly model: string } | { readonly kind: "unknown" };
-export type CodexUsageWindow = {
-  readonly source: "primary" | "secondary";
-  readonly usedPercent: number;
-  readonly windowDurationMins: number | null;
-  readonly resetsAt: number | null;
-};
-export type CodexObservedUsage =
-  | { readonly kind: "observed"; readonly source: "account/rateLimits/read"; readonly windows: readonly CodexUsageWindow[] }
-  | { readonly kind: "unknown" };
-export type CodexExecutionContext = {
-  readonly observedAt: string;
-  readonly model: CodexDefaultModel;
-  readonly usage: CodexObservedUsage;
-  readonly taskForecast: { readonly kind: "unknown" };
-};
-export type CodexThreadMetadata = { readonly model: string | null; readonly modelProvider: string | null };
+import type { CodexDefaultModel, CodexUsageWindow, CodexObservedUsage, CodexExecutionContext, CodexThreadMetadata } from "../../../packages/core/src/provider-account-context.js";
+export type { CodexDefaultModel, CodexUsageWindow, CodexObservedUsage, CodexExecutionContext, CodexThreadMetadata } from "../../../packages/core/src/provider-account-context.js";
 
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -57,14 +41,19 @@ export function parseObservedUsage(value: unknown): CodexObservedUsage {
     if (!record(window)) return { kind: "unknown" };
     const usedPercent = nullableInteger(window.usedPercent, 0, 100);
     const windowDurationMins = nullableInteger(window.windowDurationMins, 1);
-    // Unix seconds; values must remain representable as a JavaScript date.
-    const resetsAt = nullableInteger(window.resetsAt, 0, 8_640_000_000_000);
-    if (usedPercent === null || usedPercent === undefined || windowDurationMins === undefined || resetsAt === undefined) return { kind: "unknown" };
-    windows.push({ source, usedPercent, windowDurationMins, resetsAt });
+    const resetsAtUnixSeconds = nullableInteger(window.resetsAt, 0, 8_640_000_000_000);
+    if (usedPercent === null || usedPercent === undefined || windowDurationMins === undefined || resetsAtUnixSeconds === undefined) return { kind: "unknown" };
+    windows.push({ source, usedPercent, windowDurationMins, resetsAt: resetsAtUnixSeconds });
   }
   return windows.length ? { kind: "observed", source: "account/rateLimits/read", windows } : { kind: "unknown" };
 }
 
 export function parseThreadMetadata(value: unknown): CodexThreadMetadata {
   return record(value) ? { model: publicModelIdentifier(value.model), modelProvider: publicModelIdentifier(value.modelProvider) } : { model: null, modelProvider: null };
+}
+
+export function accountContextText(context: CodexExecutionContext): string {
+  const windows = context.usage.kind === "observed" ? context.usage.windows.map(window =>
+    `${window.source}: ${String(window.usedPercent)}% used; window ${window.windowDurationMins === null ? "duration unknown" : `${String(window.windowDurationMins)} minutes`}; reset ${window.resetsAt === null ? "unknown" : new Date(window.resetsAt * 1000).toISOString()}`).join("; ") : "Account usage unavailable";
+  return `Account observation at ${context.observedAt}. ${windows}. This is a recorded account bucket, not model-specific remaining capacity. Predicted task allowance consumption, cost and actual token usage are unknown. No paid fallback is authorized.`;
 }

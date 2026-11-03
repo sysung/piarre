@@ -10,14 +10,15 @@ import { SqliteProjectRepository } from "../../src/sqlite-project-repository.js"
 import { GoalInterpreter } from "../../src/goal-interpreter.js";
 
 const nodeExecutable = process.env.PIARRE_TEST_NODE ?? process.execPath;
-type Client = Pick<CodexConversationClient, "connect" | "proposePatch" | "interrupt" | "dispose">;
+type Client = Pick<CodexConversationClient, "connect" | "readExecutionContext" | "proposePatch" | "interrupt" | "dispose">;
 suite("Execution coordinator actual backend", () => {
   let directory: string; let source: string; let storage: string; let repository: SqliteProjectRepository; let taskId: string;
   let requests: number; let dirty: boolean; let loseAcknowledgment: boolean;
   const createClient = (): Client => ({
     connect: () => Promise.resolve({ kind: "ready", authType: "unknown" }),
+    readExecutionContext: () => Promise.resolve({ observedAt: new Date().toISOString(), model: { kind: "resolved-default", model: "fixture-model" }, usage: { kind: "unknown" }, taskForecast: { kind: "unknown" } }),
     proposePatch: input => {
-      requests++; input.onThreadStarted?.("fixture-thread");
+      requests++; input.onThreadMetadata?.({ model: "fixture-model", modelProvider: "openai" }); input.onThreadStarted?.("fixture-thread");
       if (loseAcknowledgment) throw new Error("Fixture lost acknowledgment");
       input.onTurnStarted?.("fixture-thread", "fixture-turn");
       const prompt: unknown = JSON.parse(input.prompt);
@@ -38,6 +39,29 @@ suite("Execution coordinator actual backend", () => {
     const first = repository.read().tasks[0]; assert.ok(first); taskId = first.taskId;
   });
   teardown(() => { repository.close(); rmSync(directory, { recursive: true, force: true }); });
+  test("missing default model requires an explicit selection before persisting approval scope", async () => {
+    const control = new ExecutionCoordinator({ repository, storageDirectory: storage, publish: () => undefined,
+      createClient: () => ({ ...createClient(), readExecutionContext: () => Promise.resolve({ observedAt: new Date().toISOString(), model: { kind: "unknown" }, usage: { kind: "unknown" }, taskForecast: { kind: "unknown" } }) }) });
+    const input: Parameters<ExecutionCoordinator["prepare"]>[0] = { taskId, relativePaths: ["refund.txt"], objective: "45 days", criteria: [{ criterionId: "days", text: "45 days" }], checks: [{ checkId: "value", argv: [nodeExecutable, "--version"], criterionIds: ["days"] }] };
+    await assert.rejects(control.prepare(input), /explicit coding model/);
+    assert.equal(repository.read().executionPlans.length, 0); assert.equal(requests, 0);
+    const prepared = await control.prepare({ ...input, requestedModel: "fixture-model" });
+    assert.equal(prepared.plan.provider.requestedModel, "fixture-model");
+    assert.equal(prepared.plan.accountContext.model.kind, "unknown");
+    assert.equal(requests, 0);
+  });
+  test("provider model mismatch is recorded without starting a turn or applying source", async () => {
+    const { plan } = await prepare(); let turnStarted = false;
+    const control = new ExecutionCoordinator({ repository, storageDirectory: storage, publish: () => undefined,
+      createClient: () => ({ ...createClient(), proposePatch: input => {
+        input.onThreadMetadata?.({ model: "different-model", modelProvider: "openai" });
+        turnStarted = true; return Promise.reject(new Error("Generation must not start"));
+      } }) });
+    const run = await control.approveAndRun({ planId: plan.planId, planRevision: plan.recordedAtRevision, approvalId: "mismatch" });
+    assert.equal(turnStarted, false); assert.equal(run.providerObservation.kind, "unobserved");
+    assert.equal(run.state.kind, "terminal"); assert.match(run.state.result.summary, /differs from the approved plan/);
+    assert.equal(readFileSync(path.join(source, "refund.txt"), "utf8"), "30\n");
+  });
   test("preparation generates nothing; manual edits and dirty buffers block approval", async () => {
     const prepared = await prepare(); assert.equal(requests, 0);
     dirty = true;
@@ -108,7 +132,7 @@ suite("Execution coordinator actual backend", () => {
     const ready = new Promise<void>(resolve => { started = resolve; });
     const pending = new Promise<never>((_, reject) => { rejectTurn = reject; });
     const control = new ExecutionCoordinator({ repository, storageDirectory: storage, publish: () => undefined,
-      createClient: () => ({ ...createClient(), proposePatch: input => { input.onThreadStarted?.("pending-thread"); started(); return pending; }, dispose: () => { rejectTurn(new Error("Disposed provider")); } }) });
+      createClient: () => ({ ...createClient(), proposePatch: input => { input.onThreadMetadata?.({ model: "fixture-model", modelProvider: "openai" }); input.onThreadStarted?.("pending-thread"); started(); return pending; }, dispose: () => { rejectTurn(new Error("Disposed provider")); } }) });
     const completion = control.approveAndRun({ planId: plan.planId, planRevision: plan.recordedAtRevision, approvalId: "disposing" });
     await ready; control.dispose();
     const before = repository.read(); assert.equal(before.executionRuns[0]?.state.kind, "unknown");

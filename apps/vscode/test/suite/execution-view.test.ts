@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { replay, type ExecutionAction, type ExecutionPlanDraft, type ProjectEvent, type ProjectSnapshot } from "../../../../packages/core/src/index.js";
+import { replay, executionDependenciesReady, type ExecutionAction, type ExecutionPlanDraft, type ProjectEvent, type ProjectSnapshot } from "../../../../packages/core/src/index.js";
+import { applyExecutionEvent } from "../../../../packages/core/src/execution.js";
 import { renderExecutionControls, renderExecutionDesk, renderExecutionResult, taskExecutionStatus } from "../../src/execution-view.js";
 
 suite("Execution review rendering", () => {
@@ -8,7 +9,7 @@ suite("Execution review rendering", () => {
     { kind: "project-created", projectId: "project", repositoryUri: "file:///tmp/source", name: "Test" },
     { kind: "proposal-created", group: { groupId: "group", goal: "Goal", source: "deterministic-draft", taskIds: ["task"] }, tasks: [{ taskId: "task", groupId: "group", planVersion: 1, state: { kind: "unapproved" }, title: "Fix <script> & policy", requirements: [{ key: "criterion", text: "Require 45 days" }], proposedScope: { included: [], excluded: [] }, checks: [], proposedBudget: { maxAttempts: 1, maxElapsedMinutes: 2, maxTokens: 4000 }, dependsOn: [] }] },
   ];
-  const draft: ExecutionPlanDraft = { taskId: "task", objective: "45-day <policy>", criteria: [{ criterionId: "criterion", text: "45 days <required>" }], knowledge: [], files: [{ kind: "existing", fileId: "file-1", relativePath: "a&b.ts", sha256: hash, bytes: 8 }], checks: [{ checkId: "check", argv: ["node", "test.js"], criterionIds: ["criterion"] }], candidateRoot: "/tmp/candidate", sourceRoot: "/tmp/source", controlDirectory: "/tmp/control", captureHash: hash, baselineCheckpoint: { checkpointId: "before-run", manifestHash: hash }, provider: { kind: "codex-readonly-patch", authType: "unknown", requestedModel: null }, durationMs: 120000, maxTokens: 4000 };
+  const draft: ExecutionPlanDraft = { taskId: "task", objective: "45-day <policy>", criteria: [{ criterionId: "criterion", text: "45 days <required>" }], knowledge: [], files: [{ kind: "existing", fileId: "file-1", relativePath: "a&b.ts", sha256: hash, bytes: 8 }], checks: [{ checkId: "check", argv: ["node", "test.js"], criterionIds: ["criterion"] }], candidateRoot: "/tmp/candidate", sourceRoot: "/tmp/source", controlDirectory: "/tmp/control", captureHash: hash, baselineCheckpoint: { checkpointId: "before-run", manifestHash: hash }, provider: { kind: "codex-readonly-patch", authType: "unknown", requestedModel: "fixture-model" }, accountContext: { observedAt: "2026-11-02T00:00:00.000Z", model: { kind: "resolved-default", model: "fixture-model" }, usage: { kind: "unknown" }, taskForecast: { kind: "unknown" } }, durationMs: 120000, maxTokens: 4000 };
   let history: ProjectEvent[];
   let project: ProjectSnapshot;
   const send = (action: ExecutionAction): void => {
@@ -23,6 +24,7 @@ suite("Execution review rendering", () => {
   const complete = (outcome: "needs-review" | "failed" = "needs-review", manifestHash = hash): void => {
     approve();
     send({ kind: "request-execution", runId: "run", requestedAt: 1100 });
+    send({ kind: "observe-execution-provider", runId: "run", model: "fixture-model", modelProvider: "openai", observedAt: 1101 });
     send({ kind: "bind-execution-thread", runId: "run", threadId: "thread" });
     send({ kind: "bind-execution-turn", runId: "run", threadId: "thread", turnId: "turn" });
     send({ kind: "begin-candidate-apply", runId: "run", observedAt: 1200 });
@@ -49,7 +51,7 @@ suite("Execution review rendering", () => {
     assert.match(html, /Passed scoped checks/); assert.match(html, /Acceptance: unreviewed/);
     assert.match(html, /data-execution-action="apply-accept"/); assert.match(html, /Apply and accept/);
     assert.match(html, /&lt;img src=x onerror=&quot;bad\(\)&quot;&gt;/); assert.doesNotMatch(html, /<img|<script>/);
-    assert.match(html, /a&amp;b.ts/); assert.match(html, /soft and not enforced/); assert.match(html, /Cost and actual token usage: unknown/);
+    assert.match(html, /a&amp;b.ts/); assert.match(html, /soft and not enforced/); assert.match(html, /cost and actual token usage are unknown/);
     assert.match(html, /result:event-/); assert.match(html, /SHA-256/);
   });
   test("check evidence for other bytes cannot mark a criterion passed", () => {
@@ -78,6 +80,35 @@ suite("Execution review rendering", () => {
     send({ kind: "invalidate-execution-workspace", runId: "run", reason: "Source changed" });
     assert.match(renderExecutionResult(project, "run"), /Historical result/);
     assert.doesNotMatch(renderExecutionResult(project, "run"), /data-execution-action="apply-accept"/);
+  });
+  test("transitive prerequisite staleness blocks results and new work without releasing active leases", () => {
+    complete();
+    const completed = project.executionRuns[0]; assert.ok(completed); assert.equal(completed.state.kind, "terminal");
+    send({ kind: "begin-workspace-operation", runId: "run", request: { kind: "integrate", resultId: completed.state.result.resultId, resultRevision: completed.state.result.recordedAtRevision, expectedManifestHash: hash, targetManifestHash: hash } });
+    const writing = project.executionRuns[0]?.workspace; assert.equal(writing?.kind, "writing");
+    send({ kind: "finish-workspace-operation", runId: "run", operationId: writing.operationId, manifestHash: hash, observedAt: 1700 });
+    send({ kind: "accept-execution-result", runId: "run", resultId: completed.state.result.resultId, resultRevision: completed.state.result.recordedAtRevision });
+    const rootTask = project.tasks[0]; const rootPlan = project.executionPlans[0]; const rootRun = project.executionRuns[0];
+    assert.ok(rootTask && rootPlan && rootRun);
+    const middlePlan = { ...rootPlan, taskId: "middle", planId: "middle-plan" };
+    const leafPlan = { ...rootPlan, taskId: "leaf", planId: "leaf-plan" };
+    const chain: ProjectSnapshot = { ...project,
+      tasks: [rootTask, { ...rootTask, taskId: "middle", dependsOn: [rootTask.taskId] }, { ...rootTask, taskId: "leaf", dependsOn: ["middle"] }],
+      executionPlans: [rootPlan, middlePlan, leafPlan],
+      executionRuns: [rootRun, { ...rootRun, runId: "middle-run", grant: { ...rootRun.grant, plan: middlePlan } }, { ...rootRun, runId: "leaf-run", grant: { ...rootRun.grant, plan: leafPlan } }],
+    };
+    assert.equal(executionDependenciesReady(chain, "leaf"), true);
+    const stale: ProjectSnapshot = { ...chain, executionRuns: chain.executionRuns.map(run => run.runId === "run" ? { ...run, reviewFreshness: { kind: "stale", reason: "Manual source edit" } } : run) };
+    assert.equal(executionDependenciesReady(stale, "leaf"), false);
+    assert.match(renderExecutionResult(stale, "leaf-run"), /Historical result/);
+    assert.doesNotMatch(renderExecutionResult(stale, "leaf-run"), /data-execution-action="apply-accept"/);
+    const active: ProjectSnapshot = { ...stale, executionRuns: stale.executionRuns.map(run => run.runId === "leaf-run" ? { ...run, acceptance: { kind: "unreviewed" }, workspace: { kind: "not-integrated" }, state: { kind: "generating" } } : run) };
+    assert.throws(() => applyExecutionEvent(active, { kind: "execution-recorded", commandId: "stale-apply", action: { kind: "begin-candidate-apply", runId: "leaf-run", observedAt: 2000 } }));
+    assert.match(renderExecutionControls(active), /Execution lease retained/);
+    const missing = { ...chain, tasks: chain.tasks.filter(task => task.taskId !== rootTask.taskId) };
+    assert.equal(executionDependenciesReady(missing, "leaf"), false);
+    const cycle = { ...chain, tasks: chain.tasks.map(task => task.taskId === rootTask.taskId ? { ...task, dependsOn: ["leaf"] } : task) };
+    assert.equal(executionDependenciesReady(cycle, "leaf"), false);
   });
   test("missing evidence is untested and missing run guides to recorded runs", () => {
     approve(); const html = renderExecutionResult(project, "run");

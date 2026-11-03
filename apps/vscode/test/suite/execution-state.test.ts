@@ -18,12 +18,13 @@ suite("Durable execution authority and freshness", () => {
     knowledge: currentKnowledge(repository.read()).map(entry => ({ projectId: entry.projectId, knowledgeId: entry.knowledgeId, recordedAtRevision: entry.recordedAtRevision })),
     files: [{ kind: "absent", fileId: "file-1", relativePath: "refunds.ts" }],
     checks: [{ checkId: "refund-check", argv: ["/usr/bin/node", "test.js"], criterionIds: ["refund-days"] }],
-    candidateRoot: "/tmp/run-candidate", controlDirectory: "/tmp/capture-control", captureHash: hash, baselineCheckpoint: { checkpointId: "before-run", manifestHash: hash }, sourceRoot: "/tmp/project", provider: { kind: "codex-readonly-patch", authType: "unknown", requestedModel: null }, durationMs: 120_000, maxTokens: 4000 });
+    candidateRoot: "/tmp/run-candidate", controlDirectory: "/tmp/capture-control", captureHash: hash, baselineCheckpoint: { checkpointId: "before-run", manifestHash: hash }, sourceRoot: "/tmp/project", provider: { kind: "codex-readonly-patch", authType: "unknown", requestedModel: "fixture-model" }, accountContext: { observedAt: "2026-11-02T00:00:00.000Z", model: { kind: "resolved-default", model: "fixture-model" }, usage: { kind: "unknown" }, taskForecast: { kind: "unknown" } }, durationMs: 120_000, maxTokens: 4000 });
   const plan = () => { const found = currentExecutionPlan(repository.read(), taskId); if (!found) throw new Error("Missing test plan"); return found; };
   const prepare = () => { send({ kind: "prepare-execution-plan", plan: draft() }); return plan(); };
   const approve = (runId = "run-1") => { const prepared = plan(); return send({ kind: "approve-execution", planId: prepared.planId, planRevision: prepared.recordedAtRevision, runId, approvedAt: 1000, expiresAt: 5000, ownerPid: 12345, ownerId: "owner" }); };
   const generating = () => {
     prepare(); approve(); send({ kind: "request-execution", runId: "run-1", requestedAt: 1100 });
+    send({ kind: "observe-execution-provider", runId: "run-1", model: "fixture-model", modelProvider: "openai", observedAt: 1101 });
     send({ kind: "bind-execution-thread", runId: "run-1", threadId: "thread" });
     send({ kind: "bind-execution-turn", runId: "run-1", threadId: "thread", turnId: "turn" });
   };
@@ -43,6 +44,15 @@ suite("Durable execution authority and freshness", () => {
   });
   teardown(() => { repository.close(); rmSync(directory, { recursive: true, force: true }); });
 
+  test("unknown or changed provider metadata cannot authorize a generation turn", () => {
+    prepare(); approve(); send({ kind: "request-execution", runId: "run-1", requestedAt: 1100 });
+    assert.throws(() => send({ kind: "bind-execution-thread", runId: "run-1", threadId: "thread" }));
+    for (const metadata of [{ model: "other-model", modelProvider: "openai" }, { model: "fixture-model", modelProvider: "other-provider" }]) {
+      assert.throws(() => send({ kind: "observe-execution-provider", runId: "run-1", ...metadata, observedAt: 1101 }));
+    }
+    assert.equal(repository.read().executionRuns[0]?.providerObservation.kind, "unobserved");
+    assert.equal(repository.read().executionRuns.some(ownsExecutionLease), true);
+  });
   test("duplicate approval receipts cannot reserve another attempt and retain the historical snapshot", () => {
     const prepared = prepare(); const before = repository.read();
     const command = { commandId: "one-approval", projectId: before.projectId, expectedProjectRevision: before.revision,
@@ -78,6 +88,7 @@ suite("Durable execution authority and freshness", () => {
     prepare(); approve();
     assert.throws(() => send({ kind: "request-execution", runId: "run-1", requestedAt: 5000 }));
     send({ kind: "request-execution", runId: "run-1", requestedAt: 1100 });
+    send({ kind: "observe-execution-provider", runId: "run-1", model: "fixture-model", modelProvider: "openai", observedAt: 1101 });
     send({ kind: "bind-execution-thread", runId: "run-1", threadId: "thread" });
     send({ kind: "bind-execution-turn", runId: "run-1", threadId: "thread", turnId: "turn" });
     assert.throws(() => send({ kind: "begin-candidate-apply", runId: "run-1", observedAt: 121000 }));

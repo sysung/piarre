@@ -12,7 +12,7 @@ import { CandidateCheckRunner, inspectCheckControl, type CandidateCheckResult } 
 import type { CodexConversationClient } from "./codex-conversation-client.js";
 import type { SqliteProjectRepository } from "./sqlite-project-repository.js";
 
-type Client = Pick<CodexConversationClient, "connect" | "proposePatch" | "interrupt" | "dispose">;
+type Client = Pick<CodexConversationClient, "connect" | "readExecutionContext" | "proposePatch" | "interrupt" | "dispose">;
 type Runner = Pick<CandidateCheckRunner, "capability" | "run" | "interrupt">;
 const disposedOwners = new Set<string>();
 interface Options {
@@ -55,6 +55,9 @@ export class ExecutionCoordinator {
     try {
       const connection = await client.connect();
       if (connection.kind !== "ready") throw new Error("Connect Codex before preparing execution.");
+      const context = await client.readExecutionContext();
+      const requestedModel = input.requestedModel ?? (context.model.kind === "resolved-default" ? context.model.model : undefined);
+      if (!requestedModel) throw new Error("Codex did not report a default model. Configure an explicit coding model before preparing a run.");
       const project = this.snapshot();
       const candidate = CandidateWorkspace.capture({ repositoryRoot: fileURLToPath(project.repositoryUri), relativePaths: input.relativePaths, storageDirectory: this.options.storageDirectory });
       this.clean(candidate);
@@ -62,7 +65,7 @@ export class ExecutionCoordinator {
       const knowledge = currentKnowledge(project).filter(entry => entry.affectedTaskIds.includes(input.taskId)).map(entry => ({ projectId: entry.projectId, knowledgeId: entry.knowledgeId, recordedAtRevision: entry.recordedAtRevision }));
       this.dispatch({ kind: "prepare-execution-plan", plan: { taskId: input.taskId, objective: input.objective, criteria: input.criteria, checks: input.checks, knowledge,
         baselineCheckpoint, files: candidate.files.map(file => file.baseline), candidateRoot: candidate.root, controlDirectory: candidate.controlDirectory, captureHash: candidate.captureHash, sourceRoot: candidate.sourceRoot,
-        provider: { kind: "codex-readonly-patch", authType: connection.authType, requestedModel: input.requestedModel ?? null }, durationMs: input.durationMs ?? 120_000, maxTokens: input.maxTokens ?? 16_000 } });
+        provider: { kind: "codex-readonly-patch", authType: connection.authType, requestedModel }, accountContext: context, durationMs: input.durationMs ?? 120_000, maxTokens: input.maxTokens ?? 16_000 } });
       const plan = this.snapshot().executionPlans.at(-1);
       if (!plan) throw new Error("Prepared plan was not persisted.");
       return { plan, capability: await (this.options.createRunner?.() ?? new CandidateCheckRunner()).capability() };
@@ -92,7 +95,11 @@ export class ExecutionCoordinator {
       this.dispatch({ kind: "request-execution", runId, requestedAt: Date.now() });
       const linked = currentKnowledge(this.snapshot()).filter(entry => plan.knowledge.some(version => version.knowledgeId === entry.knowledgeId && version.recordedAtRevision === entry.recordedAtRevision));
       const prompt = JSON.stringify({ instruction: "Propose only bounded file replacements using disclosed opaque fileId values. Return summary and operations. Do not run tools or checks.", objective: plan.objective, criteria: plan.criteria, knowledge: linked, files: candidate.files, maxTokens: { kind: "soft", value: plan.maxTokens } });
-      const response = await Promise.race([client.proposePatch({ prompt, cwd: candidate.root, ...(plan.provider.requestedModel ? { model: plan.provider.requestedModel } : {}),
+      const response = await Promise.race([client.proposePatch({ prompt, cwd: candidate.root, model: plan.provider.requestedModel,
+        onThreadMetadata: metadata => {
+          if (metadata.model !== plan.provider.requestedModel || metadata.modelProvider !== "openai") throw new Error("Observed Codex model or provider differs from the approved plan. Generation was not started.");
+          this.dispatch({ kind: "observe-execution-provider", runId, model: metadata.model, modelProvider: metadata.modelProvider, observedAt: Date.now() });
+        },
         onThreadStarted: threadId => { this.dispatch({ kind: "bind-execution-thread", runId, threadId }); },
         onTurnStarted: (threadId, turnId) => { this.dispatch({ kind: "bind-execution-turn", runId, threadId, turnId }); } }),
       new Promise<never>((_, reject) => { timer = setTimeout(() => { active.stopped = true; void client.interrupt().catch(() => undefined); client.dispose(); reject(new Error("Approved absolute deadline expired; provider completion and usage are unknown.")); }, Math.max(0, this.run(runId).grant.deadlineAt - Date.now())); })]);
@@ -131,8 +138,8 @@ export class ExecutionCoordinator {
       if (this.disposedSnapshot) return this.run(runId);
       const run = this.run(runId);
       if (run.state.kind !== "terminal" && run.state.kind !== "unknown") this.dispatch({ kind: "mark-execution-unknown", runId, reason: error instanceof Error ? error.message : "Execution completion is unknown." });
-      // A provider has no filesystem authority. An uncertain check or partial journal retains its lease.
-      if (this.run(runId).process.kind === "none" && this.run(runId).state.kind === "unknown" && run.state.kind !== "applying") this.finish(runId, "unknown", error instanceof Error ? error.message : "Execution completion is unknown.", candidate);
+      const canRecordUnknownCompletion = this.run(runId).process.kind === "none" && this.run(runId).state.kind === "unknown" && run.state.kind !== "applying";
+      if (canRecordUnknownCompletion) this.finish(runId, "unknown", error instanceof Error ? error.message : "Execution completion is unknown.", candidate);
     } finally { if (timer) clearTimeout(timer); client.dispose(); if (this.run(runId).process.kind === "none") this.active.delete(runId); }
     return this.run(runId);
   }
@@ -206,7 +213,6 @@ export class ExecutionCoordinator {
       if (run.process.kind === "unknown") {
         const inspection = inspectCheckControl(run.process);
         if (inspection.kind !== "terminal") continue;
-        // Read only nonce-correlated receipts; never signal persisted PIDs.
         const process = run.process;
         const approved = run.grant.plan.checks.find(item => item.checkId === process.checkId);
         if (!approved) continue;

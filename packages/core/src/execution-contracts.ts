@@ -1,3 +1,4 @@
+import type { CodexExecutionContext, CodexUsageWindow } from "./provider-account-context.js";
 import type { ExecutionAction, ExecutionEvent, ExecutionPlanDraft, CheckEvidence, ExecutionCheck, ExecutionCriterion, WorkspaceRequest } from "./execution.js";
 import type { FileBaseline } from "./execution-patch.js";
 import { validateFileManifest } from "./execution-patch.js";
@@ -40,8 +41,29 @@ function check(value: unknown): ExecutionCheck {
   const row = fields(value, ["checkId", "argv", "criterionIds"]);
   return { checkId: text(row.checkId, 512), argv: argv(row.argv), criterionIds: unique(list(row.criterionIds, item => text(item, 512))) };
 }
+function accountContext(value: unknown): CodexExecutionContext {
+  const row = fields(value, ["observedAt", "model", "usage", "taskForecast"]);
+  const observedAt = text(row.observedAt, 40);
+  if (!Number.isFinite(Date.parse(observedAt)) || new Date(observedAt).toISOString() !== observedAt) invalid();
+  if (!isRecord(row.model)) invalid();
+  const model = row.model.kind === "unknown" ? fields(row.model, ["kind"]) : fields(row.model, ["kind", "model"]);
+  if (model.kind !== "unknown" && model.kind !== "resolved-default") invalid();
+  if (!isRecord(row.usage)) invalid();
+  const usage = row.usage.kind === "unknown" ? fields(row.usage, ["kind"]) : fields(row.usage, ["kind", "source", "windows"]);
+  if (usage.kind !== "unknown" && (usage.kind !== "observed" || usage.source !== "account/rateLimits/read")) invalid();
+  const windows = usage.kind === "observed" ? list(usage.windows, (item): CodexUsageWindow => {
+    const window = fields(item, ["source", "usedPercent", "windowDurationMins", "resetsAt"]);
+    return { source: enumeration(window.source, ["primary", "secondary"]), usedPercent: integer(window.usedPercent, 0, 100),
+      windowDurationMins: window.windowDurationMins === null ? null : integer(window.windowDurationMins),
+      resetsAt: window.resetsAt === null ? null : integer(window.resetsAt, 0, 8_640_000_000_000) };
+  }, 2) : [];
+  if (usage.kind === "observed" && windows.length === 0) invalid(); unique(windows.map(window => window.source));
+  const forecast = fields(row.taskForecast, ["kind"]); if (forecast.kind !== "unknown") invalid();
+  return { observedAt, model: model.kind === "unknown" ? { kind: "unknown" } : { kind: "resolved-default", model: text(model.model, 128) },
+    usage: usage.kind === "unknown" ? { kind: "unknown" } : { kind: "observed", source: "account/rateLimits/read", windows }, taskForecast: { kind: "unknown" } };
+}
 function plan(value: unknown): ExecutionPlanDraft {
-  const row = fields(value, ["taskId", "objective", "criteria", "knowledge", "files", "checks", "candidateRoot", "controlDirectory", "captureHash", "baselineCheckpoint", "sourceRoot", "provider", "durationMs", "maxTokens"]);
+  const row = fields(value, ["taskId", "objective", "criteria", "knowledge", "files", "checks", "candidateRoot", "controlDirectory", "captureHash", "baselineCheckpoint", "sourceRoot", "provider", "accountContext", "durationMs", "maxTokens"]);
   const baselineCheckpoint = fields(row.baselineCheckpoint, ["checkpointId", "manifestHash"]);
   const provider = fields(row.provider, ["kind", "authType", "requestedModel"]);
   if (provider.kind !== "codex-readonly-patch") invalid();
@@ -52,7 +74,8 @@ function plan(value: unknown): ExecutionPlanDraft {
   const knowledge = list(row.knowledge, version, 100); unique(knowledge.map(item => item.knowledgeId));
   return { taskId: text(row.taskId), objective: text(row.objective), criteria, knowledge, files, checks,
     candidateRoot: absolute(row.candidateRoot), controlDirectory: absolute(row.controlDirectory), captureHash: sha(row.captureHash), baselineCheckpoint: { checkpointId: text(baselineCheckpoint.checkpointId), manifestHash: sha(baselineCheckpoint.manifestHash) }, sourceRoot: absolute(row.sourceRoot),
-    provider: { kind: "codex-readonly-patch", authType: enumeration(provider.authType, ["chatgpt", "apiKey", "unknown"]), requestedModel: provider.requestedModel === null ? null : text(provider.requestedModel, 256) },
+    provider: { kind: "codex-readonly-patch", authType: enumeration(provider.authType, ["chatgpt", "apiKey", "unknown"]), requestedModel: text(provider.requestedModel, 128) },
+    accountContext: accountContext(row.accountContext),
     durationMs: integer(row.durationMs, 1000, 120_000), maxTokens: integer(row.maxTokens, 1, 1_000_000) };
 }
 function evidence(value: unknown): CheckEvidence {
@@ -79,6 +102,7 @@ export function parseExecutionAction(value: unknown): ExecutionAction | undefine
     case "prepare-execution-plan": { const row = fields(value, ["kind", "plan"]); return { kind: value.kind, plan: plan(row.plan) }; }
     case "approve-execution": { const row = fields(value, ["kind", "planId", "planRevision", "runId", "approvedAt", "expiresAt", "ownerPid", "ownerId"]); return { kind: value.kind, planId: text(row.planId), planRevision: integer(row.planRevision), runId: text(row.runId), approvedAt: epoch(row.approvedAt), expiresAt: epoch(row.expiresAt), ownerPid: integer(row.ownerPid), ownerId: text(row.ownerId) }; }
     case "request-execution": { const row = fields(value, ["kind", "runId", "requestedAt"]); return { kind: value.kind, runId: text(row.runId), requestedAt: epoch(row.requestedAt) }; }
+    case "observe-execution-provider": { const row = fields(value, ["kind", "runId", "model", "modelProvider", "observedAt"]); return { kind: value.kind, runId: text(row.runId), model: text(row.model, 128), modelProvider: text(row.modelProvider, 128), observedAt: epoch(row.observedAt) }; }
     case "bind-execution-thread": { const row = fields(value, ["kind", "runId", "threadId"]); return { kind: value.kind, runId: text(row.runId), threadId: text(row.threadId, 512) }; }
     case "bind-execution-turn": { const row = fields(value, ["kind", "runId", "threadId", "turnId"]); return { kind: value.kind, runId: text(row.runId), threadId: text(row.threadId, 512), turnId: text(row.turnId, 512) }; }
     case "begin-candidate-apply": { const row = fields(value, ["kind", "runId", "observedAt"]); return { kind: value.kind, runId: text(row.runId), observedAt: epoch(row.observedAt) }; }
