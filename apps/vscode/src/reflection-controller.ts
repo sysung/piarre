@@ -38,10 +38,12 @@ export class ReflectionController {
       const selected = await vscode.window.showQuickPick(["Decline and close", "Inspect reflection", "Add feedback or correction", "Mark reviewed and close", "Close now; keep pending"],
         { placeHolder: "Optional reflection. Closing never stops agents or approves proposals. Escape leaves reflection pending." });
       if (!this.current()) return;
-      if (selected === "Decline and close") { this.closeView(); this.apply({ kind: "resolve-reflection", reflectionId: id, resolution: "declined" }); }
+      if (selected === "Decline and close" || selected === "Mark reviewed and close") {
+        try { this.apply({ kind: "resolve-reflection", reflectionId: id, resolution: selected === "Decline and close" ? "declined" : "reviewed" }); }
+        finally { this.closeView(); }
+      }
       else if (selected === "Close now; keep pending") this.closeView();
       else if (selected === "Inspect reflection") await this.inspect(pending);
-      else if (selected === "Mark reviewed and close") { this.closeView(); this.apply({ kind: "resolve-reflection", reflectionId: id, resolution: "reviewed" }); }
       else if (selected === "Add feedback or correction") {
         const feedback = await vscode.window.showInputBox({ prompt: "Feedback or correction. This records a proposal only; it changes no rules, memory, or code.", ignoreFocusOut: true,
           validateInput: value => value.trim() && value.length <= 10_000 ? undefined : "Enter 1 to 10,000 characters." });
@@ -85,7 +87,7 @@ export class ReflectionController {
       { label: "Keep current / skip", value: preference },
       { label: "Default (reset)", value: "default" }, { label: "Brief", value: "brief" }, { label: "Guided", value: "guided" },
     ], { placeHolder: `Current explanation preference: ${preference}. Optional and reversible; affects reflection explanations only.` });
-    if (!selected || !this.current()) return;
+    if (!selected || !this.current() || selected.label === "Keep current / skip") return;
     if (selected.value === "default" || selected.value === "brief" || selected.value === "guided") this.apply({ kind: "set-explanation-preference", preference: selected.value });
   }
 }
