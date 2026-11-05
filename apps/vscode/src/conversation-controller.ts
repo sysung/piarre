@@ -211,16 +211,19 @@ export class ConversationController {
   }
 
   async interrupt(): Promise<void> {
-    if (!this.client || this.state.kind !== "busy") return;
+    const client = this.client;
+    const generation = this.generation;
+    if (!client || this.state.kind !== "busy") return;
     this.update({ kind: "stopping", message: this.route === "codex" ? "Stop requested. Waiting for Codex to report a terminal state…" : "Cancelling local delivery. Backend termination cannot be confirmed." });
     try {
-      const result = await this.client.interrupt();
+      const result = await client.interrupt();
+      if (client !== this.client || generation !== this.generation) return;
       if (result.kind === "unconfirmed") {
         this.disconnect("Local delivery cancelled. Backend compute may continue; completion and usage are unknown. No automatic retry was made.");
         this.update({ kind: "disconnected", message: "Local delivery cancelled. Backend compute may continue; completion and usage are unknown. Explicitly reconnect before another request." });
       }
     }
-    catch { this.disconnect(); }
+    catch { if (client === this.client && generation === this.generation) this.disconnect(); }
   }
 
   disconnect(reason = "Disconnected before a terminal reply was recorded. Completion and usage are unknown."): void {

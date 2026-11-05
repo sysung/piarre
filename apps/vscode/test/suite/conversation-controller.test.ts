@@ -6,6 +6,8 @@ import { pathToFileURL } from "node:url";
 import { conversationHistory, defaultSessionId, type SessionAction } from "../../../../packages/core/src/index.js";
 import type { CodexConversationClient } from "../../src/codex-conversation-client.js";
 import { ConversationController, type ConversationState } from "../../src/conversation-controller.js";
+import type { ConversationTransport, DiscussionRoute } from "../../src/conversation-transport.js";
+import { localDiscussionDefaults } from "../../src/docker-model-runner-conversation-client.js";
 import { SqliteProjectRepository } from "../../src/sqlite-project-repository.js";
 
 type Client = Pick<CodexConversationClient, "connect" | "respond" | "interrupt" | "dispose">;
@@ -232,6 +234,48 @@ suite("Durable conversation controller", () => {
     oldModels.resolve([{ model: "stale" }]); assert.deepEqual(await old, []);
     await assert.rejects(controller.send("blocked while current catalog is loading"), /Wait for model discovery/);
     newModels.resolve([{ model: "current" }]); assert.deepEqual(await current, [{ model: "current" }]);
+  });
+
+  for (const scenario of [
+    { name: "rejected Codex interruption", route: "codex", outcome: "rejected" },
+    { name: "unconfirmed local interruption", route: "docker-model-runner", outcome: "unconfirmed" },
+  ] as const) test(`ignores late ${scenario.name} after replacement route reconnects`, async () => {
+    const oldReply = deferred<Awaited<ReturnType<ConversationTransport["respond"]>>>();
+    const replacementReply = deferred<Awaited<ReturnType<ConversationTransport["respond"]>>>();
+    let finishInterrupt: (() => void) | undefined;
+    const delayedInterrupt = new Promise<{ readonly kind: "unconfirmed" }>((resolve, reject) => {
+      finishInterrupt = () => { if (scenario.outcome === "rejected") reject(new Error("Disposed old Codex connection")); else resolve({ kind: "unconfirmed" }); };
+    });
+    const disposed: DiscussionRoute[] = [];
+    const replacementRoute = scenario.route === "codex" ? "docker-model-runner" : "codex";
+    const transport = (route: DiscussionRoute, old: boolean): ConversationTransport => ({
+      kind: route, connect: () => Promise.resolve({ kind: "ready" }), models: () => Promise.resolve([]),
+      origin: () => route === "codex" ? { kind: "codex", requestedModel: null } : { kind: "docker-model-runner", requestedModel: localDiscussionDefaults.model,
+        endpoint: localDiscussionDefaults.endpoint, configuredDigest: localDiscussionDefaults.digest },
+      respond: input => { input.beforeSend(); return old ? oldReply.promise : replacementReply.promise; },
+      interrupt: () => old ? delayedInterrupt : Promise.resolve({ kind: "confirmed" }), dispose: () => { disposed.push(route); },
+    });
+    controller.dispose(); states = [];
+    controller = new ConversationController(repository, (_project, state) => { states.push(state); }, route => transport(route, route === scenario.route));
+    await controller.connect(scenario.route);
+    const oldOperation = controller.send("Old provider request", [], repository.read().revision, { recordSources: [] });
+    const stopping = controller.interrupt();
+    assert.equal(states.at(-1)?.kind, "stopping");
+    controller.selectRoute(replacementRoute); await controller.connect(replacementRoute);
+    assert.equal(states.at(-1)?.kind, "ready"); assert.equal(states.at(-1)?.route, replacementRoute);
+    const replacementOperation = controller.send("Replacement provider request", [], repository.read().revision, { recordSources: [] });
+    const beforeLateInterrupt = repository.read();
+    assert.equal(beforeLateInterrupt.conversation[0]?.kind, "unknown"); assert.equal(beforeLateInterrupt.conversation[1]?.kind, "pending");
+    assert.ok(finishInterrupt); finishInterrupt(); await stopping;
+    assert.deepEqual(repository.read(), beforeLateInterrupt);
+    assert.equal(states.at(-1)?.kind, "busy"); assert.equal(states.at(-1)?.route, replacementRoute);
+    assert.deepEqual(disposed, [scenario.route], "A stale stop must not dispose the replacement transport");
+    const completed = (route: DiscussionRoute): Awaited<ReturnType<ConversationTransport["respond"]>> => ({ status: "completed", output: { summary: "Accepted inference", sourceIndexes: [0] },
+      origin: route === "codex" ? { kind: "codex", threadId: "replacement-thread", turnId: "replacement-turn" } : { kind: "docker-model-runner", observedModel: localDiscussionDefaults.model, responseId: null } });
+    oldReply.resolve(completed(scenario.route)); await oldOperation;
+    replacementReply.resolve(completed(replacementRoute)); await replacementOperation;
+    assert.equal(repository.read().conversation[0]?.kind, "unknown"); assert.equal(repository.read().conversation[1]?.kind, "answered");
+    assert.equal(states.at(-1)?.kind, "ready"); assert.equal(states.at(-1)?.route, replacementRoute);
   });
 
 });
