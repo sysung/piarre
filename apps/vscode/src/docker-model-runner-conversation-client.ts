@@ -52,7 +52,7 @@ export class DockerModelRunnerConversationClient implements ConversationTranspor
     if (this.unavailable || this.pending) throw new Error("Reconnect explicitly before another local request.");
     this.origin(input.model);
     if (Buffer.byteLength(input.prompt, "utf8") > localPromptByteLimit) throw new Error("Local discussion allows 6,000 UTF-8 bytes for the complete prompt. Choose fewer sources or start a shorter session.");
-    const payload = JSON.stringify({ model: input.model, messages: [{ role: "user", content: input.prompt }], stream: false,
+    const payload = JSON.stringify({ model: input.model, messages: [{ role: "user", content: input.prompt }], stream: false, temperature: 0,
       max_tokens: 1024, chat_template_kwargs: { enable_thinking: false },
       response_format: { type: "json_schema", json_schema: { name: "sourced_discussion", strict: true, schema: {
         type: "object", properties: { summary: { type: "string", minLength: 1 }, sourceIndexes: { type: "array", items: { type: "integer", minimum: 0 }, minItems: 1 } },

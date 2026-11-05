@@ -35,7 +35,7 @@ suite("Bounded local discussion transport", () => {
     assert.deepEqual(result.output, output);
     assert.equal(received.length, 1); assert.equal(received[0]?.authorization, undefined);
     const body: unknown = JSON.parse(received[0]?.body ?? "");
-    assert.deepEqual(body, { model: configured.model, messages: [{ role: "user", content: "Exact reviewed bytes\n한글" }], stream: false, max_tokens: 1024,
+    assert.deepEqual(body, { model: configured.model, messages: [{ role: "user", content: "Exact reviewed bytes\n한글" }], stream: false, temperature: 0, max_tokens: 1024,
       chat_template_kwargs: { enable_thinking: false }, response_format: { type: "json_schema", json_schema: { name: "sourced_discussion", strict: true,
         schema: { type: "object", properties: { summary: { type: "string", minLength: 1 }, sourceIndexes: { type: "array", items: { type: "integer", minimum: 0 }, minItems: 1 } }, required: ["summary", "sourceIndexes"], additionalProperties: false } } } });
   });
