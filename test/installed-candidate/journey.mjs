@@ -15,7 +15,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function waitFor(read, message) {
   for (let attempt = 0; attempt < 100; attempt += 1) {
-    const value = read();
+    const value = await read();
     if (value) return value;
     await pause(100);
   }
@@ -29,28 +29,139 @@ function readRecords(databasePath) {
   finally { db.close(); }
 }
 
-async function captureView(config) {
+async function withWorkbench(config, inspect) {
   const response = await globalThis.fetch(`http://127.0.0.1:${config.debugPort}/json/list`);
   const targets = await response.json();
   const target = targets.find(item => item.type === 'page' && item.url.includes('workbench'));
   assert.ok(target?.webSocketDebuggerUrl, 'Native workbench has an inspectable renderer');
-  const bytes = await new Promise((resolve, reject) => {
-    const socket = new globalThis.WebSocket(target.webSocketDebuggerUrl);
-    const timeout = setTimeout(() => { socket.close(); reject(new Error('Native view capture timed out')); }, 10_000);
-    socket.onopen = () => socket.send(JSON.stringify({ id: 1, method: 'Page.captureScreenshot', params: { format: 'png' } }));
-    socket.onerror = error => { clearTimeout(timeout); reject(error); };
-    socket.onmessage = message => {
-      const reply = JSON.parse(message.data);
-      if (reply.id !== 1) return;
-      clearTimeout(timeout);
-      socket.close();
-      if (reply.error) reject(new Error(JSON.stringify(reply.error)));
-      else resolve(Buffer.from(reply.result.data, 'base64'));
-    };
+  const socket = new globalThis.WebSocket(target.webSocketDebuggerUrl);
+  const pending = new Map();
+  const contexts = new Map();
+  const attached = new Map();
+  let sequence = 0;
+  const key = (sessionId, id) => `${sessionId ?? 'workbench'}:${id}`;
+  const request = (method, params = {}, sessionId) => new Promise((resolve, reject) => {
+    const id = ++sequence;
+    const timer = setTimeout(() => { pending.delete(id); reject(new Error(`Native CDP ${method} timed out`)); }, 10_000);
+    pending.set(id, { resolve, reject, timer });
+    socket.send(JSON.stringify({ id, method, params, ...(sessionId && { sessionId }) }));
   });
-  assert.equal(bytes.subarray(1, 4).toString(), 'PNG');
-  writeFileSync(config.screenshotPath, bytes);
-  return { file: path.basename(config.screenshotPath), sha256: hash(bytes) };
+  socket.onmessage = message => {
+    const reply = JSON.parse(message.data);
+    if (reply.method === 'Runtime.executionContextCreated') {
+      const context = reply.params.context;
+      if (context.auxData?.isDefault !== false) contexts.set(key(reply.sessionId, context.id), { id: context.id, sessionId: reply.sessionId });
+    } else if (reply.method === 'Runtime.executionContextDestroyed') {
+      contexts.delete(key(reply.sessionId, reply.params.executionContextId));
+    } else if (reply.method === 'Runtime.executionContextsCleared') {
+      for (const [id, context] of contexts) if (context.sessionId === reply.sessionId) contexts.delete(id);
+    }
+    const waiting = pending.get(reply.id);
+    if (!waiting) return;
+    clearTimeout(waiting.timer); pending.delete(reply.id);
+    if (reply.error) waiting.reject(new Error(`${reply.error.code}: ${reply.error.message}`));
+    else waiting.resolve(reply.result);
+  };
+  const evaluate = async (context, expression) => {
+    const result = await request('Runtime.evaluate', { expression, contextId: context.id, returnByValue: true, awaitPromise: true }, context.sessionId);
+    assert.equal(result.exceptionDetails, undefined, `Native webview expression failed: ${result.exceptionDetails?.text}`);
+    return result.result.value;
+  };
+  try {
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('Native CDP connection timed out')), 10_000);
+      socket.onopen = () => { clearTimeout(timer); resolve(); };
+      socket.onerror = () => { clearTimeout(timer); reject(new Error('Native CDP connection failed')); };
+    });
+    await request('Runtime.enable');
+    const context = await waitFor(async () => {
+      const { targetInfos } = await request('Target.getTargets');
+      for (const frame of targetInfos.filter(item => item.type === 'iframe' || ['page', 'webview'].includes(item.type) && item.url.includes('vscode-webview'))) {
+        if (attached.has(frame.targetId)) continue;
+        const { sessionId } = await request('Target.attachToTarget', { targetId: frame.targetId, flatten: true });
+        attached.set(frame.targetId, sessionId);
+        await request('Runtime.enable', {}, sessionId);
+      }
+      for (const candidate of contexts.values()) {
+        try {
+          if (await evaluate(candidate, `typeof document !== 'undefined' && document.body?.dataset.projectId === ${JSON.stringify(config.projectId)} && !!document.getElementById('goal') && !!document.getElementById('setup-overlay')`)) return candidate;
+        } catch { contexts.delete(key(candidate.sessionId, candidate.id)); }
+      }
+      return undefined;
+    }, 'Installed Piarre webview execution context was not found');
+    return await inspect({ request, evaluate: expression => evaluate(context, expression), sessionId: context.sessionId });
+  } finally {
+    for (const waiting of pending.values()) { clearTimeout(waiting.timer); waiting.reject(new Error('Native CDP inspection closed')); }
+    socket.close();
+  }
+}
+
+const visibleExpression = `(element) => {
+  if (!element || element.closest('[hidden], [inert]') || getComputedStyle(element).visibility === 'hidden') return false;
+  const bounds = element.getBoundingClientRect();
+  return bounds.width > 0 && bounds.height > 0;
+}`;
+
+async function inspectOfflineChat(config) {
+  return withWorkbench(config, async ({ request, evaluate, sessionId }) => {
+    const entry = await evaluate(`(() => {
+      const visible = ${visibleExpression};
+      const overlay = document.getElementById('setup-overlay');
+      const button = document.getElementById('continue-offline');
+      if (!button || !overlay.contains(button)) throw new Error('Installed Continue offline button is unavailable');
+      const clicked = visible(overlay);
+      if (clicked) {
+        if (button.disabled) throw new Error('Continue offline is disabled');
+        button.click();
+      } else {
+        document.querySelector('[data-pane="chat"]').click();
+        document.getElementById('goal').focus();
+      }
+      const goal = document.getElementById('goal');
+      return { clicked, overlayClosed: overlay.hidden, chatVisible: visible(document.getElementById('chat-pane')),
+        composerEditable: visible(goal) && !goal.disabled && !goal.readOnly,
+        composerFocused: document.activeElement === goal, draft: goal.value };
+    })()`);
+    if (config.phase === 'create') assert.equal(entry.clicked, true, 'Fresh repository actually clicks the installed Continue offline button');
+    assert.equal(entry.overlayClosed, true); assert.equal(entry.chatVisible, true);
+    assert.equal(entry.composerEditable, true); assert.equal(entry.composerFocused, true);
+    assert.equal(entry.draft, '', 'Disposable chat starts without an unsent draft');
+    const draft = `C07 offline input ${config.context} ${config.phase}`;
+    await request('Input.insertText', { text: draft }, sessionId);
+    assert.equal(await evaluate(`document.getElementById('goal').value`), draft, 'The real focused composer accepts native text input');
+    await evaluate(`(() => { const goal = document.getElementById('goal'); goal.value = ''; goal.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+    assert.equal(await evaluate(`document.getElementById('goal').value`), '');
+    return { clicked: entry.clicked, overlayClosed: true, chatVisible: true, composerEditable: true, composerFocused: true, inputSha256: hash(draft) };
+  });
+}
+
+async function inspectProposalAndCapture(config, proposal) {
+  return withWorkbench(config, async ({ request, evaluate }) => {
+    await evaluate(`(() => {
+      document.querySelector('[data-pane="sessions"]').click();
+      const disclosure = document.getElementById('inspection').closest('details');
+      if (!disclosure.open) disclosure.querySelector('summary').click();
+    })()`);
+    const card = await waitFor(async () => evaluate(`(() => {
+      const visible = ${visibleExpression};
+      const card = [...document.querySelectorAll('[data-open-goal]')].find(item => item.dataset.openGoal === ${JSON.stringify(proposal.groupId)});
+      if (!card || !visible(card)) return undefined;
+      card.scrollIntoView({ block: 'center' });
+      const bounds = card.getBoundingClientRect();
+      return { proposalId: card.dataset.openGoal, goal: card.querySelector('.goal-title')?.textContent,
+        unapproved: card.querySelector('.goal-meta')?.textContent.includes('Unapproved'),
+        visible: visible(document.getElementById('sessions-pane')) && bounds.bottom > 0 && bounds.top < innerHeight && bounds.right > 0 && bounds.left < innerWidth && document.getElementById('setup-overlay').hidden };
+    })()`), 'Saved proposal card is not visible through Sessions');
+    assert.equal(card.proposalId, proposal.groupId); assert.equal(card.goal, config.goal);
+    assert.equal(card.unapproved, true); assert.equal(card.visible, true);
+    const capture = await request('Page.captureScreenshot', { format: 'png' });
+    const bytes = Buffer.from(capture.data, 'base64');
+    assert.equal(bytes.subarray(1, 4).toString(), 'PNG');
+    writeFileSync(config.screenshotPath, bytes);
+    await evaluate(`document.querySelector('[data-pane="chat"]').click()`);
+    return { screenshot: { file: path.basename(config.screenshotPath), sha256: hash(bytes) },
+      visibleProposal: { proposalId: card.proposalId, goalSha256: hash(card.goal), unapproved: true, visible: true, route: 'Sessions / Saved goals' } };
+  });
 }
 
 export async function run() {
@@ -84,6 +195,10 @@ export async function run() {
     assert.equal(extension.isActive, true);
     let rows = readRecords(config.databasePath);
     const original = rows[0].event;
+    const beforeOffline = JSON.stringify(rows);
+    const offlineChat = await inspectOfflineChat({ ...config, projectId: original.projectId });
+    await pause(100);
+    assert.equal(JSON.stringify(readRecords(config.databasePath)), beforeOffline, 'Offline entry and an unsent draft append no project events');
     assert.equal(original.repositoryUri, vscode.Uri.file(config.repository).toString());
     if (config.phase === 'create') {
       assert.equal(rows.filter(row => row.event.kind === 'proposal-created').length, 0);
@@ -104,7 +219,7 @@ export async function run() {
     const sourceSha256 = hash(source.getText());
     await vscode.commands.executeCommand('piarre.sidebar.focus');
     await pause(250);
-    const screenshot = await captureView(config);
+    const { screenshot, visibleProposal } = await inspectProposalAndCapture({ ...config, projectId: original.projectId }, proposals[0].event.group);
     const beforeReopen = JSON.stringify(rows);
     await vscode.commands.executeCommand('piarre.open');
     assert.equal(JSON.stringify(readRecords(config.databasePath)), beforeReopen, 'Open is idempotent and preserves recorded proposal');
@@ -156,10 +271,10 @@ export async function run() {
       sourceCommit: config.sourceCommit, vsixSha256: config.vsixSha256, bundleSha256: config.bundleSha256,
       projectId: original.projectId, repositoryUri: original.repositoryUri, repositoryCommit: config.repositoryCommit,
       revision: rows.length, proposalId: proposals[0].event.group.groupId, proposalGoalSha256: hash(config.goal),
-      screenshot, inspectedSource: { path: config.sourceFile, sha256: sourceSha256 }, dialogs,
+      screenshot, offlineChat, visibleProposal, inspectedSource: { path: config.sourceFile, sha256: sourceSha256 }, dialogs,
       diagnosticExportSha256: hash(readFileSync(config.exportPath)), platform: process.platform,
       diagnostics: config.phase === 'create' ? ['capture', 'synchronized-revisions', 'redaction', 'export', 'explicit-deletion', 'expiry', 'export-preserved'] : ['reopened-project', 'export-preserved'],
-      limitations: ['No provider execution was requested.', 'Native modal choices are automated; real document editors and installed command handlers run.', 'Disposable profile is signed out; onboarding can obscure proposal cards. Proposal inspection reads canonical SQLite rather than claiming visible card inspection.'] };
+      limitations: ['No provider execution was requested.', 'Native modal choices are automated; real document editors and installed command handlers run.', 'The signed-out offline entry and visible Saved goals card are asserted through the installed webview; no model reply or completed execution is claimed.'] };
     writeFileSync(config.resultPath, JSON.stringify(result, null, 2) + '\n');
   } finally {
     for (const [name, value] of Object.entries(originals)) candidateWindow[name] = value;
