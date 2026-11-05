@@ -16,16 +16,22 @@ try {
   const manifest = JSON.parse(await readFile("package.json", "utf8"));
   const candidate = process.env.PIARRE_PACKAGE_CHANNEL === "candidate";
   if (candidate) manifest.name = "piarre-candidate";
-  const executable = await downloadAndUnzipVSCode(vscodeVersion);
-  const [cli] = resolveCliArgsFromVSCodeExecutablePath(executable);
+  const configuredExecutable = process.env.PIARRE_TEST_VSCODE_EXECUTABLE || undefined;
+  if (configuredExecutable) assert.ok(path.isAbsolute(configuredExecutable), "PIARRE_TEST_VSCODE_EXECUTABLE must be absolute");
+  const executable = configuredExecutable ?? await downloadAndUnzipVSCode(vscodeVersion);
+  const [cli, ...cliArgs] = resolveCliArgsFromVSCodeExecutablePath(executable);
+  if (configuredExecutable) {
+    const version = execFileSync(cli, [...cliArgs, "--version", "--no-sandbox"], { encoding: "utf8" }).trim().split(/\r?\n/)[0];
+    assert.equal(version, vscodeVersion, "Configured VS Code must match the pinned test version");
+  }
   const profile = [
     "--user-data-dir", path.join(temporaryProfile, "user"),
     "--extensions-dir", path.join(temporaryProfile, "extensions"),
   ];
   const options = { encoding: "utf8", shell: process.platform === "win32" };
   const vsix = path.resolve("dist-package", ...(candidate ? ["candidate"] : []), `${manifest.name}-${manifest.version}.vsix`);
-  console.log(execFileSync(cli, [...profile, "--install-extension", vsix], options));
-  const installed = execFileSync(cli, [...profile, "--list-extensions", "--show-versions"], options);
+  console.log(execFileSync(cli, [...cliArgs, ...profile, "--install-extension", vsix], options));
+  const installed = execFileSync(cli, [...cliArgs, ...profile, "--list-extensions", "--show-versions"], options);
   const expected = `${manifest.publisher}.${manifest.name}@${manifest.version}`;
   assert.ok(installed.split(/\r?\n/).includes(expected), `Installed package missing: ${expected}`);
   console.log(`Verified installed VSIX: ${expected}`);
@@ -34,6 +40,7 @@ try {
   execFileSync("git", ["init", repository], { stdio: "ignore" });
   execFileSync("npm", ["run", "test:compile"], { stdio: "inherit" });
   await runTests({
+    vscodeExecutablePath: executable,
     extensionDevelopmentPath: path.join(temporaryProfile, "extensions", `${manifest.publisher}.${manifest.name}-${manifest.version}`),
     extensionTestsPath: path.resolve("dist-test/suite/index.js"),
     version: vscodeVersion,

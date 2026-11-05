@@ -3,11 +3,20 @@ import { execFileSync, spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { runTests, downloadAndUnzipVSCode } from "@vscode/test-electron";
+import assert from "node:assert/strict";
+import { runTests, downloadAndUnzipVSCode, resolveCliArgsFromVSCodeExecutablePath } from "@vscode/test-electron";
 import { assertGuiTestsAllowed, isolatedSettings } from "./profile-settings.mjs";
 import { vscodeVersion } from "../../../config/vscode-version.mjs";
 
 assertGuiTestsAllowed();
+
+const configuredExecutable = process.env.PIARRE_TEST_VSCODE_EXECUTABLE || undefined;
+if (configuredExecutable) {
+  assert.ok(path.isAbsolute(configuredExecutable), "PIARRE_TEST_VSCODE_EXECUTABLE must be absolute");
+  const [cli, ...cliArgs] = resolveCliArgsFromVSCodeExecutablePath(configuredExecutable);
+  const version = execFileSync(cli, [...cliArgs, "--version", "--no-sandbox"], { encoding: "utf8" }).trim().split(/\r?\n/)[0];
+  assert.equal(version, vscodeVersion, "Configured VS Code must match the pinned test version");
+}
 
 const packageRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -40,6 +49,7 @@ console.log(environment);
 
 try {
   await runTests({
+    vscodeExecutablePath: configuredExecutable,
     extensionDevelopmentPath: packageRoot,
     extensionTestsPath: path.join(
       packageRoot,
@@ -68,7 +78,7 @@ try {
     "security.workspace.trust.startupPrompt": "never",
     "security.workspace.trust.emptyWindow": false,
   }));
-  const executable = await downloadAndUnzipVSCode(vscodeVersion);
+  const executable = configuredExecutable ?? await downloadAndUnzipVSCode(vscodeVersion);
   await new Promise((resolve, reject) => {
     const child = spawn(executable, [fixturePath, "--no-sandbox", "--skip-welcome",
       "--disable-extensions", "--user-data-dir", restrictedUserData,

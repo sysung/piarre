@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { stripVTControlCharacters } from "node:util";
+import { observedHostTests, readExternalEvidence, sha256 } from "./acceptance-evidence.mjs";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { vscodeVersion } from "../config/vscode-version.mjs";
@@ -10,7 +10,7 @@ import { vscodeVersion } from "../config/vscode-version.mjs";
 const root = fileURLToPath(new URL("../", import.meta.url));
 const args = process.argv.slice(2);
 const scope = args.length === 0 ? "foundation" : args[0]?.replace(/^--scope=/, "");
-assert.ok(args.length <= 1 && ["foundation", "candidate"].includes(scope), "Use --scope=foundation or --scope=candidate");
+assert.ok(args.length <= 1 && ["foundation", "implementation", "candidate"].includes(scope), "Use --scope=foundation, --scope=implementation or --scope=candidate");
 function git(...args) {
   const result = spawnSync("git", args, { cwd: root, encoding: "utf8" });
   assert.equal(result.status, 0, "Cannot bind acceptance evidence to a Git revision");
@@ -32,7 +32,11 @@ for (const scenario of catalog.scenarios) {
   assert.ok(document.split("\n").includes(`## ${scenario.source.heading}`), `Missing requirement source for ${scenario.id}`);
   assert.ok(["automated", "pending"].includes(scenario.verification.kind));
   if (scenario.verification.kind === "automated") {
-    assert.equal(scenario.verification.check, "host-tests");
+    assert.ok(["host-tests", "installed-candidate"].includes(scenario.verification.check));
+    for (const check of scenario.verification.additionalChecks ?? []) {
+      assert.equal(check.check, "supported-execution");
+      assert.ok(check.tests.length > 0);
+    }
     assert.ok(scenario.verification.tests.length > 0);
   }
 }
@@ -65,21 +69,38 @@ if (!blocked) {
     const log = path.join(directory, `${id}.log`);
     writeFileSync(log, (result.stdout ?? "") + (result.stderr ?? ""));
     report.checks.push({ id, command: ["npm", ...argv], status: result.status === 0 ? "passed" : "failed", exitCode: result.status, log: path.relative(root, log) });
-    if (id === "host-tests") hostOutput = stripVTControlCharacters(result.stdout ?? "");
+    if (id === "host-tests") hostOutput = result.stdout ?? "";
     if (result.status !== 0) break;
   }
 }
 const stable = clean();
 const checksPassed = report.checks.length === 2 && report.checks.every(({ status }) => status === "passed");
+const observed = new Map([["host-tests", observedHostTests(hostOutput)]]);
+const externalStatuses = new Map();
+if (!blocked && stable && checksPassed && scope !== "foundation") {
+  const identity = { sourceCommit: revision, bundleSha256: sha256(readFileSync(path.join(root, "apps/vscode/dist/extension.js"))) };
+  report.bundleSha256 = identity.bundleSha256;
+  for (const [kind, variable] of [["supported-execution", "PIARRE_ACCEPTANCE_SUPPORTED_EXECUTION_REPORT"], ["installed-candidate", "PIARRE_ACCEPTANCE_INSTALLED_CANDIDATE_REPORT"]]) {
+    try {
+      assert.ok(process.env[variable], `Provide ${variable} from an actual external execution`);
+      const evidence = readExternalEvidence(path.resolve(process.env[variable]), kind, identity);
+      observed.set(kind, evidence.passedTests);
+      externalStatuses.set(kind, evidence.results);
+      report.checks.push({ id: kind, status: "recorded", report: evidence.file, sha256: evidence.sha256, evidence: evidence.report });
+    } catch (error) {
+      report.checks.push({ id: kind, status: "blocked", reason: String(error) });
+    }
+  }
+}
 for (const scenario of catalog.scenarios) {
   const pending = scenario.verification.kind === "pending";
   let status = pending ? "not-tested" : "blocked";
   if (!pending && !blocked && stable) {
-    const observed = scenario.verification.tests.every((name) => {
-      const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      return new RegExp(`[✓✔]\\s+${escaped}(?:\\s|$)`).test(hostOutput);
-    });
-    status = checksPassed && observed ? "passed" : "failed";
+    const requirements = [scenario.verification, ...(scenario.verification.additionalChecks ?? [])];
+    const complete = requirements.every(({ check, tests }) => tests.every(name => observed.get(check)?.has(name)));
+    const unavailable = requirements.some(({ check, tests }) => check !== "host-tests" &&
+      (!observed.has(check) || tests.some(name => !externalStatuses.get(check)?.has(name) || externalStatuses.get(check).get(name).status === "unsupported")));
+    status = unavailable ? "blocked" : checksPassed && complete ? "passed" : "failed";
   }
   report.scenarios.push({ ...scenario, status });
 }
@@ -91,8 +112,8 @@ report.principles = principleInventory.principles.map((principle) => ({
   }),
 }));
 if (blocked) report.blocker = blocked;
-if (!stable) report.blocker = "Source changed during verification; evidence cannot establish acceptance.";
-const selected = report.scenarios.filter(({ owner }) => scope === "candidate" || owner === "C01");
+if (!stable && !blocked) report.blocker = "Source changed during verification; evidence cannot establish acceptance.";
+const selected = report.scenarios.filter(({ owner }) => scope === "candidate" || (scope === "implementation" ? owner !== "C08" : owner === "C01"));
 report.scopePassed = !report.blocker && selected.length > 0 && selected.every(({ status }) => status === "passed");
 report.productReady = scope === "candidate" && report.scopePassed;
 const reportPath = path.join(directory, "report.json");

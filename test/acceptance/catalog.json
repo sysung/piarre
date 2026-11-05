@@ -32,8 +32,13 @@
       },
       "requirement": "Brief accomplishments, upcoming tasks, unresolved decisions, and correct project sources.",
       "verification": {
-        "kind": "pending",
-        "criterion": "Stored history and current-source integration journey."
+        "kind": "automated",
+        "check": "host-tests",
+        "tests": [
+          "restart reports changes after the last displayed revision, then advances only navigation metadata",
+          "changes use the prior observed boundary, retain intermediate corrections and exact sources",
+          "opens exact correction sources without losing unsent input and persists the observed visit"
+        ]
       }
     },
     {
@@ -45,8 +50,15 @@
       },
       "requirement": "Supporting typed instructions and consequential clarification preserve privacy and source meaning; agent visibility and direct controls do not require opening a conversation.",
       "verification": {
-        "kind": "pending",
-        "criterion": "Typed input privacy/correlation checks and an agent-overview journey operated without a chat exchange."
+        "kind": "automated",
+        "check": "host-tests",
+        "tests": [
+          "requires explicit connect and starts only one durable turn",
+          "replays exact original statement and accepted reply after SQLite restart",
+          "an accepted inference that claims approval does not create tasks or proposals",
+          "real webview preserves unsent input on inspection updates and requires explicit save",
+          "optional detail and familiarity preserve qualifiers, original wording and authority in every presentation"
+        ]
       }
     },
     {
@@ -58,8 +70,16 @@
       },
       "requirement": "Observed agent/task ownership, concise milestones, blockers and pending decisions remain visible without status questions.",
       "verification": {
-        "kind": "pending",
-        "criterion": "Event-driven checks and recorded active-run observation."
+        "kind": "automated",
+        "check": "host-tests",
+        "tests": [
+          "global, coding and assignment stop controls remain visible and actionable through every tab and setup",
+          "correction exposes exact plan approval/result relationships and preserves unknown writer facts",
+          "SQL pages select sparse milestones in revision order, survive append/reopen, and never write history or visits",
+          "LIMIT is applied in SQLite before parsing and paging rejects invalid bounds",
+          "allowlisted milestones retain exact identity and uncertainty without raw payloads or submitted text",
+          "removed proposals and corrected knowledge keep historical identities without a current navigation claim"
+        ]
       }
     },
     {
@@ -71,8 +91,14 @@
       },
       "requirement": "Cancel provisional drafts when intent changes and reject obsolete results.",
       "verification": {
-        "kind": "pending",
-        "criterion": "Delayed-result, cancellation, and denied-authority cases."
+        "kind": "automated",
+        "check": "host-tests",
+        "tests": [
+          "disconnect records unknown and ignores a late successful reply",
+          "restart records pending turn as unknown without connecting or retrying",
+          "plan changes during thread capability checks block the outbound turn",
+          "last pre-turn callback blocks corrected parent after capability checks and preserves observed thread"
+        ]
       }
     },
     {
@@ -84,8 +110,16 @@
       },
       "requirement": "Inspect and approve corrections with provenance and affected-work invalidation.",
       "verification": {
-        "kind": "pending",
-        "criterion": "Contradiction, restart, and stale-plan integration checks."
+        "kind": "automated",
+        "check": "host-tests",
+        "tests": [
+          "confirmed replacements get unique monotonic revisions and replay full source history",
+          "correction invalidates explicitly linked work while preserving unrelated tasks",
+          "a correction leaves old adopted links historical, never retargets them, and blocks pending adoption",
+          "native adoption reviews exact content, rechecks after the modal and never authorizes execution",
+          "actual language provider preserves saved origin, exact returned bytes and static coverage",
+          "source edits, rename/deletion and unsaved buffers block consequential relationship reuse"
+        ]
       }
     },
     {
@@ -97,8 +131,15 @@
       },
       "requirement": "Reversible priorities and dependency-aware work without implied approval.",
       "verification": {
-        "kind": "pending",
-        "criterion": "Direct-control priority and dependency checks with current agent/task ownership."
+        "kind": "automated",
+        "check": "host-tests",
+        "tests": [
+          "proposal is inert, exact adoption survives restart, duplicate receipt and reversal preserve history",
+          "ordering is stable, available before deferred, priority never bypasses dependencies",
+          "deferral blocks preparation and old approval, and reversing requires a fresh plan",
+          "active and unknown writers reject deferral and preserve owned lease, while priority is harmless",
+          "task controls expose exact proposals, escape text and use existing execution messages"
+        ]
       }
     },
     {
@@ -110,8 +151,24 @@
       },
       "requirement": "One supported coding writer under explicit scope, cost, and data-sharing authority.",
       "verification": {
-        "kind": "pending",
-        "criterion": "Live adapter, denied approval, single-writer, and disk readback checks."
+        "kind": "automated",
+        "check": "host-tests",
+        "tests": [
+          "preparation generates nothing; manual edits and dirty buffers block approval",
+          "two repository connections cannot reserve concurrent runs",
+          "unknown or changed provider metadata cannot authorize a generation turn",
+          "model file IDs resolve only to the approved immutable baseline"
+        ],
+        "additionalChecks": [
+          {
+            "check": "supported-execution",
+            "tests": [
+              "supported macOS containment and correction journey",
+              "authenticated bounded Codex execution with current checks",
+              "manual edit preserved after authenticated proposal"
+            ]
+          }
+        ]
       }
     },
     {
@@ -123,8 +180,21 @@
       },
       "requirement": "Review current independent checks and one outcome package.",
       "verification": {
-        "kind": "pending",
-        "criterion": "Revision-bound checks, stale evidence rejection, and human review."
+        "kind": "automated",
+        "check": "host-tests",
+        "tests": [
+          "completion, current criterion checks and acceptance remain separate",
+          "a new plan invalidates old result authority while preserving its historical check"
+        ],
+        "additionalChecks": [
+          {
+            "check": "supported-execution",
+            "tests": [
+              "supported macOS containment and correction journey",
+              "authenticated bounded Codex execution with current checks"
+            ]
+          }
+        ]
       }
     },
     {
@@ -136,8 +206,22 @@
       },
       "requirement": "Stop, restart, manual edits, and lost acknowledgments preserve honest state.",
       "verification": {
-        "kind": "pending",
-        "criterion": "Fault injection and live-worker reconciliation."
+        "kind": "automated",
+        "check": "host-tests",
+        "tests": [
+          "lost acknowledgment retains ownership across restart and blocks replacement requests",
+          "SQLite successor registration retains one reservation through crash/restart and rejects an old finisher",
+          "restart reconciliation binds a partial source journal to SQLite before any further write",
+          "uncertain process termination retains the lease until actual reconciliation"
+        ],
+        "additionalChecks": [
+          {
+            "check": "supported-execution",
+            "tests": [
+              "supported macOS containment and correction journey"
+            ]
+          }
+        ]
       }
     },
     {
@@ -149,8 +233,21 @@
       },
       "requirement": "Preview and restore supported scope while preserving newer work.",
       "verification": {
-        "kind": "pending",
-        "criterion": "Isolated repository edits, untracked files, partial failure, and repeated restoration."
+        "kind": "automated",
+        "check": "host-tests",
+        "tests": [
+          "mixed recovery preserves full scope, supersedes old replay, remains historical, and restores preserved newer work after restart",
+          "partial source recovery keeps candidate and source namespaces separate and preserves untracked scoped work",
+          "keep-current makes no inode replacement, registers all files, and cannot revive the original journal"
+        ],
+        "additionalChecks": [
+          {
+            "check": "supported-execution",
+            "tests": [
+              "supported macOS containment and correction journey"
+            ]
+          }
+        ]
       }
     },
     {
@@ -162,8 +259,15 @@
       },
       "requirement": "Investigate side ideas and return without losing or silently changing the main goal.",
       "verification": {
-        "kind": "pending",
-        "criterion": "Thread-switch, scope conflict, and restart journey."
+        "kind": "automated",
+        "check": "host-tests",
+        "tests": [
+          "captures and returns a linked idea durably without calls or parent mutation",
+          "linked idea investigation findings and pending decision survive return and restart",
+          "investigations include the chosen parent and every linked policy instead of unrelated global records",
+          "deleted parent invalidates previously prepared approval without mutating history",
+          "worker findings can cite every supplied source through index nineteen"
+        ]
       }
     },
     {
@@ -175,8 +279,16 @@
       },
       "requirement": "Bounded independent findings, available traces, dissent, and resource transparency.",
       "verification": {
-        "kind": "pending",
-        "criterion": "Failed/cancelled agents, denied spend, no writes, and synthesis review."
+        "kind": "automated",
+        "check": "host-tests",
+        "tests": [
+          "bounds fanout and requires exact explicit batch consent; prepared work makes zero calls",
+          "declining native batch spending records no approval and starts no provider",
+          "keeps conflicting findings, failures and resource uncertainty visible without synthesis calls",
+          "provider-observed failure remains failed rather than completion or dropped worker",
+          "restart marks active requests unknown and never retries approved queued or active assignments",
+          "global fanout limit rejects another batch before any extra provider call"
+        ]
       }
     },
     {
@@ -188,8 +300,17 @@
       },
       "requirement": "Optional evidence-based reflection and correctable preferences without silent policy changes.",
       "verification": {
-        "kind": "pending",
-        "criterion": "Decline, correction, forced close, and policy-boundary scenarios."
+        "kind": "automated",
+        "check": "host-tests",
+        "tests": [
+          "Decline and close persists its resolution and leaves the actual Work view closed",
+          "Mark reviewed and close persists its resolution and leaves the actual Work view closed",
+          "forced surface and controller disposal recover pending reflection without resolving it",
+          "canceling reflection and correction leaves durable state and the view unchanged",
+          "correction records feedback as a proposal without changing policy or preferences",
+          "optional preferences can be skipped, canceled, changed and reset through native dialog choices",
+          "persistence failure closes before its warning is dismissed and preserves recoverable pending work"
+        ]
       }
     },
     {
@@ -201,8 +322,13 @@
       },
       "requirement": "Promote reviewed lasting conclusions from linked temporary artifacts.",
       "verification": {
-        "kind": "pending",
-        "criterion": "Planned/observed outcome, supersession, and source-link checks."
+        "kind": "automated",
+        "check": "host-tests",
+        "tests": [
+          "source revision and exact decision text survive later correction without silently upgrading authority",
+          "review closes proposal without applying it and keeps its export convention stable",
+          "superseded plans are flagged without rewriting their historical source"
+        ]
       }
     },
     {
@@ -214,8 +340,14 @@
       },
       "requirement": "Stable daily use remains separate from candidate tests and diagnostics.",
       "verification": {
-        "kind": "pending",
-        "criterion": "Separate installations/state, redaction/export/deletion, and failure recovery."
+        "kind": "automated",
+        "check": "installed-candidate",
+        "tests": [
+          "installed candidate counter create",
+          "installed candidate counter reopen",
+          "installed candidate piarre create",
+          "installed candidate piarre reopen"
+        ]
       }
     },
     {
@@ -297,10 +429,18 @@
         "document": "docs/01_PRODUCT_PRD.md",
         "heading": "Agent visibility and project inspection"
       },
-      "requirement": "Default overview shows known agents, task/scope ownership, parent work, last observed state, progress or blockers, pending decisions, outputs and supported direct controls; disconnected and unattached coverage is explicit.",
+      "requirement": "Default overview shows known agents, task/scope ownership, parent work, last observed state, progress or blockers, pending decisions, outputs and supported direct controls; disconnected and unattached coverage is explicit. Human evaluation remains in C08.",
       "verification": {
-        "kind": "pending",
-        "criterion": "Actual managed-agent and bounded parallel-work journeys, stop/restart/unknown states, evidence navigation, and user evaluation without opening chat."
+        "kind": "automated",
+        "check": "host-tests",
+        "tests": [
+          "global, coding and assignment stop controls remain visible and actionable through every tab and setup",
+          "clicks target independent assignments and preserves private input through stop and idea return",
+          "restart marks active requests unknown and never retries approved queued or active assignments",
+          "keeps conflicting findings, failures and resource uncertainty visible without synthesis calls",
+          "allowlisted milestones retain exact identity and uncertainty without raw payloads or submitted text",
+          "removed proposals and corrected knowledge keep historical identities without a current navigation claim"
+        ]
       }
     }
   ]
