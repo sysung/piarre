@@ -1,3 +1,4 @@
+import { currentTaskTriage, type TaskTriageAction } from "../../../packages/core/src/task-triage.js";
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
@@ -54,6 +55,13 @@ export class ExecutionCoordinator {
     if (result.kind !== "applied") throw new Error(`Execution authority was not acquired: ${result.kind}`);
     this.options.publish(result.snapshot);
   }
+  recordTaskTriage(action: TaskTriageAction, expectedProjectRevision: number): void {
+    if (this.disposedSnapshot) throw new Error("Execution coordinator is disposed.");
+    const project = this.snapshot();
+    const result = this.options.repository.dispatch({ commandId: randomUUID(), projectId: project.projectId, expectedProjectRevision, action });
+    if (result.kind !== "applied") throw new Error("Task changed during triage review. Review the current proposal again.");
+    this.options.publish(result.snapshot);
+  }
   private clean(candidate?: CandidateWorkspace): void {
     if (this.disposedSnapshot) throw new Error("Execution coordinator is disposed.");
     if (candidate && this.options.hasDirtyDocuments?.(candidate.files.flatMap(file => [path.join(candidate.sourceRoot, file.baseline.relativePath), path.join(candidate.root, file.baseline.relativePath)]))) throw new Error("Save or discard dirty editor documents in this execution scope before execution or workspace changes.");
@@ -94,6 +102,7 @@ export class ExecutionCoordinator {
   }
   async prepare(input: { readonly taskId: string; readonly relativePaths: readonly string[]; readonly objective: string; readonly criteria: readonly ExecutionCriterion[]; readonly checks: readonly ExecutionCheck[]; readonly durationMs?: number; readonly maxTokens?: number; readonly requestedModel?: string }) {
     this.clean();
+    if (currentTaskTriage(this.snapshot(), input.taskId).disposition.kind === "deferred") throw new Error("This task is deferred. Review and adopt its return to the queue before preparing work.");
     for (const value of this.prepared.values()) { clearTimeout(value.timer); value.client.dispose(); } this.prepared.clear();
     const client = this.options.createClient();
     let retained = false;

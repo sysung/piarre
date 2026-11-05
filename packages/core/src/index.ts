@@ -1,3 +1,6 @@
+import { applyTaskTriageEvent, type TaskTriageAction, type TaskTriageEvent, type TaskTriageState } from "./task-triage.js";
+export { currentTaskTriage, taskTriageRevision, latestTaskTriageDecision, orderedTriageTasks } from "./task-triage.js";
+export type { TaskTriageAction, TaskTriageEvent, TaskTriageValue, TaskTriageProposal, TaskTriageDecision } from "./task-triage.js";
 import { applyCoordinationEvent, type CoordinationAction, type CoordinationEvent, type CoordinationState } from "./coordination.js";
 export type { CoordinationAction, CoordinationGroup, Assignment, LinkedIdea } from "./coordination.js";
 import { applyReflectionEvent, type Reflection, type ReflectionAction, type ReflectionEvent, type ExplanationPreference, type ExpertisePreference } from "./reflection.js";
@@ -23,6 +26,7 @@ export interface ProjectSnapshot {
   readonly revision: number;
   readonly proposals: readonly RecordedProposalGroup[];
   readonly tasks: readonly ProposedTask[];
+  readonly taskTriage: TaskTriageState;
   readonly sessions: readonly ConversationSession[];
   readonly conversation: readonly ConversationTurn[];
   readonly coordination: CoordinationState;
@@ -98,13 +102,13 @@ export interface ProjectCommand {
   readonly commandId: string;
   readonly projectId: string;
   readonly expectedProjectRevision: number;
-  readonly action: CoordinationAction | ConversationAction | KnowledgeAction | ExecutionAction | ReflectionAction
+  readonly action: TaskTriageAction | CoordinationAction | ConversationAction | KnowledgeAction | ExecutionAction | ReflectionAction
     | { readonly kind: "rename-project"; readonly name: string }
     | { readonly kind: "delete-proposal"; readonly groupId: string }
     | { readonly kind: "propose-tasks"; readonly draft: ProposalDraft; readonly sessionId?: string };
 }
 
-export type ProjectEvent = CoordinationEvent | ConversationEvent | KnowledgeEvent | ExecutionEvent | ReflectionEvent
+export type ProjectEvent = TaskTriageEvent | CoordinationEvent | ConversationEvent | KnowledgeEvent | ExecutionEvent | ReflectionEvent
   | {
       readonly kind: "project-created";
       readonly projectId: string;
@@ -140,6 +144,7 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
         revision: 1,
         proposals: [],
         tasks: [],
+        taskTriage: { proposals: [], decisions: [] },
         sessions: [{ id: defaultSessionId, title: "Project chat" }],
         conversation: [],
         coordination: { ideas: [], groups: [] },
@@ -156,6 +161,7 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
     }
     if (!snapshot) throw new Error("Invalid project history: missing creation");
     switch (event.kind) {
+      case "task-triage-recorded": snapshot = applyTaskTriageEvent(snapshot, event); break;
       case "coordination-recorded":
         snapshot = applyCoordinationEvent(snapshot, event); break;
       case "reflection-recorded":
@@ -231,6 +237,10 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
 
 export function decideProjectEvent(command: ProjectCommand): ProjectEvent {
   switch (command.action.kind) {
+    case "propose-task-triage":
+    case "adopt-task-triage":
+    case "reverse-task-triage":
+      return { kind: "task-triage-recorded", commandId: command.commandId, action: command.action };
     case "coordinate": return { kind: "coordination-recorded", commandId: command.commandId, action: command.action };
     case "offer-reflection":
     case "correct-reflection":

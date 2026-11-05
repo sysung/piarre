@@ -1,3 +1,4 @@
+import { currentTaskTriage } from "./task-triage.js";
 import { consentMatches, type ExecutionForecast, type SpendingConsent } from "./execution-forecast.js";
 import { activeRecovery, supersededOperation, unresolvedRecoveryOperation, type RecoveryAction, type RecoveryRecord, type SavedVersion } from "./recovery.js";
 import type { CodexExecutionContext } from "./provider-account-context.js";
@@ -139,6 +140,7 @@ function sameVersion(left: KnowledgeVersion, right: KnowledgeVersion): boolean {
 export function planFreshness(project: ProjectSnapshot, plan: ExecutionPlan): "current" | "stale" | "disputed" {
   if (project.executionPlans.some(item => item.planId === plan.planId) && currentExecutionPlan(project, plan.taskId)?.planId !== plan.planId) return "stale";
   if (!project.tasks.some(task => task.taskId === plan.taskId)) return "stale";
+  if (project.taskTriage.decisions.some(decision => decision.taskId === plan.taskId && decision.recordedAtRevision > plan.recordedAtRevision && decision.previous.disposition.kind !== decision.adopted.disposition.kind)) return "stale";
   const records = currentKnowledge(project);
   for (const version of plan.knowledge) {
     const entry = records.find(item => sameVersion(item, version));
@@ -158,7 +160,7 @@ export function executionDependenciesReady(project: ProjectSnapshot, taskId: str
     if (cached !== undefined) return cached;
     if (visiting.has(id)) return false;
     const task = project.tasks.find(item => item.taskId === id);
-    if (!task) return false;
+    if (!task || currentTaskTriage(project, id).disposition.kind === "deferred") return false;
     visiting.add(id);
     const result = task.dependsOn.every(dependency => visit(dependency) && project.executionRuns.some(run =>
       run.grant.plan.taskId === dependency && run.acceptance.kind === "accepted" && run.state.kind === "terminal" &&
@@ -181,7 +183,7 @@ export function applyExecutionEvent(project: ProjectSnapshot, event: ExecutionEv
   const revision = project.revision + 1;
   if (action.kind === "set-scheduling-paused") return { ...project, revision, schedulingPaused: action.paused };
   if (action.kind === "prepare-execution-plan") {
-    if (!project.tasks.some(task => task.taskId === action.plan.taskId)) invalid();
+    if (!project.tasks.some(task => task.taskId === action.plan.taskId) || currentTaskTriage(project, action.plan.taskId).disposition.kind === "deferred") invalid();
     validateFileManifest(action.plan.files);
     const plan = { ...action.plan, planId: `plan:${event.commandId}`, recordedAtRevision: revision };
     if (planFreshness(project, plan) !== "current") invalid();

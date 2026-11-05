@@ -1,3 +1,4 @@
+import { parseTaskTriageAction, parseTaskTriageEvent } from "./task-triage.js";
 import { parseSuppliedReference, parseSuppliedSources } from "./supplied-source.js";
 import { parseCoordinationAction, parseCoordinationEvent } from "./coordination-contracts.js";
 import { parseReflectionAction, parseReflectionEvent } from "./reflection.js";
@@ -236,6 +237,8 @@ export function validateProjectCommand(value: unknown): ProjectCommand {
   const projectId = nonblank(value.projectId);
   const expectedProjectRevision = positiveInteger(value.expectedProjectRevision);
   const action = value.action;
+  const triageAction = parseTaskTriageAction(action);
+  if (triageAction) return { commandId, projectId, expectedProjectRevision, action: triageAction };
   const coordinationAction = parseCoordinationAction(action);
   if (coordinationAction) return { commandId, projectId, expectedProjectRevision, action: coordinationAction };
   const reflectionAction = parseReflectionAction(action);
@@ -289,6 +292,8 @@ function storedTask(value: unknown): ProposedTask {
 }
 
 export function parseProjectEvent(value: unknown): ProjectEvent {
+  const triageEvent = parseTaskTriageEvent(value);
+  if (triageEvent) return triageEvent;
   const coordinationEvent = parseCoordinationEvent(value);
   if (coordinationEvent) return coordinationEvent;
   const reflectionEvent = parseReflectionEvent(value);

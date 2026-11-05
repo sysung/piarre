@@ -1,3 +1,4 @@
+import { currentTaskTriage, taskTriageRevision, latestTaskTriageDecision, type TaskTriageValue } from "../../../packages/core/src/task-triage.js";
 import { executionForecastText } from "../../../packages/core/src/execution-forecast.js";
 import * as vscode from "vscode";
 import { randomUUID } from "node:crypto";
@@ -28,13 +29,24 @@ function criterionText(value: string): readonly string[] {
   return parsed.map((item: unknown) => { if (typeof item !== "string" || !item.trim() || item.length > 10_000) throw new Error("Each criterion needs text of 1 to 10,000 characters."); return item; });
 }
 
+export interface TriageDialogs {
+  pick(title: string, choices: readonly string[], placeHolder: string): PromiseLike<string | undefined>;
+  input(title: string): PromiseLike<string | undefined>;
+  review(title: string, detail: string, approve: string): PromiseLike<string | undefined>;
+}
+const nativeTriageDialogs: TriageDialogs = {
+  pick: (title, choices, placeHolder) => vscode.window.showQuickPick([...choices], { title, placeHolder }),
+  input: title => vscode.window.showInputBox({ title, ignoreFocusOut: true, validateInput: value => value.trim() && value.length <= 4000 ? undefined : "Enter a reason of up to 4,000 characters." }),
+  review: (title, detail, approve) => vscode.window.showWarningMessage(title, { modal: true, detail }, approve),
+};
+
 export class ExecutionUi {
   private preparing = false;
   private disposed = false;
   private readonly recovery: RecoveryUi;
   private readonly reviewing = new Set<string>();
   constructor(private readonly coordinator: ExecutionCoordinator, private readonly snapshot: () => ProjectSnapshot,
-    private readonly showResult: (runId: string) => void, private readonly recoveryDialogs: RecoveryDialogs = nativeRecoveryDialogs) { this.recovery = new RecoveryUi(coordinator, () => this.current(), showResult, recoveryDialogs); }
+    private readonly showResult: (runId: string) => void, private readonly recoveryDialogs: RecoveryDialogs = nativeRecoveryDialogs, private readonly triageDialogs: TriageDialogs = nativeTriageDialogs) { this.recovery = new RecoveryUi(coordinator, () => this.current(), showResult, recoveryDialogs); }
 
   async handle(message: ExecutionMessage): Promise<void> {
     if (this.disposed || !vscode.workspace.isTrusted) return;
@@ -43,6 +55,9 @@ export class ExecutionUi {
         case "pause-all": await this.coordinator.stopAll(); return;
         case "resume": this.coordinator.resume(); return;
         case "reconcile-all": await this.coordinator.reconcile(); return;
+        case "triage": await this.proposeTriage(message.id); return;
+        case "adopt-triage": await this.adoptTriage(message.id); return;
+        case "reverse-triage": await this.reverseTriage(message.id); return;
         case "prepare": await this.prepare(message.id); return;
         case "view": this.coordinator.refreshWorkspaceFreshness(); this.showResult(message.id); return;
         case "abandon-provider": await this.abandonProvider(message.id); return;
@@ -71,6 +86,40 @@ export class ExecutionUi {
   }
 
   private current(): boolean { return !this.disposed && vscode.workspace.isTrusted; }
+  private async proposeTriage(taskId: string): Promise<void> {
+    const project = this.snapshot(), task = project.tasks.find(item => item.taskId === taskId); if (!task) return;
+    const current = currentTaskTriage(project, taskId);
+    const priority = await this.triageDialogs.pick("Task priority", ["high", "normal", "low"], `Current priority: ${current.priority}`);
+    if (!priority || !this.current() || (priority !== "high" && priority !== "normal" && priority !== "low")) return;
+    const disposition = await this.triageDialogs.pick("Task availability", ["Available", "Deferred"], "Changing queue organization does not start work.");
+    if (!disposition || !this.current()) return;
+    let desired: TaskTriageValue;
+    if (disposition === "Deferred") {
+      const reason = await this.triageDialogs.input("Why defer this task?");
+      if (!reason || !this.current()) return;
+      desired = { priority, disposition: { kind: "deferred", reason } };
+    } else { desired = { priority, disposition: { kind: "available" } }; }
+    const rationale = await this.triageDialogs.input("Reason for this triage proposal");
+    if (!rationale || !this.current()) return;
+    this.coordinator.recordTaskTriage({ kind: "propose-task-triage", taskId, basedOnTriageRevision: taskTriageRevision(project, taskId), desired, rationale, origin: { kind: "user" } }, project.revision);
+  }
+  private triageText(value: TaskTriageValue): string { return `${value.priority} priority; ${value.disposition.kind === "deferred" ? `deferred because ${value.disposition.reason}` : "available"}`; }
+  private async adoptTriage(proposalId: string): Promise<void> {
+    const project = this.snapshot(), proposal = project.taskTriage.proposals.find(item => item.proposalId === proposalId);
+    if (!proposal) return;
+    const task = project.tasks.find(item => item.taskId === proposal.taskId); if (!task) return;
+    if (proposal.basedOnTriageRevision !== taskTriageRevision(project, task.taskId)) throw new Error("This proposal is stale. Propose a change against the current task triage.");
+    const choice = await this.triageDialogs.review("Adopt this task triage?", `${task.title}\n\nPrevious: ${this.triageText(currentTaskTriage(project, task.taskId))}\nProposed: ${this.triageText(proposal.desired)}\n\nUser rationale: ${proposal.rationale}\n\nPriority changes display order only. Deferral blocks new preparation, approval and generation. Active or unknown writers must be stopped and reconciled first. Returning a task never starts work or restores stale approval. Dependencies and verification remain required.\n\nProposal ${proposal.proposalId}, revision ${String(proposal.recordedAtRevision)}; current triage revision ${String(proposal.basedOnTriageRevision ?? "initial")}.`, "Adopt triage");
+    if (choice !== "Adopt triage" || !this.current()) return;
+    this.coordinator.recordTaskTriage({ kind: "adopt-task-triage", proposalId, proposalRevision: proposal.recordedAtRevision, triageRevision: proposal.basedOnTriageRevision }, project.revision);
+  }
+  private async reverseTriage(taskId: string): Promise<void> {
+    const project = this.snapshot(), task = project.tasks.find(item => item.taskId === taskId), decision = latestTaskTriageDecision(project, taskId);
+    if (!task || !decision || decision.reversedDecisionId !== null) return;
+    const choice = await this.triageDialogs.review("Reverse the latest task triage?", `${task.title}\n\nCurrent: ${this.triageText(decision.adopted)}\nRestore: ${this.triageText(decision.previous)}\n\nThis appends a reversal and retains history. Returning a task never starts work or restores stale approval. Deferring requires active or unknown work to be stopped and reconciled first.\n\nDecision ${decision.decisionId}, triage revision ${String(decision.recordedAtRevision)}.`, "Reverse triage");
+    if (choice !== "Reverse triage" || !this.current()) return;
+    this.coordinator.recordTaskTriage({ kind: "reverse-task-triage", taskId, decisionId: decision.decisionId, triageRevision: decision.recordedAtRevision }, project.revision);
+  }
   private async prepare(taskId: string): Promise<void> {
     if (this.preparing) return;
     this.preparing = true;
