@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import * as vscode from "vscode";
+import { isDeepStrictEqual } from "node:util";
 import { defaultSessionId } from "../../../../packages/core/src/conversation.js";
 import { currentKnowledge } from "../../../../packages/core/src/knowledge.js";
 import { resolveRecordReference } from "../../../../packages/core/src/inspection.js";
@@ -28,6 +29,7 @@ if (process.env.PIARRE_LIVE_LOCAL === "1") {
       const identity = { name: "Synthetic local discussion proof", repositoryUri: pathToFileURL(directory).href };
       let repository = new SqliteProjectRepository(databasePath);
       let controller: ConversationController | undefined;
+      let observedTurn: ReturnType<SqliteProjectRepository["read"]>["conversation"][number] | undefined;
       const startedAt = new Date().toISOString();
       const start = performance.now();
       const writeReport = (value: unknown) => {
@@ -71,9 +73,9 @@ if (process.env.PIARRE_LIVE_LOCAL === "1") {
           reviewed, accepted: () => { accepted = true; } });
         assert.equal(accepted, true);
         const saved = repository.read();
-        const turn = saved.conversation[0]; assert.equal(turn?.kind, "answered", states.at(-1)?.message ?? "Missing answered turn");
+        const turn = saved.conversation[0]; observedTurn = turn; assert.equal(turn?.kind, "answered", states.at(-1)?.message ?? "Missing answered turn");
         assert.match(turn.text, /\bblue\b/i);
-        assert.ok(turn.citations.some(reference => JSON.stringify(reference) === JSON.stringify(source.reference)), "The real reply must cite the confirmed blue knowledge, not only the user's question");
+        assert.ok(turn.citations.some(reference => isDeepStrictEqual(reference, source.reference)), "The real reply must cite the confirmed blue knowledge, not only the user's question");
         assert.deepEqual(turn.origin, { kind: "docker-model-runner", endpoint: configuration.endpoint, requestedModel: configuration.model, configuredDigest: configuration.digest });
         assert.ok("replyOrigin" in turn); assert.equal(turn.replyOrigin.kind, "docker-model-runner");
         assert.ok(turn.replyOrigin.observedModel.startsWith("/"));
@@ -93,7 +95,7 @@ if (process.env.PIARRE_LIVE_LOCAL === "1") {
           limits: { promptUtf8Bytes: 6000, requestedOutputTokens: 1024, runtimeContextTokens: "operator-configured 8192; not independently observed by this fixture", generalTokenizerTemplateGuarantee: "unverified" } });
       } catch (error) {
         writeReport({ result: "failed", startedAt, completedAt: new Date().toISOString(), elapsedMs: Math.round(performance.now() - start), configuration,
-          error: error instanceof Error ? error.stack ?? error.message : String(error), explanation: "No passing live integration claim is made. No retry or cloud fallback was attempted." });
+          observedTurn, error: error instanceof Error ? error.stack ?? error.message : String(error), explanation: "No passing live integration claim is made. No retry or cloud fallback was attempted." });
         throw error;
       } finally { controller?.dispose(); repository.close(); rmSync(directory, { recursive: true, force: true }); }
     });
