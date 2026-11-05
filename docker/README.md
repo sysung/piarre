@@ -49,6 +49,23 @@ Follow the displayed device-login instructions in your browser, then select **Co
 
 The container has its own Codex credential volume. Host credentials, SSH keys, Git credentials, and the Docker socket are not mounted. Signing in does not send a chat message. Credentials remain in the named volume when you stop the container.
 
+## Continue offline or connect a local model
+
+Choose **Continue offline** in Piarre to inspect the project and draft plans without signing in. This makes no provider request. For optional local discussion, run these Docker CLI commands on the host:
+
+```sh
+docker desktop enable model-runner
+docker model pull ai/qwen3.5@sha256:ea484046efba5fc126b1b331c2d590a20cb7d3abdfc65366a7f8b547350cd629
+docker model tag ai/qwen3.5@sha256:ea484046efba5fc126b1b331c2d590a20cb7d3abdfc65366a7f8b547350cd629 ai/qwen3.5:4b-q6_K
+docker model configure --context-size 8192 --keep-alive 5m ai/qwen3.5:4b-q6_K
+docker model status
+docker model ps
+```
+
+This pins the evaluated Qwen3.5 4B Q6_K artifact. Its model layers total about 4.20 GB; runtime memory is additional. The runtime loads the model when a request arrives. In Piarre, choose **+ → Connect local model**, review the selected context, then send. Discussion uses the private `model-runner.docker.internal` endpoint without a host TCP listener, Docker socket, or Codex credentials in the container. It cannot run coding tools or agents and never falls back to a cloud provider.
+
+The extension requests non-thinking structured replies, limits complete prompt size to 6,000 UTF-8 bytes and output to 1,024 tokens, and rejects unsupported or truncated replies. Those byte limits are not exact tokenizer accounting. Source interpretation and clarification remain fallible; review cited records before adopting a recommendation. Stop cancels delivery but does not prove backend compute stopped. Use `docker model ps` to inspect residency; reconnecting does not retry the earlier turn.
+
 ## Stop and update
 
 ```sh
