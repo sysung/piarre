@@ -18,8 +18,8 @@ export { parseProposalOutput, parseProjectEvent, validateProjectCommand } from "
 export { parseSubmittedStatement, parseInterpretationOutput, parseKnowledgeCorrection } from "./context.js";
 export type { SubmittedStatement, KnowledgeSource, SourcedText, Interpretation, KnowledgeVersion, KnowledgeEntry, KnowledgeCorrection } from "./context.js";
 import { applyConversationEvent, conversationEvent, defaultSessionId, type ConversationSession, type ConversationAction, type ConversationEvent, type ConversationTurn } from "./conversation.js";
-export { conversationHistory, defaultSessionId } from "./conversation.js";
-export type { ConversationAction, ConversationEvent, ConversationTurn, ConversationSource, ConversationSession, SessionAction } from "./conversation.js";
+export { conversationProviderLabel, conversationHistory, defaultSessionId } from "./conversation.js";
+export type { ConversationAction, ConversationEvent, ConversationTurn, ConversationSource, ConversationSession, SessionAction, ConversationRequestOrigin, ConversationReplyOrigin } from "./conversation.js";
 
 export interface ProjectSnapshot {
   readonly projectId: string;
@@ -180,6 +180,8 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
         snapshot = applyKnowledgeEvent(snapshot, event);
         break;
       case "session-recorded":
+      case "provider-conversation-started":
+      case "provider-conversation-replied":
       case "conversation-started":
       case "conversation-replied":
       case "conversation-ended":
@@ -293,6 +295,8 @@ export function decideProjectEvent(command: ProjectCommand): ProjectEvent {
     case "create-session":
     case "rename-session":
     case "archive-session":
+    case "begin-provider-conversation":
+    case "record-provider-conversation-reply":
     case "begin-conversation":
     case "record-conversation-reply":
     case "end-conversation":

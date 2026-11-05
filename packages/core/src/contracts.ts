@@ -17,7 +17,7 @@ import type {
   ProposedTask,
 } from "./index.js";
 import { parseSubmittedStatement } from "./context.js";
-import type { ConversationEvent, SessionAction } from "./conversation.js";
+import type { ConversationEvent, ConversationRequestOrigin, ConversationReplyOrigin, SessionAction } from "./conversation.js";
 
 function parseSessionAction(value: unknown): SessionAction | undefined {
   if (!isObject(value) || !("kind" in value) || !("id" in value)) return;
@@ -67,6 +67,34 @@ function replyFields(value: object) {
   if (!("requestId" in value) || !("text" in value) || !("citations" in value) || !("providerThreadId" in value) || !("providerTurnId" in value) || !Array.isArray(value.citations)) invalid();
   return { requestId: nonblank(value.requestId), text: nonblank(value.text), citations: value.citations.map(parseSuppliedReference),
     providerThreadId: nonblank(value.providerThreadId), providerTurnId: nonblank(value.providerTurnId) };
+}
+
+function requestOrigin(value: unknown): ConversationRequestOrigin {
+  if (!isObject(value) || !("kind" in value) || !("requestedModel" in value)) invalid();
+  if (value.kind === "codex" && hasOnlyKeys(value, ["kind", "requestedModel"])) return { kind: value.kind, requestedModel: value.requestedModel === null ? null : nonblank(value.requestedModel) };
+  if (value.kind === "docker-model-runner" && hasOnlyKeys(value, ["kind", "endpoint", "requestedModel", "configuredDigest"]) && "endpoint" in value && "configuredDigest" in value) {
+    const configuredDigest = nonblank(value.configuredDigest);
+    if (!/^[a-f0-9]{64}$/.test(configuredDigest)) invalid();
+    return { kind: value.kind, endpoint: nonblank(value.endpoint), requestedModel: nonblank(value.requestedModel), configuredDigest };
+  }
+  invalid();
+}
+
+function replyOrigin(value: unknown): ConversationReplyOrigin {
+  if (!isObject(value) || !("kind" in value)) invalid();
+  if (value.kind === "codex" && hasOnlyKeys(value, ["kind", "threadId", "turnId"]) && "threadId" in value && "turnId" in value) return { kind: value.kind, threadId: nonblank(value.threadId), turnId: nonblank(value.turnId) };
+  if (value.kind === "docker-model-runner" && hasOnlyKeys(value, ["kind", "observedModel", "responseId"]) && "observedModel" in value && "responseId" in value) return { kind: value.kind, observedModel: nonblank(value.observedModel), responseId: value.responseId === null ? null : nonblank(value.responseId) };
+  invalid();
+}
+
+function providerStart(value: object) {
+  if (!("submitted" in value) || !("sources" in value) || !("origin" in value) || !hasOnlyKeys(value, ["kind", "submitted", "sources", "origin", ...("sessionId" in value ? ["sessionId"] : [])])) invalid();
+  return { submitted: parseSubmittedStatement(value.submitted), sources: conversationSources(value.sources), origin: requestOrigin(value.origin), ...("sessionId" in value ? { sessionId: nonblank(value.sessionId) } : {}) };
+}
+
+function providerReply(value: object) {
+  if (!hasOnlyKeys(value, ["kind", "requestId", "text", "citations", "origin"]) || !("requestId" in value) || !("text" in value) || !("citations" in value) || !Array.isArray(value.citations) || !("origin" in value)) invalid();
+  return { requestId: nonblank(value.requestId), text: nonblank(value.text), citations: value.citations.map(parseSuppliedReference), origin: replyOrigin(value.origin) };
 }
 
 function endFields(value: object): Omit<Extract<ConversationEvent, { kind: "conversation-ended" }>, "kind"> {
@@ -252,6 +280,8 @@ export function validateProjectCommand(value: unknown): ProjectCommand {
   if (knowledgeAction) return { commandId, projectId, expectedProjectRevision, action: knowledgeAction };
   const sessionAction = parseSessionAction(action);
   if (sessionAction) return { commandId, projectId, expectedProjectRevision, action: sessionAction };
+  if (action.kind === "begin-provider-conversation") return { commandId, projectId, expectedProjectRevision, action: { kind: action.kind, ...providerStart(action) } };
+  if (action.kind === "record-provider-conversation-reply") return { commandId, projectId, expectedProjectRevision, action: { kind: action.kind, ...providerReply(action) } };
   if (action.kind === "begin-conversation" && hasOnlyKeys(action, "sessionId" in action ? ["kind", "submitted", "sources", "sessionId"] : ["kind", "submitted", "sources"]) && "submitted" in action && "sources" in action) {
     return { commandId, projectId, expectedProjectRevision, action: { kind: action.kind, submitted: parseSubmittedStatement(action.submitted), sources: conversationSources(action.sources), ...("sessionId" in action ? { sessionId: nonblank(action.sessionId) } : {}) } };
   }
@@ -313,6 +343,8 @@ export function parseProjectEvent(value: unknown): ProjectEvent {
     if (!action) invalid();
     return { kind: value.kind, action };
   }
+  if (value.kind === "provider-conversation-started") return { kind: value.kind, ...providerStart(value) };
+  if (value.kind === "provider-conversation-replied") return { kind: value.kind, ...providerReply(value) };
   if (value.kind === "conversation-started" && hasOnlyKeys(value, "sessionId" in value ? ["kind", "submitted", "sources", "sessionId"] : ["kind", "submitted", "sources"]) && "submitted" in value && "sources" in value) {
     return { kind: value.kind, submitted: parseSubmittedStatement(value.submitted), sources: conversationSources(value.sources), ...("sessionId" in value ? { sessionId: nonblank(value.sessionId) } : {}) };
   }

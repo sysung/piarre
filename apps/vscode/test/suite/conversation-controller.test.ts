@@ -69,6 +69,10 @@ suite("Durable conversation controller", () => {
     assert.equal(pending[0].submitted.originalStatement, original);
     assert.equal(client.requests[0]?.cwd, directory);
     assert.equal(client.requests[0].prompt.includes(JSON.stringify(original)), true);
+    assert.match(client.requests[0].prompt, /Answer the submitted statement directly/);
+    assert.match(client.requests[0].prompt, /ask one concise, concrete clarification question/);
+    assert.match(client.requests[0].prompt, /User requests express intent; they do not approve a bounded execution run/);
+    assert.match(client.requests[0].prompt, /Do not label the request itself an unconfirmed fact/);
     client.complete(); await operation;
     assert.equal(repository.read().conversation[0]?.kind, "answered");
   });
@@ -85,7 +89,7 @@ suite("Durable conversation controller", () => {
     assert.equal(turn?.kind, "answered");
     assert.equal(turn.submitted.originalStatement, original);
     assert.equal(turn.text, "A sourced inference");
-    assert.equal(turn.providerThreadId, "provider-thread"); assert.equal(turn.providerTurnId, "provider-turn");
+    assert.ok("replyOrigin" in turn); assert.deepEqual(turn.replyOrigin, { kind: "codex", threadId: "provider-thread", turnId: "provider-turn" });
     assert.equal(creations, 1);
   });
 
@@ -183,4 +187,51 @@ suite("Durable conversation controller", () => {
     assert.equal(after.conversation[0]?.kind, "answered");
     assert.deepEqual(after.tasks, before.tasks); assert.deepEqual(after.proposals, before.proposals);
   });
+  test("reconnect invalidates an approved prompt even when the model and source revision match", async () => {
+    await controller.connect();
+    const snapshot = repository.read();
+    const reviewed = controller.review(snapshot, "reviewed", [], defaultSessionId, "");
+    controller.disconnect(); await controller.connect();
+    await assert.rejects(controller.send("reviewed", [], snapshot.revision, { recordSources: [], reviewed }), /changed during review/);
+    assert.equal(client.requests.length, 0); assert.equal(repository.read().conversation.length, 0);
+    const next = controller.review(snapshot, "reviewed", [], defaultSessionId, "");
+    controller.selectRoute("codex", true);
+    await assert.rejects(controller.send("reviewed", [], snapshot.revision, { recordSources: [], reviewed: next }), /changed during review/);
+  });
+
+  test("model, session and exact prompt changes invalidate review before outbound I/O", async () => {
+    await controller.connect(); const snapshot = repository.read();
+    const reviewed = controller.review(snapshot, "reviewed", [], defaultSessionId, "fixture");
+    await assert.rejects(controller.send("reviewed", [], snapshot.revision, { model: "other", recordSources: [], reviewed }), /changed during review/);
+    await assert.rejects(controller.send("changed text", [], snapshot.revision, { model: "fixture", recordSources: [], reviewed }), /Reviewed prompt changed/);
+    await assert.rejects(controller.send("reviewed", [], snapshot.revision, { model: "fixture", sessionId: "different", recordSources: [], reviewed }), /changed during review/);
+    assert.equal(client.requests.length, 0); assert.equal(repository.read().conversation.length, 0);
+  });
+
+  test("final beforeSend freshness check prevents bytes after a review-time project change", async () => {
+    await controller.connect();
+    client.respond = input => {
+      const snapshot = repository.read();
+      repository.dispatch({ commandId: "change-after-start", projectId: snapshot.projectId, expectedProjectRevision: snapshot.revision, action: { kind: "rename-project", name: "Changed" } });
+      input.onThreadStarted?.("fixture-thread");
+      return Promise.reject(new Error("Must not dispatch"));
+    };
+    await controller.send("reviewed", [], repository.read().revision, { recordSources: [] });
+    assert.equal(repository.read().conversation[0]?.kind, "unknown"); assert.equal(states.at(-1)?.kind, "disconnected");
+  });
+
+  test("late model discovery cannot clear the newer route discovery guard", async () => {
+    const oldModels = deferred<readonly { readonly model: string }[]>();
+    const newModels = deferred<readonly { readonly model: string }[]>();
+    let calls = 0;
+    const transport = { kind: "codex" as const, connect: () => Promise.resolve({ kind: "ready" as const }),
+      origin: () => ({ kind: "codex" as const, requestedModel: null }), models: () => (++calls === 1 ? oldModels.promise : newModels.promise),
+      respond: () => Promise.reject(new Error("No request expected")), interrupt: () => Promise.resolve({ kind: "confirmed" as const }), dispose: () => {} };
+    controller.dispose(); controller = new ConversationController(repository, () => {}, () => transport);
+    await controller.connect(); const old = controller.models(); controller.disconnect(); await controller.connect(); const current = controller.models();
+    oldModels.resolve([{ model: "stale" }]); assert.deepEqual(await old, []);
+    await assert.rejects(controller.send("blocked while current catalog is loading"), /Wait for model discovery/);
+    newModels.resolve([{ model: "current" }]); assert.deepEqual(await current, [{ model: "current" }]);
+  });
+
 });

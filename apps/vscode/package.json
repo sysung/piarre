@@ -472,6 +472,24 @@
           "default": "codex",
           "scope": "machine",
           "description": "Codex CLI executable used for an explicit connection. Sign in through the CLI first. No shell arguments or credentials."
+        },
+        "piarre.localDiscussion.endpoint": {
+          "type": "string",
+          "default": "http://model-runner.docker.internal/engines/v1",
+          "scope": "machine",
+          "description": "Discussion-only Docker Model Runner endpoint. Only this internal endpoint or literal loopback HTTP /engines/v1 is accepted. Global settings only; workspace overrides are ignored."
+        },
+        "piarre.localDiscussion.model": {
+          "type": "string",
+          "default": "docker.io/ai/qwen3.5:4b-q6_K",
+          "scope": "machine",
+          "description": "Operator-installed local discussion model. No download, execution, agent tools or cloud fallback. Global settings only."
+        },
+        "piarre.localDiscussion.digest": {
+          "type": "string",
+          "default": "ea484046efba5fc126b1b331c2d590a20cb7d3abdfc65366a7f8b547350cd629",
+          "scope": "machine",
+          "description": "Operator-configured SHA-256 digest for local model provenance. Configuration is not independent verification of installed weights. Global settings only."
         }
       }
     },

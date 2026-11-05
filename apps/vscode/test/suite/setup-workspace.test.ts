@@ -48,4 +48,38 @@ api.postMessage({kind:'test-setup-result',ok:true});
       assert.equal(sends, 0, "Connection and setup never send the unsent draft");
     } finally { if (deadline) clearTimeout(deadline); view.dispose(); panel.dispose(); }
   });
+  test("Continue offline reveals chat and deterministic drafting with zero provider calls", async function () {
+    this.timeout(20_000);
+    const project = replay([{ kind: "project-created", projectId: "offline-test", repositoryUri: "file:///offline-test", name: "Offline" }]);
+    let connects = 0; let sends = 0;
+    const view = new WorkView(undefined, undefined, undefined, {
+      connect: () => { connects++; return Promise.resolve(); }, disconnect: () => {}, interrupt: () => Promise.resolve(),
+      send: () => { sends++; return Promise.resolve(); },
+    });
+    const panel = vscode.window.createWebviewPanel("piarre.offline.fixture", "Piarre offline fixture", vscode.ViewColumn.One, { enableScripts: true });
+    let deadline: ReturnType<typeof setTimeout> | undefined;
+    try {
+      view.update(project);
+      const result = new Promise<unknown>(resolve => {
+        deadline = setTimeout(() => { resolve({ ok: false, error: "Offline webview timed out" }); }, 15_000);
+        panel.webview.onDidReceiveMessage((message: unknown) => { if (typeof message === "object" && message !== null && "kind" in message && message.kind === "test-offline-result") resolve(message); });
+      });
+      view.resolveWebviewView({ webview: panel.webview, show: () => { panel.reveal(); }, onDidDispose: panel.onDidDispose,
+        get visible() { return panel.visible; }, onDidChangeVisibility: listener => panel.onDidChangeViewState(() => { listener(); }) });
+      panel.webview.html = panel.webview.html.replace("</script>", `
+(async()=>{const wait=async f=>{const until=Date.now()+10000;while(!f()){if(Date.now()>until)throw new Error('Offline condition timed out');await new Promise(r=>setTimeout(r,10));}};try{
+goal.value='Preserve my offline thought';goal.dispatchEvent(new Event('input'));
+document.getElementById('continue-offline').click();
+if(!document.getElementById('setup-overlay').hidden||document.querySelector('.workspace-nav').inert||document.activeElement!==goal)throw new Error('Offline entry must reveal and focus chat');
+if(!send.disabled||!setupCompleted||api.getState().setupCompleted!==true||goal.value!=='Preserve my offline thought')throw new Error('Offline state must persist without enabling Send');
+const offlineDraft=api.getState().drafts.find(row=>row[0]===sessionId);if(offlineDraft[1].text!==goal.value)throw new Error('Offline draft was not persisted');
+setContext(true);document.getElementById('prepare').click();await wait(()=>!document.getElementById('preview').hidden);
+if(document.getElementById('preview').textContent.length===0)throw new Error('Offline deterministic plan missing');
+api.postMessage({kind:'test-offline-result',ok:true});
+}catch(error){api.postMessage({kind:'test-offline-result',ok:false,error:String(error)});}})();</script>`);
+      assert.deepEqual(await result, { kind: "test-offline-result", ok: true });
+      assert.equal(connects, 0); assert.equal(sends, 0);
+    } finally { if (deadline) clearTimeout(deadline); view.dispose(); panel.dispose(); }
+  });
+
 });

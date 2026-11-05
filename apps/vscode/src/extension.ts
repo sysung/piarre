@@ -15,8 +15,10 @@ import * as vscode from "vscode";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import { conversationPrompt, ConversationController } from "./conversation-controller.js";
+import { ConversationController } from "./conversation-controller.js";
 import { resolveConversationContext } from "./conversation-context.js";
+import { conversationProviderLabel } from "../../../packages/core/src/conversation.js";
+import { DockerModelRunnerConversationClient, localDiscussionDefaults, parseLocalDiscussionConfiguration } from "./docker-model-runner-conversation-client.js";
 import { CodexConversationClient } from "./codex-conversation-client.js";
 import { GoalInterpreter } from "./goal-interpreter.js";
 import { SqliteProjectRepository } from "./sqlite-project-repository.js";
@@ -45,6 +47,12 @@ export function activate(context: vscode.ExtensionContext): void {
   stopWork.command = "piarre.stopAll";
   stopWork.tooltip = "Request stop and prevent new scheduling. Unknown effects require reconciliation.";
   const createClient = () => new CodexConversationClient({ command: vscode.workspace.getConfiguration("piarre").inspect<string>("codexExecutable")?.globalValue ?? "codex" });
+  const localConfiguration = () => {
+    const settings = vscode.workspace.getConfiguration("piarre");
+    return parseLocalDiscussionConfiguration({ endpoint: settings.inspect<string>("localDiscussion.endpoint")?.globalValue ?? localDiscussionDefaults.endpoint,
+      model: settings.inspect<string>("localDiscussion.model")?.globalValue ?? localDiscussionDefaults.model,
+      digest: settings.inspect<string>("localDiscussion.digest")?.globalValue ?? localDiscussionDefaults.digest });
+  };
   const publishExecution = (project: ProjectSnapshot): void => {
     executionPaths = new Set(project.executionRuns.flatMap(run => run.grant.plan.files.flatMap(file => [canonicalWorkspacePath(path.join(run.grant.plan.sourceRoot, file.relativePath)), canonicalWorkspacePath(path.join(run.grant.plan.candidateRoot, file.relativePath))])));
     if (project.executionRuns.some(ownsExecutionLease)) stopWork.show(); else stopWork.hide();
@@ -80,14 +88,18 @@ export function activate(context: vscode.ExtensionContext): void {
       return result.snapshot;
     },
   }, undefined, {
-    connect: async () => { if (isTrusted()) await conversation?.connect(); },
+    connect: async route => { if (isTrusted()) await conversation?.connect(route); },
+    selectRoute: (route, selectionChanged) => { if (isTrusted()) conversation?.selectRoute(route, selectionChanged); },
+    localModel: () => vscode.workspace.getConfiguration("piarre").inspect<string>("localDiscussion.model")?.globalValue ?? localDiscussionDefaults.model,
     disconnect: () => conversation?.disconnect(),
     models: async () => {
       if (!isTrusted()) return [];
       const profiles = await conversation?.models() ?? [];
       return profiles.map(profile => profile.model);
     },
-    send: async (text, sessionId, model, attachFiles, recordIds, accepted) => {
+    send: async (text, sessionId, selectedModel, attachFiles, recordIds, accepted) => {
+      const local = selectedModel.startsWith("docker-model-runner::");
+      const model = selectedModel.startsWith("codex::") ? selectedModel.slice(7) : local ? selectedModel.slice(21) : selectedModel;
       if (!isTrusted()) return;
       const store = repository;
       const controller = conversation;
@@ -106,12 +118,14 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
       assertSharedFilesCurrent(snapshot, sources);
-      const detail = conversationPrompt(snapshot, text, sources, sessionId);
-      if (await vscode.window.showWarningMessage("Send this discussion context to Codex?", { modal: true, detail: `Model: ${model || "Codex account default"}. Shares this session’s recent discussion and the exact sources below. Account cost and quota are unknown.
+      const reviewed = controller.review(snapshot, text, sources, sessionId, model);
+      if (local !== (reviewed.route === "docker-model-runner")) throw new Error("Discussion provider selection changed. Reconnect the selected provider.");
+      const detail = reviewed.prompt;
+      if (await vscode.window.showWarningMessage(`Send this discussion context to ${local ? "Docker Model Runner" : "Codex"}?`, { modal: true, detail: `Model: ${model || "Codex account default"}. ${local ? "Local discussion only. Configured digest is operator supplied; installed weights and compute are not independently verified. Full prompt is limited to 6,000 UTF-8 bytes; a general 8K tokenizer/template guarantee is unverified." : "Shares this session’s recent discussion and the exact sources below. Account cost and quota are unknown."}
 ${detail}` }, "Send reviewed context") !== "Send reviewed context") return;
       if (repository !== store || conversation !== controller || !isTrusted()) return;
       assertSharedFilesCurrent(store.read(), capturedFiles);
-      await controller.send(text, capturedFiles, snapshot.revision, { sessionId, model, recordSources: records, accepted });
+      await controller.send(text, capturedFiles, snapshot.revision, { sessionId, model, recordSources: records, accepted, reviewed });
     },
     session: async (operation, id) => {
       const store = repository;
@@ -123,7 +137,7 @@ ${detail}` }, "Send reviewed context") !== "Send reviewed context") return;
       if (operation === "share" && session) {
         const transcript = conversationHistory(snapshot, session.id).map(turn =>
           `You: ${turn.submitted.originalStatement}
-${turn.kind === "answered" ? `Codex: ${turn.text}` : `Status: ${turn.kind}`}`).join("\n\n");
+${turn.kind === "answered" ? `${conversationProviderLabel(turn)}: ${turn.text}` : `Status: ${turn.kind}`}`).join("\n\n");
         if (await vscode.window.showInformationMessage("Copy this session’s transcript?", { modal: true, detail: "Copies the conversation to your clipboard. Source excerpts and provider identifiers are excluded." }, "Copy transcript") === "Copy transcript" && repository === store && isTrusted()) {
           await vscode.env.clipboard.writeText(`${session.title}
 
@@ -249,7 +263,7 @@ ${transcript}`);
       coordination = new CoordinationController(next, snapshot => { view.update(snapshot); }, createClient, canShare);
       coordinationUi = new CoordinationUi(coordination, () => next.read(), groupId => { view.openProposal(groupId); });
       conversation = new ConversationController(next, (snapshot, state) => { view.updateConversation(snapshot, state); },
-        createClient, canShare);
+        route => route === "codex" ? createClient() : new DockerModelRunnerConversationClient(localConfiguration()), canShare);
     } catch (error) {
       next.close();
       throw error;

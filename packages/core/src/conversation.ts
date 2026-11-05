@@ -37,7 +37,25 @@ export type SessionAction =
   | { readonly kind: "rename-session"; readonly id: string; readonly title: string }
   | { readonly kind: "archive-session"; readonly id: string };
 
+export type ConversationRequestOrigin =
+  | { readonly kind: "codex"; readonly requestedModel: string | null }
+  | { readonly kind: "docker-model-runner"; readonly endpoint: string; readonly requestedModel: string; readonly configuredDigest: string };
+
+export type ConversationReplyOrigin =
+  | { readonly kind: "codex"; readonly threadId: string; readonly turnId: string }
+  | { readonly kind: "docker-model-runner"; readonly observedModel: string; readonly responseId: string | null };
+
+export function localReplyMatchesRequest(request: Extract<ConversationRequestOrigin, { kind: "docker-model-runner" }>, observedModel: string): boolean {
+  const digestPath = `/bundles/sha256/${request.configuredDigest}/model/`;
+  return observedModel === request.requestedModel || (observedModel.startsWith("/") && observedModel.includes(digestPath) && /^[^/]+\.gguf$/.test(observedModel.split(digestPath)[1] ?? ""));
+}
+
+export function conversationProviderLabel(turn: ConversationTurn): string {
+  return turn.origin?.kind === "docker-model-runner" ? `Docker Model Runner · ${turn.origin.requestedModel}` : "Codex";
+}
+
 interface ConversationContext {
+  readonly origin?: ConversationRequestOrigin;
   readonly sessionId?: string;
   readonly submitted: SubmittedStatement;
   readonly sources: readonly ConversationSource[];
@@ -46,19 +64,23 @@ interface ConversationContext {
 
 export type ConversationTurn = ConversationContext & (
   | { readonly kind: "pending" }
-  | { readonly kind: "answered"; readonly text: string; readonly citations: readonly SuppliedReference[];
-      readonly providerThreadId: string; readonly providerTurnId: string }
+  | ({ readonly kind: "answered"; readonly text: string; readonly citations: readonly SuppliedReference[] } &
+      ({ readonly providerThreadId: string; readonly providerTurnId: string } | { readonly replyOrigin: ConversationReplyOrigin }))
   | { readonly kind: "interrupted" | "failed" | "unknown"; readonly reason: string }
 );
 
 export type ConversationAction =
   | SessionAction
+  | { readonly kind: "begin-provider-conversation"; readonly submitted: SubmittedStatement; readonly sources: readonly ConversationSource[]; readonly sessionId?: string; readonly origin: ConversationRequestOrigin }
+  | { readonly kind: "record-provider-conversation-reply"; readonly requestId: string; readonly text: string; readonly citations: readonly SuppliedReference[]; readonly origin: ConversationReplyOrigin }
   | { readonly kind: "begin-conversation"; readonly submitted: SubmittedStatement; readonly sources: readonly ConversationSource[]; readonly sessionId?: string }
   | { readonly kind: "record-conversation-reply"; readonly requestId: string; readonly text: string;
       readonly citations: readonly SuppliedReference[]; readonly providerThreadId: string; readonly providerTurnId: string }
   | { readonly kind: "end-conversation"; readonly requestId: string; readonly outcome: "interrupted" | "failed" | "unknown"; readonly reason: string };
 
 export type ConversationEvent =
+  | { readonly kind: "provider-conversation-started"; readonly submitted: SubmittedStatement; readonly sources: readonly ConversationSource[]; readonly sessionId?: string; readonly origin: ConversationRequestOrigin }
+  | { readonly kind: "provider-conversation-replied"; readonly requestId: string; readonly text: string; readonly citations: readonly SuppliedReference[]; readonly origin: ConversationReplyOrigin }
   | { readonly kind: "session-recorded"; readonly action: SessionAction }
   | { readonly kind: "conversation-started"; readonly submitted: SubmittedStatement; readonly sources: readonly ConversationSource[]; readonly sessionId?: string }
   | { readonly kind: "conversation-replied"; readonly requestId: string; readonly text: string;
@@ -87,7 +109,7 @@ export function applyConversationEvent(snapshot: ProjectSnapshot, event: Convers
       ? action.kind === "rename-session" ? { ...session, title: action.title } : { ...session, archived: true as const }
       : session) };
   }
-  if (event.kind === "conversation-started") {
+  if (event.kind === "conversation-started" || event.kind === "provider-conversation-started") {
     if (!snapshot.sessions.some(session => session.id === (event.sessionId ?? defaultSessionId) && !session.archived)) throw new Error("Session is unavailable");
     if (event.submitted.projectId !== snapshot.projectId || event.submitted.contextRevision !== snapshot.revision ||
         snapshot.conversation.some((turn) => turn.submitted.requestId === event.submitted.requestId || turn.kind === "pending")) {
@@ -103,17 +125,20 @@ export function applyConversationEvent(snapshot: ProjectSnapshot, event: Convers
       if (resolved.kind !== "resolved" || resolved.text !== source.text) throw new Error("Invalid conversation source");
     }
     return { ...snapshot, revision, conversation: [...snapshot.conversation,
-      { kind: "pending", submitted: event.submitted, sources, recordedAtRevision: revision, ...(event.sessionId && { sessionId: event.sessionId }) }] };
+      { kind: "pending", submitted: event.submitted, sources, recordedAtRevision: revision, ...(event.kind === "provider-conversation-started" && { origin: event.origin }), ...(event.sessionId && { sessionId: event.sessionId }) }] };
   }
   const turn = snapshot.conversation.find((item) => item.submitted.requestId === event.requestId);
   if (!turn || turn.kind !== "pending") throw new Error("Conversation turn is no longer pending");
   let next: ConversationTurn;
-  if (event.kind === "conversation-replied") {
+  if (event.kind === "conversation-replied" || event.kind === "provider-conversation-replied") {
+    if ((event.kind === "provider-conversation-replied" && (!turn.origin || turn.origin.kind !== event.origin.kind)) ||
+        (event.kind === "conversation-replied" && turn.origin)) throw new Error("Conversation provider identity changed");
+    if (event.kind === "provider-conversation-replied" && event.origin.kind === "docker-model-runner" && turn.origin?.kind === "docker-model-runner" && !localReplyMatchesRequest(turn.origin, event.origin.observedModel)) throw new Error("Local response model differs from the recorded request");
     if (event.citations.some((reference) => !turn.sources.some((source) => sameSource(source.reference, reference)))) {
       throw new Error("Conversation reply cites an unavailable source");
     }
     next = { ...turn, kind: "answered", text: event.text, citations: event.citations,
-      providerThreadId: event.providerThreadId, providerTurnId: event.providerTurnId };
+      ...(event.kind === "conversation-replied" ? { providerThreadId: event.providerThreadId, providerTurnId: event.providerTurnId } : { replyOrigin: event.origin }) };
   } else {
     next = { ...turn, kind: event.outcome, reason: event.reason };
   }
@@ -125,6 +150,8 @@ export function conversationEvent(action: ConversationAction): ConversationEvent
     case "create-session":
     case "rename-session":
     case "archive-session": return { kind: "session-recorded", action };
+    case "begin-provider-conversation": return { ...action, kind: "provider-conversation-started" };
+    case "record-provider-conversation-reply": return { ...action, kind: "provider-conversation-replied" };
     case "begin-conversation": return { kind: "conversation-started", submitted: action.submitted, sources: action.sources, ...(action.sessionId && { sessionId: action.sessionId }) };
     case "record-conversation-reply": return { kind: "conversation-replied", requestId: action.requestId, text: action.text,
       citations: action.citations, providerThreadId: action.providerThreadId, providerTurnId: action.providerTurnId };

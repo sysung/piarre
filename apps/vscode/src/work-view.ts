@@ -7,6 +7,9 @@ import { parseCoordinationMessage, type CoordinationMessage } from "./coordinati
 import { parseExecutionMessage, type ExecutionMessage } from "./execution-actions.js";
 import { renderExecutionControls, renderExecutionDesk, renderExecutionResult, taskExecutionStatus } from "./execution-view.js";
 import type { RetrievalResult } from "./project-retrieval.js";
+import type { DiscussionRoute } from "./conversation-transport.js";
+import { conversationProviderLabel } from "../../../packages/core/src/conversation.js";
+import { localDiscussionDefaults } from "./docker-model-runner-conversation-client.js";
 import { type ConversationState } from "./conversation-controller.js";
 import { randomUUID } from "node:crypto";
 import * as vscode from "vscode";
@@ -128,7 +131,8 @@ export function renderConversation(project: ProjectSnapshot, sessionId?: string)
     const disputed = turn.sources.some(source => source.reference.kind === "knowledge" && currentKnowledge(project).some(entry => entry.knowledgeId === source.reference.recordId && knowledgeConflicts(project, entry).length > 0));
     const capturedFiles = turn.sources.some(source => source.reference.kind === "file") ? "<p>Captured file evidence: exact historical bytes below. Current file, permission and collection freshness has not been revalidated for this display. Prepare fresh context before consequential reuse.</p>" : "";
     const freshness = unavailable.length ? "<p><strong>Historical context:</strong> a captured source has changed or is unavailable. This reply does not demonstrate the corrected or current rule. Review current knowledge before acting.</p>" : disputed ? "<p><strong>Disputed context:</strong> captured knowledge has different confirmed values. Resolve the dispute before relying on this reply.</p>" : "";
-    const reply = turn.kind === "answered" ? `<p><strong>Codex · Inferred</strong></p>${capturedFiles}${freshness}<pre>${escape(turn.text)}</pre><details><summary>Recommendation context and citations</summary><p>Your original statement is preserved above. A source reference does not independently verify the reply.</p>${turn.sources.map(source => `<p>${turn.citations.some(reference => reference.kind === source.reference.kind && reference.recordId === source.reference.recordId && reference.revision === source.reference.revision) ? "Cited" : "Available context"}: ${escape(source.reference.kind)} ${escape(source.reference.recordId)} · revision ${String(source.reference.revision)}${source.reference.kind === "file" ? ` · captured ${source.reference.representation.kind === "git-diff" ? `diff against ${escape(source.reference.representation.baseCommit)}` : "file"} lines ${String(source.reference.startLine)}–${String(source.reference.endLine)} · SHA-256 ${escape(source.reference.contentHash)} · historical bytes; current freshness requires revalidation` : ""}</p><pre>${escape(source.text)}</pre><details><summary>Exact citation provenance</summary><pre>${escape(JSON.stringify(source.reference, null, 2))}</pre></details>`).join("")}</details>`
+    const provenance = turn.kind === "answered" ? `<details><summary>Discussion provider provenance</summary><p>Configured request identity and observed reply identity are separate. A configured digest is not independent verification of installed weights.</p><pre>${escape(JSON.stringify({ request: turn.origin ?? { kind: "legacy-codex", requestedModel: "unknown" }, reply: "replyOrigin" in turn ? turn.replyOrigin : { kind: "codex", threadId: turn.providerThreadId, turnId: turn.providerTurnId } }, null, 2))}</pre></details>` : "";
+    const reply = turn.kind === "answered" ? `<p><strong>${escape(conversationProviderLabel(turn))} · Inferred</strong></p>${provenance}${capturedFiles}${freshness}<pre>${escape(turn.text)}</pre><details><summary>Recommendation context and citations</summary><p>Your original statement is preserved above. A source reference does not independently verify the reply.</p>${turn.sources.map(source => `<p>${turn.citations.some(reference => reference.kind === source.reference.kind && reference.recordId === source.reference.recordId && reference.revision === source.reference.revision) ? "Cited" : "Available context"}: ${escape(source.reference.kind)} ${escape(source.reference.recordId)} · revision ${String(source.reference.revision)}${source.reference.kind === "file" ? ` · captured ${source.reference.representation.kind === "git-diff" ? `diff against ${escape(source.reference.representation.baseCommit)}` : "file"} lines ${String(source.reference.startLine)}–${String(source.reference.endLine)} · SHA-256 ${escape(source.reference.contentHash)} · historical bytes; current freshness requires revalidation` : ""}</p><pre>${escape(source.text)}</pre><details><summary>Exact citation provenance</summary><pre>${escape(JSON.stringify(source.reference, null, 2))}</pre></details>`).join("")}</details>`
       : `<p>${turn.kind === "pending" ? "Waiting for a terminal reply…" : escape(turn.kind + ": " + turn.reason)}</p>`;
     return `<article class="turn"><div class="user-message"><p><strong>You</strong> · revision ${String(turn.submitted.contextRevision)}</p><pre>${escape(turn.submitted.originalStatement)}</pre></div><div class="assistant-message">${reply}</div></article>`;
   }).join("");
@@ -187,7 +191,7 @@ export class WorkView implements vscode.WebviewViewProvider {
     }, private readonly confirmDelete: (goal: string) => Promise<boolean> = async (goal) =>
       await vscode.window.showWarningMessage(`Delete “${goal}” and its proposal?`,
         { modal: true, detail: "Removes this saved goal and its proposed tasks. Repository files are unchanged. Prior project history is retained." }, "Delete goal") === "Delete goal",
-    private readonly conversation?: { connect(): Promise<void>; disconnect(): void; send(text: string, sessionId: string, model: string, attachFiles: boolean, recordIds: readonly string[], accepted: () => void): Promise<void>;
+    private readonly conversation?: { connect(route?: DiscussionRoute): Promise<void>; selectRoute?(route: DiscussionRoute, selectionChanged?: boolean): void; localModel?(): string; disconnect(): void; send(text: string, sessionId: string, model: string, attachFiles: boolean, recordIds: readonly string[], accepted: () => void): Promise<void>;
       session?(action: "new" | "rename" | "fork" | "archive" | "share", id?: string): Promise<string | undefined>;
       models?(): Promise<readonly string[]>; interrupt(): Promise<void>; knowledge?(kind: KnowledgeOperation, id?: string): Promise<void> },
     private readonly execution?: { handle(message: ExecutionMessage): Promise<void>; renderDetails?(runId: string): string },
@@ -235,10 +239,12 @@ export class WorkView implements vscode.WebviewViewProvider {
         }
         if (typeof message === "object" && message !== null && "kind" in message) {
           if (Object.keys(message).length === 1) {
-            if (message.kind === "connect-codex") { void this.conversation?.connect(); return; }
+            if (message.kind === "connect-codex") { void this.conversation?.connect("codex"); return; }
+            if (message.kind === "connect-local") { void this.conversation?.connect("docker-model-runner"); return; }
             if (message.kind === "disconnect-codex") { this.conversation?.disconnect(); return; }
             if (message.kind === "stop-conversation") { void this.conversation?.interrupt(); return; }
           }
+          if (message.kind === "select-provider" && (Object.keys(message).length === 2 || (Object.keys(message).length === 3 && "selectionChanged" in message && message.selectionChanged === true)) && "route" in message && (message.route === "codex" || message.route === "docker-model-runner")) { this.conversation?.selectRoute?.(message.route, "selectionChanged" in message && message.selectionChanged === true); return; }
           if (message.kind === "send-conversation") {
             if ("text" in message && typeof message.text === "string" && message.text.trim() && message.text.length <= 10_000 &&
                 "sessionId" in message && typeof message.sessionId === "string" && "requestId" in message && typeof message.requestId === "string" &&
@@ -264,8 +270,9 @@ export class WorkView implements vscode.WebviewViewProvider {
             return;
           }
           if (message.kind === "load-models") {
-            void this.conversation?.models?.().then(models => { if (this.sidebar === panel && this.current?.project.projectId === current.project.projectId) void panel.webview.postMessage({ kind: "models", models }); })
-              .catch(() => vscode.window.showWarningMessage("Could not read the Codex model catalog. The account default is still available."));
+            const observedState = this.conversationState;
+            void this.conversation?.models?.().then(models => { if (this.sidebar === panel && this.current?.project.projectId === current.project.projectId && this.conversationState.generation === observedState.generation && this.conversationState.route === observedState.route) void panel.webview.postMessage({ kind: "models", models, route: observedState.route ?? "codex", generation: observedState.generation ?? 0 }); })
+              .catch(() => vscode.window.showWarningMessage("Could not read the selected discussion model catalog. Your draft is preserved."));
             return;
           }
         }
@@ -461,7 +468,7 @@ document.addEventListener('focusin', remember);
     const panel = this.sidebar;
     const { project } = this.current;
     if (panel.visible && this.visit?.projectId === project.projectId) this.visit.observed(project.revision);
-    void panel.webview.postMessage({ kind: "conversation", state: this.conversationState,
+    void panel.webview.postMessage({ kind: "conversation", state: this.conversationState, localModel: this.conversation?.localModel?.() ?? localDiscussionDefaults.model,
       sessions: project.sessions.filter(session => !session.archived).map(session => {
         const turn = conversationHistory(project, session.id).at(-1);
         const proposals = project.proposals.filter(group => (group.sessionId ?? defaultSessionId) === session.id);

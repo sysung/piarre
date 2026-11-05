@@ -137,9 +137,9 @@ main{position:relative}.setup-overlay{position:absolute;inset:0;z-index:20;displ
 <aside id="session-artifacts" class="artifacts-panel" hidden><header><h2>Artifacts</h2><button id="artifacts-close" type="button" class="icon" aria-label="Close artifacts">×</button></header><div id="artifact-list"></div></aside><div class="proposal-zone"><p id="step" hidden>Step 1 of 2 · Goal</p><h2 id="page-title" tabindex="-1" hidden>Plan a task</h2><section id="preview" aria-label="Proposal review" hidden></section><div id="review-actions" hidden><button id="save" type="button" hidden>Save proposal</button><button id="discard" class="secondary" type="button">Back to chat</button></div><button id="new-goal" type="button" hidden>Back to chat</button></div>
 <div class="composer-zone">
 <div id="context-panel" class="context-panel" hidden><h3>Add to this message</h3><div class="context-actions"></div><label><input id="attach-files" type="checkbox"> Choose repository file excerpts when sending</label><input id="context-search" type="search" aria-label="Search context" placeholder="Search context…"><p id="context-summary" class="hint" role="status"></p><div id="context-records"></div><button id="context-more" type="button" hidden>Show more</button><p class="hint">Selected references are reviewed before sharing. Referencing an agent or skill does not run it.</p></div>
-<form id="composer"><div id="context-chips" aria-label="Selected context"></div><textarea id="goal" aria-label="Message" maxlength="10000" placeholder="Work with Piarre"></textarea><div class="composer-bar"><button id="context-toggle" class="quiet" type="button" title="Add context" aria-label="Add context" aria-controls="context-panel" aria-expanded="false">+</button><button id="prepare" class="quiet" type="submit">Draft plan</button><button id="reconnect-codex" class="quiet" type="button" hidden>Reconnect Codex</button><button id="disconnect-codex" class="quiet" type="button" hidden>Disconnect</button><button id="stop-conversation" type="button" hidden>Stop</button><button id="load-models" class="quiet" type="button" hidden>Load models</button><select id="model" aria-label="Discussion model"><option value="">Codex default</option></select><button id="send-codex" type="submit" aria-label="Send to Codex" title="Send (Enter)" disabled>↑</button></div></form>
+<form id="composer"><div id="context-chips" aria-label="Selected context"></div><textarea id="goal" aria-label="Message" maxlength="10000" placeholder="Work with Piarre"></textarea><div class="composer-bar"><button id="context-toggle" class="quiet" type="button" title="Add context" aria-label="Add context" aria-controls="context-panel" aria-expanded="false">+</button><button id="prepare" class="quiet" type="submit">Draft plan</button><button id="reconnect-codex" class="quiet" type="button" hidden>Connect selected provider</button><button id="connect-local" class="quiet" type="button">Connect local model</button><button id="disconnect-codex" class="quiet" type="button" hidden>Disconnect</button><button id="stop-conversation" type="button" hidden>Stop</button><button id="load-models" class="quiet" type="button" hidden>Load models</button><select id="model" aria-label="Discussion model"><option value="">Codex default</option></select><button id="send-codex" type="submit" aria-label="Send to Codex" title="Send (Enter)" disabled>↑</button></div></form>
 <p id="connection-status" class="connection" role="status">Connect Codex to send a discussion message.</p><p id="status" role="status" aria-live="polite"></p>
-</div></section></div><section id="setup-overlay" class="setup-overlay" role="region" aria-labelledby="setup-heading"><div class="setup-card"><div class="setup-logo" aria-hidden="true">P</div><h1 id="setup-heading">Let's get started<br>with Piarre.</h1><p>To start, connect with Codex.</p><button id="connect-codex" type="button">Connect with Codex <span aria-hidden="true">→</span></button><p class="setup-note">Use your configured Codex account.</p><p id="setup-status" role="status" aria-live="polite"></p></div></section></main>
+</div></section></div><section id="setup-overlay" class="setup-overlay" role="region" aria-labelledby="setup-heading"><div class="setup-card"><div class="setup-logo" aria-hidden="true">P</div><h1 id="setup-heading">Let's get started<br>with Piarre.</h1><p>Connect with Codex, or continue offline to inspect and draft plans.</p><button id="connect-codex" type="button">Connect with Codex <span aria-hidden="true">→</span></button><button id="continue-offline" class="secondary" type="button">Continue offline</button><p class="setup-note">Offline entry makes no provider calls. Local model discussion is optional after setup.</p><p id="setup-status" role="status" aria-live="polite"></p></div></section></main>
 <div id="session-menu" aria-label="Session actions" hidden><button type="button" data-session-action="rename">Rename</button><button type="button" data-session-action="fork">Fork conversation</button><button type="button" data-session-action="share">Share session</button><button type="button" data-session-action="archive">Remove session</button></div>
 <script nonce="${nonce}">${composerScript}</script></body></html>`;
 }
@@ -159,6 +159,11 @@ const step = document.getElementById('step');
 const next = document.getElementById('new-goal');
 const send = document.getElementById('send-codex');
 let connectionKind = 'disconnected';
+let connectedRoute = 'codex';
+let connectionGeneration = 0;
+let localModel = 'docker.io/ai/qwen3.5:4b-q6_K';
+function selectedRoute(){return model.value.startsWith('docker-model-runner::')?'docker-model-runner':'codex';}
+function addModel(value,label=value){if(![...model.options].some(option=>option.value===value))model.add(new Option(label,value));}
 let sessions = [];
 let sessionId = 'project-chat';
 let pendingSend;
@@ -274,6 +279,7 @@ function selectSession(id) {
     const saved = sessionDrafts.get(id);
     draftVersion = saved?.version ?? crypto.randomUUID();
     goal.value = saved?.text ?? ''; model.value = saved?.model ?? ''; files.checked = saved?.files ?? false; restoreRecords(saved?.records ?? []);
+    api.postMessage({kind:'select-provider',route:selectedRoute()});syncSend();
     invalidate(); showGoal(); status.textContent = ''; setContext(false); setArtifacts(false);
   }
   renderSession(); renderChips();
@@ -357,16 +363,20 @@ document.addEventListener('pointerdown', event => {
   if (!contextPanel.contains(event.target) && !contextToggle.contains(event.target)) setContext(false);
 });
 let executionAnnouncements = new Map();
-function syncSend() { send.disabled = connectionKind !== 'ready' || !!pendingSend || !sessions.some(item=>item.id===sessionId) || !goal.value.trim(); }
+function syncSend() { send.setAttribute('aria-label',selectedRoute()==='codex'?'Send to Codex':'Send to Docker Model Runner'); send.disabled = connectedRoute !== selectedRoute() || connectionKind !== 'ready' || !!pendingSend || !sessions.some(item=>item.id===sessionId) || !goal.value.trim(); }
 function connectCodex() {
   if(connectionKind !== 'disconnected') return;
+  if(selectedRoute()!=='codex'){model.value='';edited();}
   connectionAttempted=true;
   document.getElementById('connect-codex').disabled=true;
   document.getElementById('setup-status').textContent='Checking your local Codex connection…';
   api.postMessage({kind:'connect-codex'});
 }
 document.getElementById('connect-codex').addEventListener('click',connectCodex);
-document.getElementById('reconnect-codex').addEventListener('click',connectCodex);
+document.getElementById('continue-offline').addEventListener('click',()=>{setupCompleted=true;syncSetup();remember();goal.focus();});
+function connectSelected(){if(selectedRoute()==='codex')connectCodex();else api.postMessage({kind:'connect-local'});}
+document.getElementById('reconnect-codex').addEventListener('click',connectSelected);
+document.getElementById('connect-local').addEventListener('click',()=>{addModel('docker-model-runner::'+localModel,'Local · '+localModel);model.value='docker-model-runner::'+localModel;edited();api.postMessage({kind:'connect-local'});});
 function syncSetup(message='') {
   const connected=['ready','busy','stopping'].includes(connectionKind);
   if(connected)setupCompleted=true;
@@ -499,10 +509,8 @@ window.addEventListener('message', ({data}) => {
   }
   if (data.kind === 'select-session') { selectSession(data.id); setPane('chat',true); return; }
   if (data.kind === 'models') {
-    const previous = model.value;
-    model.replaceChildren(new Option('Codex default',''), ...data.models.map(name=>new Option(name,name)));
-    model.value = data.models.includes(previous) ? previous : '';
-    if(model.value!==previous)edited();
+    if((data.generation??0)!==connectionGeneration||(data.route??'codex')!==connectedRoute)return;
+    for(const name of data.models??[])if(typeof name==='string')addModel(connectedRoute+'::'+name,(connectedRoute==='codex'?'Codex · ':'Local · ')+name);
     return;
   }
   if (data.kind === 'send-accepted' && pendingSend?.id === data.requestId) {
@@ -517,6 +525,8 @@ window.addEventListener('message', ({data}) => {
   if (data.kind === 'send-finished' && pendingSend?.id === data.requestId) { pendingSend = undefined; syncSend(); return; }
   if (data.kind === 'conversation') {
     connectionKind = data.state.kind;
+    connectedRoute=data.state.route??'codex';connectionGeneration=data.state.generation??0;
+    if(typeof data.localModel==='string'){localModel=data.localModel;addModel('docker-model-runner::'+localModel,'Local · '+localModel);}
     if(connectionKind==='disconnected')modelsLoaded=false;
     if(connectionKind==='ready'&&!modelsLoaded){modelsLoaded=true;api.postMessage({kind:'load-models'});}
     document.getElementById('connection-status').textContent = data.state.message;
@@ -671,14 +681,15 @@ window.addEventListener('message', ({data}) => {
   }
 });
 prepare.disabled = !goal.value.trim();
+addModel('docker-model-runner::'+localModel,'Local · '+localModel);
 for(const name of stored?.models ?? []) if(typeof name==='string' && name && ![...model.options].some(option=>option.value===name)) model.add(new Option(name,name));
 const initialDraft=sessionDrafts.get(sessionId);draftVersion=initialDraft?.version??crypto.randomUUID();goal.value=initialDraft?.text??'';model.value=initialDraft?.model??'';files.checked=initialDraft?.files??false;restoreRecords(initialDraft?.records??[]);prepare.disabled=!goal.value.trim();
 const contextActions=document.querySelector('.context-actions');
-for(const id of ['prepare','load-models','disconnect-codex','reconnect-codex'])contextActions.append(document.getElementById(id));
+for(const id of ['prepare','load-models','disconnect-codex','reconnect-codex','connect-local'])contextActions.append(document.getElementById(id));
 prepare.type='button';prepare.onclick=()=>{setContext(false);composer.requestSubmit();};
 
 let modelsLoaded=false;
-model.addEventListener('change',edited);files.addEventListener('change',edited);
+model.addEventListener('change',()=>{edited();modelsLoaded=false;api.postMessage({kind:'select-provider',route:selectedRoute(),selectionChanged:true});syncSend();});files.addEventListener('change',edited);
 document.getElementById('chat-flow').addEventListener('scroll',remember,{passive:true});
 window.addEventListener('pagehide',remember);
 setPane(activePane);

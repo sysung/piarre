@@ -1,7 +1,7 @@
 import type { ProjectEvent, ProjectSnapshot } from "../../../packages/core/src/index.js";
 import { currentKnowledge } from "../../../packages/core/src/knowledge.js";
 
-export const activityEventKinds = ["project-created", "project-renamed", "proposal-created", "proposal-deleted", "knowledge-observed", "knowledge-confirmed", "knowledge-corrected", "conversation-started", "conversation-replied", "conversation-ended", "task-triage-recorded", "knowledge-relationship-recorded"] as const;
+export const activityEventKinds = ["project-created", "project-renamed", "proposal-created", "proposal-deleted", "knowledge-observed", "knowledge-confirmed", "knowledge-corrected", "conversation-started", "conversation-replied", "provider-conversation-started", "provider-conversation-replied", "conversation-ended", "task-triage-recorded", "knowledge-relationship-recorded"] as const;
 export const activityExecutionKinds = {
   "prepare-execution-plan": "Run plan prepared · not approved",
   "approve-execution": "Coding run approved",
@@ -64,7 +64,9 @@ export function activityMilestone(event: ProjectEvent, revision: number): Activi
     case "knowledge-observed": summary = "Knowledge statement recorded · unconfirmed"; link("knowledge", event.knowledgeId); break;
     case "knowledge-confirmed": summary = "Knowledge confirmed by user · not independent verification"; link("knowledge", event.target.knowledgeId); link("knowledge", event.target.knowledgeId, event.target.recordedAtRevision); break;
     case "knowledge-corrected": summary = "Knowledge corrected by user · prior evidence may be historical"; link("knowledge", event.target.knowledgeId); link("knowledge", event.target.knowledgeId, event.target.recordedAtRevision); break;
+    case "provider-conversation-started":
     case "conversation-started": summary = "Submitted discussion started · no execution approval"; link("conversation", event.submitted.requestId); break;
+    case "provider-conversation-replied":
     case "conversation-replied": summary = "Discussion reply recorded · inferred"; link("conversation", event.requestId); break;
     case "conversation-ended": summary = `Discussion ended · ${event.outcome}`; link("conversation", event.requestId); break;
     case "task-triage-recorded": {
