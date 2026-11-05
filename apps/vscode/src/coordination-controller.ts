@@ -4,7 +4,8 @@ import type { SuppliedSource } from "../../../packages/core/src/supplied-source.
 import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import type { CoordinationAction, CoordinationGroup, ProjectSnapshot } from "../../../packages/core/src/index.js";
-import { assertCoordinationCurrent, type WorkerSpec } from "../../../packages/core/src/coordination.js";
+import { currentKnowledge } from "../../../packages/core/src/index.js";
+import { assertCoordinationCurrent, assertCoordinationContextBound, captureCoordinationParent, type WorkerSpec } from "../../../packages/core/src/coordination.js";
 import { inspectProject } from "../../../packages/core/src/inspection.js";
 import { CodexConversationClient } from "./codex-conversation-client.js";
 import type { SqliteProjectRepository } from "./sqlite-project-repository.js";
@@ -48,13 +49,21 @@ export class CoordinationController {
       return existing;
     }
     if (!Number.isSafeInteger(input.workers) || input.workers < 1 || input.workers > 3) throw new Error("Bound fanout to 1–3 read-only workers");
-    const recordSources = inspectProject(snapshot).recommendation.filter(entry => entry.text.length <= 10_000).slice(0, 10).map(({ reference, text }) => ({ reference, text }));
+    const parent = snapshot.tasks.find(task => task.taskId === input.parentTaskId);
+    if (!parent) throw new Error("Choose a current parent task before preparing an investigation");
+    const linkedKnowledge = new Set(currentKnowledge(snapshot).filter(entry => entry.affectedTaskIds.includes(parent.taskId)).map(entry => entry.knowledgeId));
+    const recordSources = inspectProject(snapshot).recommendation.filter(({ reference }) =>
+      reference.kind === "task" ? reference.recordId === parent.taskId :
+      reference.kind === "proposal" ? reference.recordId === parent.groupId :
+      reference.kind === "knowledge" && linkedKnowledge.has(reference.recordId)
+    ).map(({ reference, text }) => ({ reference, text }));
     const sources = [...recordSources, ...(input.fileSources ?? [])];
+    assertCoordinationContextBound(captureCoordinationParent(snapshot, parent.taskId), sources);
     if (!this.canShare(sources)) throw new Error("Source access, project trust or saved file state changed");
     assertSharedFilesCurrent(snapshot, sources);
     const groupId = randomUUID();
     const workers = Array.from({ length: input.workers }, (_, index) => ({ assignmentId: randomUUID(), role: index === 0 ? "investigation" : "review", purpose: input.purpose, scope: input.scope, requestedModel: input.model, provider: "codex-read-only", serviceTierForTurn: "default", permissions: "supplied-sources-only" } satisfies WorkerSpec));
-    if (!this.record({ kind: "coordinate", operation: "prepare", groupId, ideaId: input.ideaId ?? null, requestId: input.requestId, parentTaskId: input.parentTaskId, sources, workers, durationMs: input.durationMs, maxTokens: input.maxTokens })) throw new Error("Assignment preparation was not saved");
+    if (!this.record({ kind: "coordinate", operation: "prepare", parentContextVersion: 1, groupId, ideaId: input.ideaId ?? null, requestId: input.requestId, parentTaskId: input.parentTaskId, sources, workers, durationMs: input.durationMs, maxTokens: input.maxTokens })) throw new Error("Assignment preparation was not saved");
     const group = this.repository.read().coordination.groups.find(group => group.groupId === groupId);
     if (!group) throw new Error("Saved assignment unavailable");
     return group;

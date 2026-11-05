@@ -49,8 +49,9 @@ export function parseCoordinationAction(value: unknown): CoordinationAction | un
   }
   const groupId = text(action.groupId, 512);
   if (action.operation === "prepare") {
-    fields(action, [...base, "groupId", "requestId", "parentTaskId", "ideaId", "sources", "workers", "durationMs", "maxTokens"]);
-    return { kind: "coordinate", operation: action.operation, groupId, ideaId: action.ideaId === null ? null : text(action.ideaId, 512), requestId: text(action.requestId, 512), parentTaskId: text(action.parentTaskId, 2048), sources: sources(action.sources), workers: workers(action.workers), durationMs: integer(action.durationMs, 1_000, 120_000), maxTokens: integer(action.maxTokens, 1, 100_000) };
+    fields(action, [...base, "groupId", "requestId", "parentTaskId", "ideaId", "sources", "workers", "durationMs", "maxTokens", ...("parentContextVersion" in action ? ["parentContextVersion"] : [])]);
+    if ("parentContextVersion" in action && action.parentContextVersion !== 1) throw new Error("Unsupported parent context version");
+    return { kind: "coordinate", operation: action.operation, ...(action.parentContextVersion === 1 && { parentContextVersion: 1 }), groupId, ideaId: action.ideaId === null ? null : text(action.ideaId, 512), requestId: text(action.requestId, 512), parentTaskId: text(action.parentTaskId, 2048), sources: sources(action.sources), workers: workers(action.workers), durationMs: integer(action.durationMs, 1_000, 120_000), maxTokens: integer(action.maxTokens, 1, 100_000) };
   }
   const observedAt = integer(action.observedAt, 1, Number.MAX_SAFE_INTEGER);
   if (action.operation === "approve") {
@@ -85,8 +86,8 @@ export function parseCoordinationAction(value: unknown): CoordinationAction | un
   if (action.operation === "finish") {
     fields(action, [...base, "groupId", "assignmentId", "outcome", "observation", "sourceIndexes", "observedAt"]);
     if (action.outcome !== "completed" && action.outcome !== "interrupted" && action.outcome !== "failed" && action.outcome !== "unknown") throw new Error("Invalid worker outcome");
-    if (!Array.isArray(action.sourceIndexes) || action.sourceIndexes.length > 10) throw new Error("Invalid findings citations");
-    return { kind: "coordinate", operation: action.operation, groupId, assignmentId, outcome: action.outcome, observation: text(action.observation), sourceIndexes: action.sourceIndexes.map((index: unknown) => integer(index, 0, 9)), observedAt };
+    if (!Array.isArray(action.sourceIndexes) || action.sourceIndexes.length > 20) throw new Error("Invalid findings citations");
+    return { kind: "coordinate", operation: action.operation, groupId, assignmentId, outcome: action.outcome, observation: text(action.observation), sourceIndexes: action.sourceIndexes.map((index: unknown) => integer(index, 0, 19)), observedAt };
   }
   throw new Error("Unsupported coordination operation");
 }

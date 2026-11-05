@@ -3,7 +3,9 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import type { CoordinationAction } from "../../../../packages/core/src/index.js";
+import type { CoordinationAction, ProjectCommand } from "../../../../packages/core/src/index.js";
+import * as vscode from "vscode";
+import { CoordinationUi } from "../../src/coordination-ui.js";
 import { CoordinationController } from "../../src/coordination-controller.js";
 import { parseCoordinationMessage } from "../../src/coordination-actions.js";
 import { renderCoordination } from "../../src/coordination-view.js";
@@ -12,6 +14,9 @@ import { GoalInterpreter } from "../../src/goal-interpreter.js";
 import { CodexConversationClient } from "../../src/codex-conversation-client.js";
 import { selectableConversationSources } from "../../src/conversation-controller.js";
 import { resolveConversationContext } from "../../src/conversation-context.js";
+import { replay } from "../../../../packages/core/src/index.js";
+import { parseCoordinationAction } from "../../../../packages/core/src/coordination-contracts.js";
+import { assignmentPrompt } from "../../src/coordination-prompt.js";
 
 type Client = Pick<CodexConversationClient, "connect" | "respond" | "interrupt" | "dispose">;
 type Reply = Awaited<ReturnType<Client["respond"]>>;
@@ -59,6 +64,77 @@ suite("Canonical bounded read-only coordination", () => {
     clients = []; controller = new CoordinationController(repository, () => undefined, createClient);
   });
   teardown(() => { controller.dispose(); repository.close(); rmSync(directory, { recursive: true, force: true }); });
+  test("investigations include the chosen parent and every linked policy instead of unrelated global records", async () => {
+    const dispatch = (action: ProjectCommand["action"]) => {
+      const snapshot = repository.read();
+      return repository.dispatch({ commandId: `context-${String(snapshot.revision)}`, projectId: snapshot.projectId, expectedProjectRevision: snapshot.revision, action });
+    };
+    for (let index = 0; index < 5; index++) dispatch({ kind: "propose-tasks", draft: await new GoalInterpreter().propose(`Private unrelated goal ${String(index)}`) });
+    dispatch({ kind: "propose-tasks", draft: await new GoalInterpreter().propose("Refund behavior") });
+    const task = repository.read().tasks.at(-1); assert.ok(task);
+    const snapshot = repository.read();
+    dispatch({ kind: "observe-knowledge", topic: "Refund policy", category: "business", submitted: {
+      requestId: "refund-policy", projectId: snapshot.projectId, contextRevision: snapshot.revision, originalStatement: "Refunds must allow 45 days",
+    }, affectedTaskIds: [task.taskId] });
+    const before = repository.read();
+    const group = controller.prepare({ requestId: "scoped-parent", parentTaskId: task.taskId, purpose: "Inspect refunds", scope: "Selected task and its linked policy", model: "fixture-model", workers: 1, durationMs: 120_000, maxTokens: 4_000 });
+    assert.ok(group.sources.some(source => source.reference.recordId === task.taskId));
+    assert.ok(group.sources.some(source => source.text === "Refunds must allow 45 days"));
+    assert.ok(group.sources.every(source => !source.text.includes("Private unrelated goal")));
+    assert.deepEqual(group.parentContext?.task.requirements, task.requirements);
+    assert.deepEqual(group.parentContext.task.proposedScope, task.proposedScope);
+    assert.deepEqual(group.parentContext.task.checks, task.checks);
+    const worker = group.assignments[0]; assert.ok(worker);
+    assert.ok(assignmentPrompt(group, worker).includes(JSON.stringify(task.requirements)));
+    assert.deepEqual(repository.read().tasks, before.tasks);
+    assert.equal(clients.length, 0);
+  });
+  test("legacy prepared histories replay without inventing structured parent context", () => {
+    prepare(1);
+    const events = repository.readDiagnosticSnapshot().events.map(event => {
+      if (event.kind !== "coordination-recorded" || event.action.operation !== "prepare") return event;
+      const action = { ...event.action }; delete action.parentContextVersion;
+      return { ...event, action };
+    });
+    const legacy = replay(events);
+    assert.equal(legacy.coordination.groups[0]?.parentContext, undefined);
+    assert.deepEqual(legacy.coordination.groups[0]?.sources, repository.read().coordination.groups[0]?.sources);
+  });
+  test("worker findings can cite every supplied source through index nineteen", async () => {
+    for (let index = 0; index < 18; index++) {
+      const snapshot = repository.read();
+      repository.dispatch({ commandId: `linked-policy-${String(index)}`, projectId: snapshot.projectId, expectedProjectRevision: snapshot.revision,
+        action: { kind: "observe-knowledge", topic: `Policy ${String(index)}`, category: "business", submitted: { requestId: `policy-${String(index)}`, projectId: snapshot.projectId, contextRevision: snapshot.revision, originalStatement: `Required condition ${String(index)}` }, affectedTaskIds: [taskId] } });
+    }
+    const group = prepare(1);
+    assert.equal(group.sources.length, 20);
+    const operation = controller.approveAndRun(group.groupId, group.preparedAtRevision, "reviewed-all-sources");
+    await tick(); clients[0]?.complete("Source nineteen is available", [19]); await operation;
+    const worker = readGroup().assignments[0]; assert.ok(worker);
+    assert.equal(worker.state.kind, "terminal");
+    assert.equal(worker.state.outcome, "completed"); assert.deepEqual(worker.state.sourceIndexes, [19]);
+    assert.throws(() => parseCoordinationAction({ kind: "coordinate", operation: "finish", groupId: group.groupId, assignmentId: worker.assignmentId, outcome: "completed", observation: "Out of bounds", sourceIndexes: [20], observedAt: Date.now() }), /Invalid coordination limit/);
+    const snapshot = repository.read();
+    repository.dispatch({ commandId: "overflow-policy", projectId: snapshot.projectId, expectedProjectRevision: snapshot.revision,
+      action: { kind: "observe-knowledge", topic: "One more required policy", category: "business", submitted: { requestId: "overflow-policy", projectId: snapshot.projectId, contextRevision: snapshot.revision, originalStatement: "Do not silently omit this constraint" }, affectedTaskIds: [taskId] } });
+    const before = repository.read();
+    assert.throws(() => prepare(1, "overflow-context"), /required context was not dropped/);
+    assert.deepEqual(repository.read(), before);
+  });
+  test("declining native batch spending records no approval and starts no provider", async () => {
+    const group = prepare();
+    const before = repository.read();
+    const previous = vscode.window.showWarningMessage;
+    let disclosures = 0;
+    vscode.window.showWarningMessage = () => { disclosures++; return Promise.resolve(undefined); };
+    try {
+      await new CoordinationUi(controller, () => repository.read()).handle({ kind: "coordination", action: "approve", id: group.groupId, requestId: "declined-spending" });
+      assert.equal(disclosures, 1);
+      assert.equal(clients.length, 0);
+      assert.deepEqual(repository.read(), before);
+      assert.equal(readGroup().approval.kind, "unapproved");
+    } finally { vscode.window.showWarningMessage = previous; }
+  });
   test("every recorded assignment stays referenceable beyond the recommendation window", () => {
     const oldest = prepare(1, "oldest-reference").assignments[0]; assert.ok(oldest);
     for (let index = 0; index < 11; index++) prepare(1, `newer-reference-${String(index)}`);

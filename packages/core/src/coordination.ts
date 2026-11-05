@@ -39,6 +39,7 @@ export interface Assignment extends WorkerSpec {
   readonly latestObservationAt: number;
 }
 export interface CoordinationGroup {
+  readonly parentContext?: CoordinationParentContext;
   readonly ideaId: string | null;
   readonly ideaContext: LinkedIdea | null;
   readonly groupId: string;
@@ -55,6 +56,28 @@ export interface CoordinationGroup {
   readonly approval: { readonly kind: "unapproved" } | { readonly kind: "approved"; readonly approvalId: string; readonly observedAt: number };
   readonly assignments: readonly Assignment[];
 }
+export interface CoordinationParentContext {
+  readonly version: 1;
+  readonly proposalRevision: number;
+  readonly task: import("./index.js").ProposedTask;
+}
+
+export function captureCoordinationParent(snapshot: ProjectSnapshot, taskId: string): CoordinationParentContext {
+  const task = snapshot.tasks.find(task => task.taskId === taskId);
+  const proposal = snapshot.proposals.find(proposal => proposal.groupId === task?.groupId);
+  if (!task || !proposal) throw new Error("Choose a current parent task");
+  return { version: 1, proposalRevision: proposal.recordedAtRevision, task };
+}
+
+export function assertCoordinationContextBound(parent: CoordinationParentContext, sources: readonly ConversationSource[]): void {
+  const bytes = (text: string) => Array.from(text).reduce((count, character) => {
+    const code = character.codePointAt(0) ?? 0;
+    return count + (code > 0xffff ? 4 : code > 0x7ff ? 3 : code > 0x7f ? 2 : 1);
+  }, 0);
+  if (sources.length > 20 || sources.some(source => bytes(source.text) > 10_000) || bytes(JSON.stringify({ parentContext: parent, sources })) > 60_000) {
+    throw new Error("Investigation context exceeds 20 sources, 10,000 bytes per excerpt or 60,000 UTF-8 bytes including parent details. Narrow the task or supplied files; required context was not dropped.");
+  }
+}
 export interface CoordinationState {
   readonly ideas: readonly LinkedIdea[];
   readonly groups: readonly CoordinationGroup[];
@@ -62,7 +85,7 @@ export interface CoordinationState {
 type Operation =
   | { readonly operation: "capture-idea"; readonly ideaId: string; readonly parentTaskId: string; readonly text: string; readonly returnPoint: string }
   | { readonly operation: "return-idea"; readonly ideaId: string; readonly observedAt: number }
-  | { readonly operation: "prepare"; readonly ideaId: string | null; readonly groupId: string; readonly requestId: string; readonly parentTaskId: string; readonly sources: readonly ConversationSource[]; readonly workers: readonly WorkerSpec[]; readonly durationMs: number; readonly maxTokens: number }
+  | { readonly operation: "prepare"; readonly parentContextVersion?: 1; readonly ideaId: string | null; readonly groupId: string; readonly requestId: string; readonly parentTaskId: string; readonly sources: readonly ConversationSource[]; readonly workers: readonly WorkerSpec[]; readonly durationMs: number; readonly maxTokens: number }
   | { readonly operation: "approve"; readonly groupId: string; readonly preparedAtRevision: number; readonly approvalId: string; readonly observedAt: number; readonly consent: "unknown-cost-and-shared-context" }
   | { readonly operation: "compare"; readonly groupId: string; readonly verdict: "agreement" | "disagreement" | "mixed"; readonly explanation: string; readonly assignmentIds: readonly string[]; readonly observedAt: number }
   | { readonly operation: "review-unknown"; readonly groupId: string; readonly assignmentId: string; readonly observedAt: number }
@@ -78,6 +101,10 @@ export interface CoordinationEvent { readonly kind: "coordination-recorded"; rea
 export function assertCoordinationCurrent(snapshot: ProjectSnapshot, group: CoordinationGroup): void {
   if (sourceCollectionVersion(snapshot) !== group.sourceCollectionVersion) throw new Error("Parent or project source collection changed; prepare fresh context");
   const task = snapshot.tasks.find(task => task.taskId === group.parentTaskId);
+  if (group.parentContext) {
+    if (JSON.stringify(captureCoordinationParent(snapshot, group.parentTaskId)) !== JSON.stringify(group.parentContext)) throw new Error("Parent task details changed; prepare fresh context");
+    assertCoordinationContextBound(group.parentContext, group.sources);
+  }
   if (!task || task.title !== group.parentObjective || task.planVersion !== group.parentPlanVersion || group.sources.some(source => {
     if (source.reference.kind === "file") return source.reference.projectId !== snapshot.projectId || source.reference.revision > snapshot.revision;
     const resolved = resolveRecordReference(snapshot, source.reference);
@@ -105,7 +132,7 @@ export function applyCoordinationEvent(snapshot: ProjectSnapshot, event: Coordin
       action.workers.some(worker => state.groups.some(group => group.assignments.some(item => item.assignmentId === worker.assignmentId)))) throw new Error("Unknown parent or reused request/assignment");
     if (action.ideaId !== null && !state.ideas.some(idea => idea.ideaId === action.ideaId && idea.parentTaskId === parent.taskId)) throw new Error("Linked idea does not belong to this parent");
     const group: CoordinationGroup = { ideaId: action.ideaId, ideaContext: state.ideas.find(idea => idea.ideaId === action.ideaId) ?? null, groupId: action.groupId, requestId: action.requestId, parentTaskId: parent.taskId, parentObjective: parent.title,
-      parentPlanVersion: parent.planVersion, sources: parseSuppliedSources(action.sources), sourceCollectionVersion: sourceCollectionVersion(snapshot), durationMs: action.durationMs, maxTokens: action.maxTokens,
+      parentPlanVersion: parent.planVersion, ...(action.parentContextVersion === 1 && { parentContext: captureCoordinationParent(snapshot, parent.taskId) }), sources: parseSuppliedSources(action.sources), sourceCollectionVersion: sourceCollectionVersion(snapshot), durationMs: action.durationMs, maxTokens: action.maxTokens,
       preparedAtRevision: revision, comparison: { kind: "not-recorded" }, approval: { kind: "unapproved" }, assignments: action.workers.map(worker => ({ ...worker, steering: [], providerObservation: { model: null, provider: null, serviceTier: null }, state: { kind: "queued" }, latestObservationAt: 0 })) };
     assertCoordinationCurrent(snapshot, group);
     return save({ ...state, groups: [...state.groups, group] });
