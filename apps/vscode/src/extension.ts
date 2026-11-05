@@ -158,7 +158,10 @@ ${transcript}`);
       else await operation;
     },
     renderDetails: runId => execution?.renderDetails(runId) ?? "",
-  }, { handle: async message => { if (isTrusted()) await coordinationUi?.handle(message); } });
+  }, { handle: async message => { if (isTrusted()) await coordinationUi?.handle(message); } }, (projectId, query) => {
+    if (!isTrusted() || !repository || repository.read().projectId !== projectId) return undefined;
+    return repository.readActivityEvents(query);
+  });
   const open = async (interactive: boolean, observedGeneration: number): Promise<void> => {
     const isCurrent = (): boolean => observedGeneration === generation && isTrusted();
     if (!isTrusted()) {

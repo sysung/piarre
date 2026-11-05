@@ -1,3 +1,4 @@
+import { renderActivity, type ActivityQuery, type ActivityPage } from "./observed-activity.js";
 import { resumeProject, knowledgeWorkImpact, type VisitBaseline, type ResumptionFact } from "../../../packages/core/src/resumption.js";
 import { renderCoordination } from "./coordination-view.js";
 import { parseCoordinationMessage, type CoordinationMessage } from "./coordination-actions.js";
@@ -170,6 +171,7 @@ export class WorkView implements vscode.WebviewViewProvider {
   private sidebarSubscriptions: vscode.Disposable[] = [];
   private viewReady = false;
   private deleting = false;
+  private activity: Omit<ActivityQuery, "limit"> | undefined;
   private runDetail: { readonly panel: vscode.WebviewPanel; readonly runId: string; readonly sessionId: string; readonly html?: string } | undefined;
   private lookup: { readonly projectId: string; readonly result: RetrievalResult } | undefined;
   private conversationState: ConversationState = { kind: "disconnected", message: "Connect your configured Codex account to discuss this project." };
@@ -187,7 +189,8 @@ export class WorkView implements vscode.WebviewViewProvider {
       session?(action: "new" | "rename" | "fork" | "archive" | "share", id?: string): Promise<string | undefined>;
       models?(): Promise<readonly string[]>; interrupt(): Promise<void>; knowledge?(kind: "observe-business" | "observe-decision" | "confirm-knowledge" | "correct-knowledge" | "lookup-project", id?: string): Promise<void> },
     private readonly execution?: { handle(message: ExecutionMessage): Promise<void>; renderDetails?(runId: string): string },
-    private readonly coordination?: { handle(message: CoordinationMessage): Promise<void> }) {
+    private readonly coordination?: { handle(message: CoordinationMessage): Promise<void> },
+    private readonly readActivity?: (projectId: string, query: ActivityQuery) => ActivityPage | undefined) {
     this.settingsChanged = vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration("piarre.providers")) this.refresh();
     });
@@ -210,6 +213,14 @@ export class WorkView implements vscode.WebviewViewProvider {
           this.viewReady = true;
           this.refresh();
           this.publishDraft();
+          return;
+        }
+        if (typeof message === "object" && message !== null && "kind" in message && message.kind === "activity-page") {
+          if (Object.keys(message).length === 3 && "projectId" in message && message.projectId === current.project.projectId && "beforeRevision" in message &&
+              (message.beforeRevision === null || (typeof message.beforeRevision === "number" && Number.isSafeInteger(message.beforeRevision) && message.beforeRevision >= 1))) {
+            this.activity = message.beforeRevision === null ? {} : { beforeRevision: message.beforeRevision };
+            this.publishActivity();
+          }
           return;
         }
         if (typeof message === "object" && message !== null && "kind" in message && message.kind === "open-proposal") {
@@ -310,6 +321,7 @@ export class WorkView implements vscode.WebviewViewProvider {
       const draft = new WorkspaceDraft(project, this.operations, () => { this.publishDraft(); });
       this.current = { project, draft };
       this.lookup = undefined;
+      this.activity = undefined;
       this.renderSidebar();
     } else {
       this.current.draft.update(project);
@@ -472,6 +484,20 @@ document.addEventListener('focusin', remember);
       brief: renderSessionBrief(project, this.visitBaseline(project)),
       agentOverview: this.execution ? renderCoordination(project) + renderExecutionDesk(project) : "<p>No coding agents are running. Save a task proposal to prepare work for an agent.</p>",
       executionControls: this.execution ? renderExecutionControls(project) : "" });
+    this.publishActivity();
+  }
+
+  private publishActivity(): void {
+    if (!this.current || !this.sidebar || !this.viewReady || !this.activity) return;
+    const { project } = this.current;
+    let html: string;
+    try {
+      const page = this.readActivity?.(project.projectId, { beforeRevision: Math.min(this.activity.beforeRevision ?? project.revision + 1, project.revision + 1), limit: 20 });
+      html = page ? renderActivity(project, page, this.activity.beforeRevision) : '<p>Activity history is unavailable for this project. No provider was contacted.</p><button type="button" data-activity-before="">Read newest milestones</button>';
+    } catch {
+      html = '<p>Activity history could not be read. Missing records do not establish completion. No provider was contacted.</p><button type="button" data-activity-before="">Read newest milestones</button>';
+    }
+    void this.sidebar.webview.postMessage({ kind: "activity", projectId: project.projectId, beforeRevision: this.activity.beforeRevision ?? null, html });
   }
 
   private publishDraft(): void {

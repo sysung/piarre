@@ -1,3 +1,4 @@
+import { activityEventKinds, activityExecutionKinds, activityCoordinationOperations, activityMilestone, type ActivityQuery, type ActivityPage } from "./observed-activity.js";
 import type { VisitBaseline } from "../../../packages/core/src/resumption.js";
 import { randomUUID } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
@@ -85,6 +86,25 @@ export class SqliteProjectRepository {
       }
     });
     return events;
+  }
+
+  readActivityEvents({ beforeRevision = Number.MAX_SAFE_INTEGER, limit }: ActivityQuery): ActivityPage {
+    if (!Number.isSafeInteger(beforeRevision) || beforeRevision < 1 || !Number.isSafeInteger(limit) || limit < 1 || limit > 50) throw new Error("Invalid activity page");
+    const placeholders = (values: readonly string[]): string => values.map(() => "?").join(",");
+    const executionKinds = Object.keys(activityExecutionKinds);
+    const coordinationOperations = Object.keys(activityCoordinationOperations);
+    const rows = this.database.prepare(`SELECT revision, schema_version, payload FROM events WHERE revision < ? AND (
+      json_extract(payload, '$.kind') IN (${placeholders(activityEventKinds)}) OR
+      (json_extract(payload, '$.kind') = 'execution-recorded' AND json_extract(payload, '$.action.kind') IN (${placeholders(executionKinds)})) OR
+      (json_extract(payload, '$.kind') = 'coordination-recorded' AND json_extract(payload, '$.action.operation') IN (${placeholders(coordinationOperations)}))
+    ) ORDER BY revision DESC LIMIT ?`).all(beforeRevision, ...activityEventKinds, ...executionKinds, ...coordinationOperations, limit + 1);
+    const entries = rows.slice(0, limit).map(row => {
+      if (typeof row.revision !== "number" || !Number.isSafeInteger(row.revision) || row.revision < 1 || row.schema_version !== 1 || typeof row.payload !== "string") throw new Error("Invalid activity history");
+      const entry = activityMilestone(parseProjectEvent(JSON.parse(row.payload)), row.revision);
+      if (!entry) throw new Error("Invalid activity milestone");
+      return entry;
+    });
+    return { entries, nextBeforeRevision: rows.length > limit ? entries.at(-1)?.revision ?? null : null };
   }
 
   beginVisit(): VisitBaseline {

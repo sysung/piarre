@@ -118,6 +118,7 @@ body{background:var(--vscode-sideBar-background)}
 .workspace-nav button:focus-visible{outline-offset:-2px}.sidebar{padding:8px 12px}.chat-flow{padding:16px 12px}
 .composer-zone{padding:8px 10px 12px}.context-panel{left:10px;right:10px}.composer-bar{gap:3px}#model{max-width:145px;font-size:11px}.composer-bar button{font-size:11px}#context-chips{display:flex;gap:4px;flex-wrap:wrap}#context-chips button{font-size:11px;color:var(--vscode-foreground);background:var(--vscode-badge-background);border-radius:5px;padding:2px 6px}.session-dot{width:9px;height:9px}
 .agent-row{display:flex;gap:8px;align-items:center;justify-content:space-between}.agent-row h5{font-size:13px;margin:8px 0;font-weight:500}.agent-row button[data-reference-assignment]{background:transparent;color:var(--vscode-descriptionForeground);font-size:18px}.agent-row+details{font-size:12px}
+#active-execution:not(:empty),#supporting-stop:not([hidden]){position:relative;z-index:21;flex:none;display:flex;flex-wrap:wrap;gap:4px;padding:4px 12px;background:var(--vscode-sideBar-background)}#active-execution button,#supporting-stop button{font-size:12px;border-radius:4px}
 .source-icon svg{width:16px;height:16px;vertical-align:middle}.context-panel #context-search{width:100%;padding:6px 8px;color:var(--vscode-input-foreground);background:var(--vscode-input-background);border:1px solid var(--vscode-input-border,var(--vscode-panel-border));border-radius:4px}.skill-list{border-top:1px solid var(--vscode-panel-border);margin-top:12px}.skill-row{display:flex;align-items:center;gap:8px;padding:6px 8px}.skill-row span{flex:1;overflow-wrap:anywhere}.sidebar .skill-row button{background:transparent;color:var(--vscode-descriptionForeground);font-size:18px}.skill-row small{display:block;color:var(--vscode-descriptionForeground);font-size:11px}
 main{position:relative}.setup-overlay{position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:24px 22px;background:color-mix(in srgb,var(--vscode-sideBar-background) 84%,transparent);backdrop-filter:blur(3px)}
 .setup-card{width:100%;max-width:300px}.setup-logo{width:36px;height:36px;display:grid;place-items:center;background:var(--vscode-button-background);color:var(--vscode-button-foreground);border-radius:8px;font-size:22px;font-weight:650;margin-bottom:24px}.setup-card h1{font-size:27px;line-height:1.2;letter-spacing:-.65px;margin:0 0 15px}.setup-card>p{font-size:13px;color:var(--vscode-foreground);margin:0 0 22px}.setup-card #connect-codex{display:flex;width:100%;justify-content:space-between;align-items:center;border-radius:5px;padding:11px 14px;font-size:13px;font-weight:550;background:var(--vscode-button-background);color:var(--vscode-button-foreground)}.setup-card .setup-note{font-size:11px;color:var(--vscode-descriptionForeground);margin:12px 0 0}.setup-card #setup-status{font-size:12px;margin:18px 0 0;color:var(--vscode-descriptionForeground)}#setup-status:empty{display:none}#active-execution:not(:empty),#supporting-stop:not([hidden]){position:relative;z-index:21;background:var(--vscode-sideBar-background)}
@@ -127,7 +128,7 @@ main{position:relative}.setup-overlay{position:absolute;inset:0;z-index:20;displ
 <aside id="workspace" class="sidebar" aria-label="Workspace" hidden>
 
 <section id="sessions-pane" role="tabpanel" hidden><h2>Sessions</h2><div id="sessions"></div><details><summary>Saved goals</summary><p class="hint">Saved proposals require review before work can run.</p><p id="browse-status" role="status"></p><div id="inspection">${inspection}</div></details><details><summary>Project brief</summary><div id="session-brief">${brief}</div></details></section>
-<section id="agents-pane" role="tabpanel" hidden><h2>Agents</h2><div id="execution-controls">${executionControls}</div><div id="agent-overview">${agentOverview}</div><section class="skill-list" aria-label="Repository skills"><h2>Skills</h2><div id="repository-skills"></div></section></section>
+<section id="agents-pane" role="tabpanel" hidden><h2>Agents</h2><div id="execution-controls">${executionControls}</div><div id="agent-overview">${agentOverview}</div><details id="observed-activity"><summary>Activity · recorded milestones</summary><div id="activity-content"><p>Open Activity to read recorded milestones. No model call is required.</p></div></details><section class="skill-list" aria-label="Repository skills"><h2>Skills</h2><div id="repository-skills"></div></section></section>
 <section id="knowledge-pane" role="tabpanel" hidden><h2>Knowledge</h2><div id="knowledge"></div></section>
 </aside>
 <section id="chat-pane" class="planning" aria-label="Chat" role="tabpanel">
@@ -169,6 +170,15 @@ let setupCompleted = stored?.setupCompleted === true;
 let setupWasOpen = false;
 let connectionAttempted = false;
 const sessionDrafts = new Map(Array.isArray(stored?.drafts) ? stored.drafts.filter(row => Array.isArray(row) && typeof row[0] === 'string' && typeof row[1]?.text === 'string' && row[1].text.length <= 10000).slice(-50) : []);
+let activityBefore = Number.isSafeInteger(stored?.activityBefore) && stored.activityBefore >= 1 ? stored.activityBefore : null;
+const activityDisclosure = document.getElementById('observed-activity');
+const activityContent = document.getElementById('activity-content');
+activityDisclosure.open = stored?.activityOpen === true;
+let activityRequested = false;
+activityDisclosure.addEventListener('toggle', () => {
+  if (activityDisclosure.open && !activityRequested) { activityRequested = true; api.postMessage({kind:'activity-page',projectId,beforeRevision:activityBefore}); }
+  remember();
+});
 let activePane = ['chat','sessions','agents','knowledge'].includes(stored?.pane) ? stored.pane : 'chat';
 if (typeof stored?.sessionId === 'string') sessionId = stored.sessionId;
 const model = document.getElementById('model');
@@ -286,7 +296,7 @@ function setPane(pane, focus = false) {
 }
 function remember() {
   sessionDrafts.set(sessionId,{version:draftVersion,text:goal.value,model:model.value,files:files.checked,records:recordIds(),scroll:document.getElementById('chat-flow').scrollTop});
-  api.setState?.({projectId,pane:activePane,sessionId,setupCompleted,drafts:[...sessionDrafts].slice(-50),models:[...model.options].map(option=>option.value)});
+  api.setState?.({projectId,pane:activePane,sessionId,setupCompleted,activityOpen:activityDisclosure.open,activityBefore,drafts:[...sessionDrafts].slice(-50),models:[...model.options].map(option=>option.value)});
 }
 function renderChips() {
   const chips=document.getElementById('context-chips'); chips.replaceChildren();
@@ -385,6 +395,26 @@ function showGoal() {
   title.textContent = 'Plan a task'; step.textContent = 'Step 1 of 2 · Goal';
 }
 workspace.addEventListener('click', (event) => {
+  const activityPage = event.target.closest('[data-activity-before]');
+  if (activityPage && !activityPage.disabled) {
+    activityBefore = activityPage.dataset.activityBefore === '' ? null : Number(activityPage.dataset.activityBefore);
+    api.postMessage({kind:'activity-page',projectId,beforeRevision:activityBefore}); remember(); return;
+  }
+  const knowledgeSource = event.target.closest('[data-activity-knowledge]');
+  if (knowledgeSource) {
+    const target = [...document.querySelectorAll('#knowledge [data-knowledge-id]')].find(item=>item.dataset.knowledgeId===knowledgeSource.dataset.activityKnowledge);
+    if (target) { setPane('knowledge'); for(let parent=target.parentElement;parent;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true; target.closest('article')?.querySelector('details')?.setAttribute('open',''); target.focus(); } return;
+  }
+  const capturedSource = event.target.closest('[data-activity-disclosure]');
+  if (capturedSource) {
+    const target = [...document.querySelectorAll('[data-coordination-disclosure]')].find(item=>item.dataset.coordinationDisclosure===capturedSource.dataset.activityDisclosure);
+    if(target){target.open=true;target.querySelector('summary')?.focus();}return;
+  }
+  const assignmentSource = event.target.closest('[data-activity-assignment]');
+  if (assignmentSource) {
+    const target = [...document.querySelectorAll('[data-coordination-disclosure]')].find(item=>item.dataset.coordinationDisclosure===assignmentSource.dataset.activityAssignment+'-profile');
+    if(target){target.open=true;target.querySelector('summary')?.focus();}return;
+  }
   const reference = event.target.closest('[data-reference-assignment]')?.dataset.referenceAssignment;
   if (reference) {
     const input = [...contextRecords.querySelectorAll('input')].find(item => item.value === reference);
@@ -456,6 +486,17 @@ save.addEventListener('click', () => {
   api.postMessage({kind: 'save', requestId});
 });
 window.addEventListener('message', ({data}) => {
+  if (data.kind === 'activity') {
+    if(data.projectId!==projectId||data.beforeRevision!==activityBefore||typeof data.html!=='string')return;
+    if(activityContent.dataset.rendered===data.html)return;
+    const focus=activityContent.contains(document.activeElement)?document.activeElement:null;
+    const focusId=focus?.id;const focusButton=focus?.tagName==='BUTTON';const focusSource=focus?.closest('[data-activity-source]')?.dataset.activitySource;
+    const openSources=new Set([...activityContent.querySelectorAll('details[open]')].map(item=>item.dataset.activitySource));
+    activityContent.innerHTML=data.html;activityContent.dataset.rendered=data.html;
+    activityContent.querySelectorAll('details').forEach(item=>{item.open=openSources.has(item.dataset.activitySource);});
+    if(focus){const target=focusId?document.getElementById(focusId):[...activityContent.querySelectorAll('[data-activity-source]')].find(item=>item.dataset.activitySource===focusSource)?.querySelector(focusButton?'button':'summary');if(target&&!target.disabled)target.focus({preventScroll:true});else (activityContent.querySelector('button:not(:disabled)')??activityDisclosure.querySelector('summary')).focus({preventScroll:true});}
+    return;
+  }
   if (data.kind === 'select-session') { selectSession(data.id); setPane('chat',true); return; }
   if (data.kind === 'models') {
     const previous = model.value;
@@ -491,13 +532,13 @@ window.addEventListener('message', ({data}) => {
     syncSend(); return;
   }
   if (data.kind === 'inspection') {
-    const focused = document.activeElement?.closest('[data-open-goal]')?.dataset.openGoal;
+    const focused = activityContent.contains(document.activeElement) ? undefined : document.activeElement?.closest('[data-open-goal]')?.dataset.openGoal;
     const coordinationFocus=document.activeElement?.closest('[data-coordination-action]');const coordinationAction=coordinationFocus?.dataset.coordinationAction;const coordinationId=coordinationFocus?.dataset.coordinationId;const assignmentId=coordinationFocus?.dataset.assignmentId;
     const openCoordination=new Set([...document.querySelectorAll('details[data-coordination-disclosure][open]')].map(item=>item.dataset.coordinationDisclosure));
     const reviewDetails = [...document.querySelectorAll('[data-review-key]')];
     const expandedReviews = new Set(reviewDetails.filter(details => details.open).map(details => details.dataset.reviewKey));
     const focusedReview = document.activeElement?.closest('summary')?.parentElement?.dataset.reviewKey;
-    const executionFocus=document.activeElement?.closest('[data-execution-action]');const action=executionFocus?.dataset.executionAction;const id=executionFocus?.dataset.executionId;
+    const executionFocus=activityContent.contains(document.activeElement)?undefined:document.activeElement?.closest('[data-execution-action]');const action=executionFocus?.dataset.executionAction;const id=executionFocus?.dataset.executionId;
     document.getElementById('inspection').innerHTML = data.html;
     const knowledge = document.getElementById('knowledge');
     const openKnowledge = new Set([...knowledge.querySelectorAll('details[open]')].map(detail=>detail.querySelector('summary')?.textContent));
@@ -533,8 +574,18 @@ window.addEventListener('message', ({data}) => {
     if (typeof data.executionControls === 'string') document.getElementById('execution-controls').innerHTML = data.executionControls;
     const activeControls = document.getElementById('active-execution');
     activeControls.replaceChildren();
-    for (const original of document.getElementById('execution-controls').querySelectorAll('[data-execution-action="stop"],[data-execution-action="reconcile"]')) {
+    const codingControls=[...document.getElementById('execution-controls').querySelectorAll('[data-execution-action="stop"],[data-execution-action="reconcile"]')];
+    const assignmentControls=[...document.getElementById('agent-overview').querySelectorAll('[data-coordination-action="stop"]')];
+    const pauseAll=document.getElementById('execution-controls').querySelector('[data-execution-action="pause-all"]');
+    const controls=[...(pauseAll&&(codingControls.length||assignmentControls.length||['busy','stopping'].includes(connectionKind))?[pauseAll]:[]),...codingControls,...assignmentControls];
+    for (const original of controls) {
       const button = original.cloneNode(true); activeControls.append(button);
+      button.removeAttribute('id');
+      if(button.dataset.coordinationAction==='stop'){
+        const purpose=original.closest('section')?.querySelector('h5')?.textContent;
+        button.textContent=purpose?'Stop '+purpose:'Stop assignment';
+        button.setAttribute('aria-label',button.textContent);
+      }
     }
     document.querySelectorAll('[data-review-key]').forEach(details => {
       details.open = expandedReviews.has(details.dataset.reviewKey);

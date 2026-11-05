@@ -86,7 +86,7 @@ export class ReflectionController {
     const selected = await vscode.window.showQuickPick([
       { label: "Keep current / skip", value: preference },
       { label: "Default (reset)", value: "default" }, { label: "Brief", value: "brief" }, { label: "Guided", value: "guided" },
-    ], { placeHolder: `Current explanation preference: ${preference}. Optional and reversible; affects reflection explanations only.` });
+], { placeHolder: `Current explanation preference: ${preference}. Optional and reversible; affects supporting conversation and reflection detail, never authority.` });
     if (!selected || !this.current() || selected.label === "Keep current / skip") return;
     if (selected.value === "default" || selected.value === "brief" || selected.value === "guided") this.apply({ kind: "set-explanation-preference", preference: selected.value });
   }
