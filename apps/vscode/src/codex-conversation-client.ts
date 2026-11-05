@@ -163,7 +163,7 @@ export class CodexConversationClient {
     try {
       const started = object(await this.request("thread/start", {
         cwd: input.cwd, model: input.model, ephemeral: true, sandbox: "read-only", approvalPolicy: "never",
-        config: { web_search: "disabled", features: { apps: false, shell_tool: false, unified_exec: false, plugins: false },
+        config: { ...(input.effort ? { model_reasoning_effort: input.effort } : {}), web_search: "disabled", features: { apps: false, shell_tool: false, unified_exec: false, plugins: false },
           mcp_servers: Object.fromEntries([...this.disabledServers].map(name => [name, { enabled: false }])) },
       }));
       const threadId = identifier(object(started.thread).id);

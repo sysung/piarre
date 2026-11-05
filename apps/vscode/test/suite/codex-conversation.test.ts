@@ -52,6 +52,45 @@ suite("Codex conversation process adapter", () => {
     } finally { connection.dispose(); }
   });
 
+  test("binds reviewed effort at thread creation before metadata preflight and preserves it at turn start", async () => {
+    const connection = client("reviewed-effort");
+    const phases: string[] = [];
+    try {
+      await connection.connect();
+      const result = await connection.proposePatch({ prompt: "Use this reviewed profile", cwd: process.cwd(), model: "fixture-model", effort: "medium",
+        onThreadMetadata: metadata => {
+          phases.push("metadata");
+          assert.deepEqual(metadata, { model: "fixture-model", modelProvider: "openai", reasoningEffort: "medium" });
+        }, onThreadStarted: () => { phases.push("thread-approved"); }, onTurnStarted: () => { phases.push("turn-started"); } });
+      assert.equal(result.status, "completed");
+      assert.deepEqual(phases, ["metadata", "thread-approved", "turn-started"]);
+      assert.deepEqual(result.output, { summary: "Adjust the refund rule", operations: [{ fileId: "opaque-file", content: "export const days = 45;" }] });
+    } finally { connection.dispose(); }
+  });
+
+  test("rejects observed effort mismatch before thread approval or turn generation", async () => {
+    const connection = client("reviewed-effort-mismatch");
+    let approved = false; let generated = false;
+    try {
+      await connection.connect();
+      await assert.rejects(connection.proposePatch({ prompt: "Use this reviewed profile", cwd: process.cwd(), model: "fixture-model", effort: "medium",
+        onThreadMetadata: metadata => {
+          if (metadata.reasoningEffort !== "medium") throw new Error("Observed reasoning effort differs from the frozen requested profile.");
+        }, onThreadStarted: () => { approved = true; }, onTurnStarted: () => { generated = true; } }), /Observed reasoning effort differs/);
+      assert.equal(approved, false); assert.equal(generated, false);
+    } finally { connection.dispose(); }
+  });
+
+  test("keeps inherited effort when no reviewed effort was requested", async () => {
+    const connection = client("inherited-effort");
+    try {
+      await connection.connect();
+      const result = await connection.respond({ prompt: "Discuss with the configured default", cwd: process.cwd(),
+        onThreadMetadata: metadata => { assert.equal(metadata.reasoningEffort, "high"); } });
+      assert.equal(result.status, "completed");
+    } finally { connection.dispose(); }
+  });
+
   test("handles partial frames and terminal notifications before start acknowledgement", async () => {
     const connection = client();
     const progress: string[] = [];
