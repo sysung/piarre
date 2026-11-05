@@ -26,7 +26,7 @@ export function parseSuppliedReference(value: unknown): SuppliedReference {
       typeof value.revision !== "number" || !Number.isSafeInteger(value.revision) || value.revision < 1) throw new Error("Invalid supplied reference");
   const base = { projectId: value.projectId, recordId: value.recordId, revision: value.revision };
   if (value.kind !== "file") {
-    if ((value.kind !== "task" && value.kind !== "proposal" && value.kind !== "knowledge" && value.kind !== "assignment") || Object.keys(value).length !== 4) throw new Error("Invalid record reference");
+    if ((value.kind !== "task" && value.kind !== "proposal" && value.kind !== "knowledge" && value.kind !== "assignment" && value.kind !== "relationship") || Object.keys(value).length !== 4) throw new Error("Invalid record reference");
     return { ...base, kind: value.kind };
   }
   if (Object.keys(value).length !== 12 || !("path" in value) || typeof value.path !== "string" ||
@@ -66,5 +66,5 @@ export function parseSuppliedSources(value: unknown): readonly SuppliedSource[] 
 }
 
 export function sourceCollectionVersion(project: import("./index.js").ProjectSnapshot): string {
-  return JSON.stringify({ knowledge: project.knowledge.map(item => [item.knowledgeId, item.recordedAtRevision]), proposals: project.proposals.map(item => [item.groupId, item.recordedAtRevision]), tasks: project.tasks.map(item => [item.taskId, item.planVersion]) });
+  return JSON.stringify({ ...(project.knowledgeRelationships.proposals.length ? { relationships: { proposals: project.knowledgeRelationships.proposals.map(item => [item.relationshipId, item.recordedAtRevision]), decisions: project.knowledgeRelationships.decisions.map(item => [item.relationshipId, item.recordedAtRevision]) } } : {}), knowledge: project.knowledge.map(item => [item.knowledgeId, item.recordedAtRevision]), proposals: project.proposals.map(item => [item.groupId, item.recordedAtRevision]), tasks: project.tasks.map(item => [item.taskId, item.planVersion]) });
 }

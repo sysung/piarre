@@ -1,6 +1,8 @@
 import { applyTaskTriageEvent, type TaskTriageAction, type TaskTriageEvent, type TaskTriageState } from "./task-triage.js";
 export { currentTaskTriage, taskTriageRevision, latestTaskTriageDecision, orderedTriageTasks } from "./task-triage.js";
 export type { TaskTriageAction, TaskTriageEvent, TaskTriageValue, TaskTriageProposal, TaskTriageDecision } from "./task-triage.js";
+import { applyKnowledgeRelationshipEvent, type KnowledgeRelationshipAction, type KnowledgeRelationshipEvent, type KnowledgeRelationships } from "./knowledge-relationships.js";
+export * from "./knowledge-relationships.js";
 import { applyCoordinationEvent, type CoordinationAction, type CoordinationEvent, type CoordinationState } from "./coordination.js";
 export type { CoordinationAction, CoordinationGroup, Assignment, LinkedIdea } from "./coordination.js";
 import { applyReflectionEvent, type Reflection, type ReflectionAction, type ReflectionEvent, type ExplanationPreference, type ExpertisePreference } from "./reflection.js";
@@ -31,6 +33,7 @@ export interface ProjectSnapshot {
   readonly conversation: readonly ConversationTurn[];
   readonly coordination: CoordinationState;
   readonly knowledge: readonly RecordedKnowledge[];
+  readonly knowledgeRelationships: KnowledgeRelationships;
   readonly knowledgeImpacts: readonly KnowledgeImpact[];
   readonly executionPlans: readonly ExecutionPlan[];
   readonly executionRuns: readonly ExecutionRun[];
@@ -102,13 +105,13 @@ export interface ProjectCommand {
   readonly commandId: string;
   readonly projectId: string;
   readonly expectedProjectRevision: number;
-  readonly action: TaskTriageAction | CoordinationAction | ConversationAction | KnowledgeAction | ExecutionAction | ReflectionAction
+  readonly action: TaskTriageAction | CoordinationAction | ConversationAction | KnowledgeRelationshipAction | KnowledgeAction | ExecutionAction | ReflectionAction
     | { readonly kind: "rename-project"; readonly name: string }
     | { readonly kind: "delete-proposal"; readonly groupId: string }
     | { readonly kind: "propose-tasks"; readonly draft: ProposalDraft; readonly sessionId?: string };
 }
 
-export type ProjectEvent = TaskTriageEvent | CoordinationEvent | ConversationEvent | KnowledgeEvent | ExecutionEvent | ReflectionEvent
+export type ProjectEvent = TaskTriageEvent | CoordinationEvent | ConversationEvent | KnowledgeRelationshipEvent | KnowledgeEvent | ExecutionEvent | ReflectionEvent
   | {
       readonly kind: "project-created";
       readonly projectId: string;
@@ -150,6 +153,7 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
         coordination: { ideas: [], groups: [] },
         knowledge: [],
         knowledgeImpacts: [],
+        knowledgeRelationships: { proposals: [], decisions: [] },
         executionPlans: [],
         executionRuns: [],
         schedulingPaused: false,
@@ -168,6 +172,8 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
         snapshot = applyReflectionEvent(snapshot, event); break;
       case "execution-recorded":
         snapshot = applyExecutionEvent(snapshot, event); break;
+      case "knowledge-relationship-recorded":
+        snapshot = applyKnowledgeRelationshipEvent(snapshot, event); break;
       case "knowledge-observed":
       case "knowledge-confirmed":
       case "knowledge-corrected":
@@ -276,6 +282,10 @@ export function decideProjectEvent(command: ProjectCommand): ProjectEvent {
     case "invalidate-execution-workspace":
     case "set-scheduling-paused":
       return { kind: "execution-recorded", commandId: command.commandId, action: command.action };
+    case "propose-knowledge-relationship":
+    case "adopt-knowledge-relationship":
+    case "withdraw-knowledge-relationship":
+      return { kind: "knowledge-relationship-recorded", action: command.action, commandId: command.commandId };
     case "observe-knowledge":
     case "confirm-knowledge":
     case "correct-knowledge":

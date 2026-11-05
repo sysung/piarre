@@ -1,4 +1,5 @@
 import { parseTaskTriageAction, parseTaskTriageEvent } from "./task-triage.js";
+import { parseKnowledgeRelationshipAction, parseKnowledgeRelationshipEvent } from "./knowledge-relationships.js";
 import { parseSuppliedReference, parseSuppliedSources } from "./supplied-source.js";
 import { parseCoordinationAction, parseCoordinationEvent } from "./coordination-contracts.js";
 import { parseReflectionAction, parseReflectionEvent } from "./reflection.js";
@@ -245,6 +246,8 @@ export function validateProjectCommand(value: unknown): ProjectCommand {
   if (reflectionAction) return { commandId, projectId, expectedProjectRevision, action: reflectionAction };
   const executionAction = parseExecutionAction(action);
   if (executionAction) return { commandId, projectId, expectedProjectRevision, action: executionAction };
+  const relationshipAction = parseKnowledgeRelationshipAction(action);
+  if (relationshipAction) return { commandId, projectId, expectedProjectRevision, action: relationshipAction };
   const knowledgeAction = parseKnowledgeAction(action);
   if (knowledgeAction) return { commandId, projectId, expectedProjectRevision, action: knowledgeAction };
   const sessionAction = parseSessionAction(action);
@@ -300,6 +303,8 @@ export function parseProjectEvent(value: unknown): ProjectEvent {
   if (reflectionEvent) return reflectionEvent;
   const executionEvent = parseExecutionEvent(value);
   if (executionEvent) return executionEvent;
+  const relationshipEvent = parseKnowledgeRelationshipEvent(value);
+  if (relationshipEvent) return relationshipEvent;
   const knowledgeEvent = parseKnowledgeEvent(value);
   if (knowledgeEvent) return knowledgeEvent;
   if (!isObject(value) || !("kind" in value)) invalid();

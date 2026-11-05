@@ -1,10 +1,11 @@
+import { relationshipDecision, relationshipKnowledgeCurrent, relationshipText } from "./knowledge-relationships.js";
 import { currentKnowledge } from "./knowledge.js";
 import { parseBillingPlan, type BillingPlan } from "./costs.js";
 import type { ProjectSnapshot, RecordedProposalGroup } from "./index.js";
 
 export type RecordReference = {
   readonly projectId: ProjectSnapshot["projectId"];
-  readonly kind: "proposal" | "task" | "knowledge" | "assignment";
+  readonly kind: "proposal" | "task" | "knowledge" | "assignment" | "relationship";
   readonly recordId: string;
   readonly revision: number;
 };
@@ -18,6 +19,13 @@ export function resolveRecordReference(
   reference: RecordReference,
 ): ReferenceResolution {
   if (reference.projectId !== project.projectId) return { kind: "wrong-project" };
+  if (reference.kind === "relationship") {
+    const relationship = project.knowledgeRelationships.proposals.find(item => item.relationshipId === reference.recordId);
+    if (!relationship) return { kind: "missing" };
+    const decision = relationshipDecision(project, relationship.relationshipId);
+    if (relationship.recordedAtRevision !== reference.revision || decision?.kind !== "adopted" || !relationshipKnowledgeCurrent(project, relationship)) return { kind: "stale" };
+    return { kind: "resolved", text: relationshipText(project, relationship), source: "user-statement" };
+  }
   if (reference.kind === "knowledge") {
     const entry = currentKnowledge(project).find(item => item.knowledgeId === reference.recordId);
     if (!entry) return { kind: "missing" };

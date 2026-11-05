@@ -1,3 +1,4 @@
+import { KnowledgeRelationshipController, type RelationshipOperation } from "./knowledge-relationship-controller.js";
 import { lookupCompilerReferences } from "./technical-lookup.js";
 import { knowledgeWorkImpact } from "../../../packages/core/src/resumption.js";
 import { fileURLToPath } from "node:url";
@@ -7,18 +8,20 @@ import { randomUUID } from "node:crypto";
 import { currentKnowledge, knowledgeConflicts, type KnowledgeAction, type ProjectSnapshot, type RecordedKnowledge } from "../../../packages/core/src/index.js";
 import type { SqliteProjectRepository } from "./sqlite-project-repository.js";
 
+export type KnowledgeOperation = "observe-business" | "observe-decision" | "confirm-knowledge" | "correct-knowledge" | "lookup-project" | RelationshipOperation;
 export class KnowledgeController {
   private busy = false;
   private disposed = false;
   constructor(private readonly repository: SqliteProjectRepository, private readonly update: (project: ProjectSnapshot) => void, private readonly publishLookup?: (projectId: string, result: RetrievalResult) => void) {}
 
-  async handle(kind: "observe-business" | "observe-decision" | "confirm-knowledge" | "correct-knowledge" | "lookup-project", knowledgeId?: string): Promise<void> {
+  async handle(kind: KnowledgeOperation, knowledgeId?: string): Promise<void> {
     if (this.busy || !this.isCurrent()) return;
     this.busy = true;
     try {
       const initial = this.repository.read();
       const entry = currentKnowledge(initial).find(item => item.knowledgeId === knowledgeId);
-      if (kind === "lookup-project") await this.lookup();
+      if (kind === "prepare-relationship" || kind === "review-relationship" || kind === "withdraw-relationship" || kind === "check-relationship") await new KnowledgeRelationshipController(this.repository, this.update, () => this.isCurrent()).handle(kind, knowledgeId);
+      else if (kind === "lookup-project") await this.lookup();
       else if (kind === "observe-business" || kind === "observe-decision") await this.observe(kind === "observe-business" ? "business" : "decision");
       else if (entry) await this.review(entry, kind === "correct-knowledge");
     } catch {
