@@ -1,3 +1,5 @@
+import { renderKnowledgeRelationships } from "./knowledge-relationship-view.js";
+import type { KnowledgeOperation } from "./knowledge-controller.js";
 import { renderActivity, type ActivityQuery, type ActivityPage } from "./observed-activity.js";
 import { resumeProject, knowledgeWorkImpact, type VisitBaseline, type ResumptionFact } from "../../../packages/core/src/resumption.js";
 import { renderCoordination } from "./coordination-view.js";
@@ -187,7 +189,7 @@ export class WorkView implements vscode.WebviewViewProvider {
         { modal: true, detail: "Removes this saved goal and its proposed tasks. Repository files are unchanged. Prior project history is retained." }, "Delete goal") === "Delete goal",
     private readonly conversation?: { connect(): Promise<void>; disconnect(): void; send(text: string, sessionId: string, model: string, attachFiles: boolean, recordIds: readonly string[], accepted: () => void): Promise<void>;
       session?(action: "new" | "rename" | "fork" | "archive" | "share", id?: string): Promise<string | undefined>;
-      models?(): Promise<readonly string[]>; interrupt(): Promise<void>; knowledge?(kind: "observe-business" | "observe-decision" | "confirm-knowledge" | "correct-knowledge" | "lookup-project", id?: string): Promise<void> },
+      models?(): Promise<readonly string[]>; interrupt(): Promise<void>; knowledge?(kind: KnowledgeOperation, id?: string): Promise<void> },
     private readonly execution?: { handle(message: ExecutionMessage): Promise<void>; renderDetails?(runId: string): string },
     private readonly coordination?: { handle(message: CoordinationMessage): Promise<void> },
     private readonly readActivity?: (projectId: string, query: ActivityQuery) => ActivityPage | undefined) {
@@ -271,7 +273,7 @@ export class WorkView implements vscode.WebviewViewProvider {
           if ((message.kind === "observe-business" || message.kind === "observe-decision" || message.kind === "lookup-project") && Object.keys(message).length === 1) {
             void this.conversation?.knowledge?.(message.kind); return;
           }
-          if ((message.kind === "confirm-knowledge" || message.kind === "correct-knowledge") && Object.keys(message).length === 2 && "knowledgeId" in message && typeof message.knowledgeId === "string") {
+          if ((message.kind === "confirm-knowledge" || message.kind === "correct-knowledge" || message.kind === "prepare-relationship" || message.kind === "review-relationship" || message.kind === "withdraw-relationship" || message.kind === "check-relationship") && Object.keys(message).length === 2 && "knowledgeId" in message && typeof message.knowledgeId === "string") {
             void this.conversation?.knowledge?.(message.kind, message.knowledgeId); return;
           }
         }
@@ -479,7 +481,7 @@ document.addEventListener('focusin', remember);
       }) });
     void panel.webview.postMessage({ kind: "inspection", selectedGroupId: this.detail?.groupId,
       html: renderInspection(project, this.configuration(), undefined, this.execution !== undefined, false),
-      knowledge: renderKnowledge(project, true) + (this.lookup?.projectId === project.projectId ? renderLookup(this.lookup.result) : ""),
+      knowledge: renderKnowledge(project, true) + renderKnowledgeRelationships(project) + (this.lookup?.projectId === project.projectId ? renderLookup(this.lookup.result) : ""),
       ...conversationContextCatalog(project),
       brief: renderSessionBrief(project, this.visitBaseline(project)),
       agentOverview: this.execution ? renderCoordination(project) + renderExecutionDesk(project) : "<p>No coding agents are running. Save a task proposal to prepare work for an agent.</p>",

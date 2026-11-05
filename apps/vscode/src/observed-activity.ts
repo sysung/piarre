@@ -1,7 +1,7 @@
 import type { ProjectEvent, ProjectSnapshot } from "../../../packages/core/src/index.js";
 import { currentKnowledge } from "../../../packages/core/src/knowledge.js";
 
-export const activityEventKinds = ["project-created", "project-renamed", "proposal-created", "proposal-deleted", "knowledge-observed", "knowledge-confirmed", "knowledge-corrected", "conversation-started", "conversation-replied", "conversation-ended"] as const;
+export const activityEventKinds = ["project-created", "project-renamed", "proposal-created", "proposal-deleted", "knowledge-observed", "knowledge-confirmed", "knowledge-corrected", "conversation-started", "conversation-replied", "conversation-ended", "task-triage-recorded", "knowledge-relationship-recorded"] as const;
 export const activityExecutionKinds = {
   "prepare-execution-plan": "Run plan prepared · not approved",
   "approve-execution": "Coding run approved",
@@ -27,7 +27,7 @@ export const activityExecutionKinds = {
 export const activityCoordinationOperations = {
   prepare: "Read-only assignments prepared · not approved",
   approve: "Read-only assignments approved",
-  start: "Read-only assignment started",
+  start: "Read-only assignment requested · provider start unconfirmed",
   stop: "Assignment stop requested · completion not established",
   finish: "Read-only assignment terminal observation recorded",
   compare: "Assignment comparison recorded · not independent verification",
@@ -36,7 +36,7 @@ export const activityCoordinationOperations = {
 
 export interface ActivityQuery { readonly beforeRevision?: number; readonly limit: number }
 export interface ActivityLink {
-  readonly kind: "proposal" | "task" | "run" | "plan" | "knowledge" | "assignment" | "conversation" | "file";
+  readonly kind: "proposal" | "task" | "run" | "plan" | "knowledge" | "assignment" | "conversation" | "file" | "relationship" | "triage";
   readonly recordId: string;
   readonly revision: number;
 }
@@ -67,6 +67,22 @@ export function activityMilestone(event: ProjectEvent, revision: number): Activi
     case "conversation-started": summary = "Submitted discussion started · no execution approval"; link("conversation", event.submitted.requestId); break;
     case "conversation-replied": summary = "Discussion reply recorded · inferred"; link("conversation", event.requestId); break;
     case "conversation-ended": summary = `Discussion ended · ${event.outcome}`; link("conversation", event.requestId); break;
+    case "task-triage-recorded": {
+      const action = event.action;
+      summary = action.kind === "propose-task-triage" ? "Task triage proposed · not adopted" : action.kind === "adopt-task-triage" ? "Task triage adopted by user · no execution approval" : "Task triage reversed by user · no work started";
+      if (action.kind === "adopt-task-triage") link("triage", action.proposalId, action.proposalRevision);
+      else link("task", action.taskId);
+      break;
+    }
+    case "knowledge-relationship-recorded": {
+      const action = event.action;
+      summary = action.kind === "propose-knowledge-relationship" ? "Knowledge relationship proposed · unadopted user assertion" : action.kind === "adopt-knowledge-relationship" ? "Knowledge relationship adopted · user assertion, not runtime verification" : "Knowledge relationship withdrawn · history retained";
+      if (action.kind === "propose-knowledge-relationship") {
+        link("relationship", `relationship:${event.commandId}`);
+        link("knowledge", action.draft.knowledge.knowledgeId, action.draft.knowledge.recordedAtRevision);
+      } else link("relationship", action.target.relationshipId, action.target.proposalRevision);
+      break;
+    }
     case "execution-recorded": {
       const action = event.action;
       if (!(action.kind in activityExecutionKinds)) return undefined;
@@ -112,6 +128,15 @@ function renderLink(project: ProjectSnapshot, source: ActivityLink, key: string)
       : project.proposals.find(item => item.taskIds.includes(source.recordId));
     standing = !proposal ? "Historical or missing · removed from current work" : proposal.recordedAtRevision === source.revision ? "Exact current record" : `Historical observation · current proposal recorded at revision ${String(proposal.recordedAtRevision)}`;
     if (proposal) navigation = `<button type="button" data-open-goal="${escape(proposal.groupId)}">Open current ${source.kind === "task" ? "task and proposal" : "proposal"}</button>`;
+  } else if (source.kind === "triage") {
+    const proposal = project.taskTriage.proposals.find(item => item.proposalId === source.recordId);
+    const task = project.tasks.find(item => item.taskId === proposal?.taskId);
+    standing = proposal ? "Historical triage proposal · inspect current task decisions before acting" : "Historical or missing triage proposal";
+    if (task) navigation = `<button type="button" data-open-goal="${escape(task.groupId)}">Inspect current task and triage</button>`;
+  } else if (source.kind === "relationship") {
+    const relationship = project.knowledgeRelationships.proposals.find(item => item.relationshipId === source.recordId);
+    standing = relationship ? "Captured user assertion · adoption, knowledge currentness and file freshness are separate" : "Historical or missing relationship";
+    if (relationship) navigation = `<button type="button" data-knowledge-action="check-relationship" data-knowledge-id="${id}">Inspect relationship and recheck sources</button>`;
   } else if (source.kind === "knowledge") {
     const current = currentKnowledge(project).find(item => item.knowledgeId === source.recordId);
     standing = !current ? "Historical or missing · current knowledge unavailable" : current.recordedAtRevision === source.revision ? `Exact current record · ${current.standing.kind}` : `Historical source · current knowledge is revision ${String(current.recordedAtRevision)}`;
