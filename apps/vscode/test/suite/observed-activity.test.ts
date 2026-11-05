@@ -70,6 +70,9 @@ suite("Observed Activity history", () => {
       { kind: "execution-recorded", commandId: "stop", action: { kind: "mark-execution-unknown", runId: "run-unknown", reason: privateText } },
       { kind: "execution-recorded", commandId: "finish", action: { kind: "finish-execution", runId: "run-failed", outcome: "failed", summary: privateText, manifestHash: "a".repeat(64) } },
       { kind: "coordination-recorded", commandId: "stop-assignment", action: { kind: "coordinate", operation: "stop", groupId: "group", assignmentId: "worker", observedAt: 1 } },
+      { kind: "task-triage-recorded", commandId: "triage", action: { kind: "propose-task-triage", taskId: "task", basedOnTriageRevision: null, desired: { priority: "high", disposition: { kind: "deferred", reason: privateText } }, rationale: privateText, origin: { kind: "user" } } },
+      { kind: "task-triage-recorded", commandId: "adopt", action: { kind: "adopt-task-triage", proposalId: "triage-proposal:triage", proposalRevision: 9, triageRevision: null } },
+      { kind: "knowledge-relationship-recorded", commandId: "withdraw", action: { kind: "withdraw-knowledge-relationship", target: { relationshipId: "relationship:source", proposalRevision: 2 }, adoptionRevision: 3 } },
     ];
     const entries = events.map((event, index) => { const entry = activityMilestone(event, index + 2); assert.ok(entry); return entry; });
     const html = renderActivity(project, { entries, nextBeforeRevision: null });
@@ -79,6 +82,9 @@ suite("Observed Activity history", () => {
     assert.match(html, /completion not established/);
     assert.match(html, /acceptance is separate · failed/);
     assert.match(html, /Historical or missing/);
+    assert.match(html, /Task triage adopted by user · no execution approval/);
+    assert.match(html, /Knowledge relationship withdrawn · history retained/);
+    assert.match(html, /triage-proposal:triage · project revision 9/);
     assert.match(html, /run-unknown · project revision 5/);
     assert.equal(activityMilestone({ kind: "reflection-recorded", commandId: "preference", action: { kind: "set-explanation-preference", preference: "brief" } }, 9), undefined);
   });
