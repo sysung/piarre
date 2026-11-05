@@ -123,7 +123,7 @@ const socket=net.connect({host:'127.0.0.1',port:9});socket.on('connect',()=>proc
     const modulePath = path.join(directory, "runner.cjs");
     const sourcePath = path.resolve(__dirname, "../../src/candidate-check-runner.ts");
     const esbuild = path.resolve(__dirname, "../../../../node_modules/esbuild/bin/esbuild");
-    const compilation = spawn(node, [esbuild, sourcePath, "--bundle", "--platform=node", "--format=cjs", `--outfile=${modulePath}`], { stdio: "ignore" });
+    const compilation = spawn(esbuild, [sourcePath, "--bundle", "--platform=node", "--format=cjs", `--outfile=${modulePath}`], { stdio: "ignore" });
     assert.equal(await new Promise(resolve => compilation.once("close", resolve)), 0, bundle);
     writeFileSync(launcher, `const {CandidateCheckRunner}=require(${JSON.stringify(modulePath)});new CandidateCheckRunner({probeExecutable:${JSON.stringify(node)}}).run({root:${JSON.stringify(root)},controlDirectory:${JSON.stringify(control)},argv:[${JSON.stringify(node)},'-e','setInterval(()=>{},1000)'],deadlineAt:Date.now()+1500,nonce:'crash-probe',onStarted:identity=>{require('node:fs').writeFileSync(${JSON.stringify(path.join(directory, "identity.json"))},JSON.stringify(identity));process.exit(0);}});`);
     const launch = spawn(node, [launcher], { stdio: "ignore" });
@@ -145,7 +145,7 @@ const socket=net.connect({host:'127.0.0.1',port:9});socket.on('connect',()=>proc
     const modulePath = path.join(directory, "runner-frozen.cjs");
     const sourcePath = path.resolve(__dirname, "../../src/candidate-check-runner.ts");
     const esbuild = path.resolve(__dirname, "../../../../node_modules/esbuild/bin/esbuild");
-    const compilation = spawn(node, [esbuild, sourcePath, "--bundle", "--platform=node", "--format=cjs", `--outfile=${modulePath}`], { stdio: "ignore" });
+    const compilation = spawn(esbuild, [sourcePath, "--bundle", "--platform=node", "--format=cjs", `--outfile=${modulePath}`], { stdio: "ignore" });
     assert.equal(await new Promise(resolve => compilation.once("close", resolve)), 0);
     const launcherPath = path.join(directory, "frozen.cjs");
     writeFileSync(launcherPath, `const {CandidateCheckRunner}=require(${JSON.stringify(modulePath)});new CandidateCheckRunner({probeExecutable:${JSON.stringify(node)}}).run({root:${JSON.stringify(root)},controlDirectory:${JSON.stringify(control)},argv:[${JSON.stringify(node)},'-e','setInterval(()=>{},1000)'],deadlineAt:Date.now()+900,nonce:'frozen-host',onStarted:()=>{Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,10000);}});`);

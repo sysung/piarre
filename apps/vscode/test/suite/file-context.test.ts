@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { chmodSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
@@ -11,6 +11,7 @@ import { parseSuppliedSources, type SuppliedSource } from "../../../../packages/
 import { CoordinationController } from "../../src/coordination-controller.js";
 import { ConversationController } from "../../src/conversation-controller.js";
 import { SqliteProjectRepository } from "../../src/sqlite-project-repository.js";
+import { resolveConversationContext } from "../../src/conversation-context.js";
 import { GoalInterpreter } from "../../src/goal-interpreter.js";
 import type { CodexConversationClient } from "../../src/codex-conversation-client.js";
 
@@ -41,6 +42,37 @@ suite("Frozen file sharing and citations", () => {
     taskId = db.read().tasks[0]?.taskId ?? ""; index = new ProjectRetrieval({ projectId: project.projectId, root });
   });
   teardown(() => { index.dispose(); db.close(); rmSync(root, { recursive: true, force: true }); for (const suffix of ["", "-wal", "-shm"]) rmSync(dbFile + suffix, { force: true }); });
+  test("a selected repository skill reaches the discussion as exact sourced text without running work", async () => {
+    mkdirSync(path.join(root, ".agents/skills/review"), { recursive: true });
+    const text = "# Review\nInspect the supplied diff; do not change repository files.\n";
+    writeFileSync(path.join(root, ".agents/skills/review/SKILL.md"), text);
+    const sources = resolveConversationContext(db.read(), ["skill-file:.agents/skills/review/SKILL.md"]);
+    assert.equal(sources[0]?.text, text);
+    const client = new Fixture();
+    const conversation = new ConversationController(db, () => undefined, () => client);
+    try {
+      await conversation.connect();
+      await conversation.send("Discuss this review procedure", sources, db.read().revision, { recordSources: [] });
+      assert.equal(client.requests.length, 1);
+      assert.ok(client.requests[0]?.prompt.includes(JSON.stringify(text)));
+      assert.equal(db.read().conversation[0]?.kind, "answered");
+      assert.equal(db.read().executionRuns.length, 0);
+      assert.equal(db.read().coordination.groups.length, 0);
+    } finally { conversation.dispose(); }
+  });
+  test("combined file and record budgets reject a send without silently dropping selected context", async () => {
+    writeFileSync(path.join(root, "large.md"), "x".repeat(10_000));
+    const source = index.captureFile("large.md", db.read().revision);
+    const client = new Fixture();
+    const conversation = new ConversationController(db, () => undefined, () => client);
+    try {
+      await conversation.connect();
+      await assert.rejects(conversation.send("Discuss", [source, source, source, source, source], db.read().revision, { recordSources: [source, source] }), /60,000/);
+      await assert.rejects(conversation.send("Discuss", [], db.read().revision, { recordSources: Array.from({ length: 16 }, () => source) }), /15 project references/);
+      assert.equal(client.requests.length, 0);
+      assert.equal(db.read().conversation.length, 0);
+    } finally { conversation.dispose(); }
+  });
   const prepare = (controller: CoordinationController, sources = [capture()]) => controller.prepare({ requestId: "review-files", parentTaskId: taskId, purpose: "Locate declaration", scope: "Selected source only", model: "fixture", workers: 1, durationMs: 5000, maxTokens: 100, fileSources: sources });
   test("hidden journal and canonical dispatch churn preserve frozen files through outbound and completion", async () => {
     const source = capture();

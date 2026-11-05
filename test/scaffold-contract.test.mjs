@@ -26,7 +26,12 @@ test("the extension exposes the Piarre: Open activation seam", async () => {
   assert.deepEqual(manifest.activationEvents, [
     "onCommand:piarre.open",
     "workspaceContains:.git",
+    "onView:piarre.sidebar",
   ]);
+  assert.deepEqual(manifest.contributes.views.piarre, [{ id: "piarre.sidebar", name: "Piarre", type: "webview" }]);
+  const container = manifest.contributes.viewsContainers.secondarySidebar.find(view => view.id === "piarre");
+  assert.ok(container);
+  assert.ok((await readFile(new URL("../apps/vscode/" + container.icon, import.meta.url), "utf8")).includes("<svg"));
   assert.deepEqual(manifest.contributes?.commands, [
     {
       command: "piarre.open",

@@ -1,3 +1,4 @@
+import { SidebarFixture as WorkView } from "./sidebar-fixture.js";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -5,7 +6,7 @@ import path from "node:path";
 import * as vscode from "vscode";
 import { currentKnowledge } from "../../../../packages/core/src/index.js";
 import { SqliteProjectRepository } from "../../src/sqlite-project-repository.js";
-import { WorkView } from "../../src/work-view.js";
+
 
 // Prepared for an explicitly authorized Extension Host slot. No provider/account is used.
 suite("Resumption real webview journey", () => {
@@ -50,7 +51,7 @@ suite("Resumption real webview journey", () => {
  const source=[...document.querySelectorAll('#session-brief details')].find(detail=>detail.querySelector('pre')?.textContent.includes('45 days'));
  if(!source)throw Error('Exact correction source unavailable');source.open=true;
  if(!source.textContent.includes('submitted-statement')||!source.textContent.includes('supersedes'))throw Error('Provenance missing');
- if(!document.getElementById('inspection').textContent.includes('30 days'))throw Error('Original revision unavailable');
+ if(!document.getElementById('knowledge').textContent.includes('30 days'))throw Error('Original revision unavailable');
  if(document.getElementById('discussion').open)throw Error('Inspection opened discussion');
  api.postMessage({kind:'resumption-result',ok:true});
 }catch(error){api.postMessage({kind:'resumption-result',ok:false,error:String(error)});}})();</script>`);

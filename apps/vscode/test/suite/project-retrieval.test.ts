@@ -127,10 +127,10 @@ suite("Grounded project retrieval", () => {
   });
 
   test("unsupported language and conflicted sources remain visible as incomplete coverage", () => {
-    writeFileSync(path.join(root, "logic.py"), "unsupportedPythonBehavior");
+    writeFileSync(path.join(root, "logic.rb"), "unsupportedRubyBehavior");
     writeFileSync(path.join(root, "conflict.ts"), "<<<<<<< HEAD\nconflictedMarker\n=======\nother\n>>>>>>> branch\n");
     const coverage = index.rebuild();
-    assert.ok(coverage.issues.some(issue => issue.includes("Unsupported source: logic.py")));
+    assert.ok(coverage.issues.some(issue => issue.includes("Unsupported source: logic.rb")));
     assert.ok(coverage.issues.some(issue => issue.includes("conflicted")));
     assert.equal(search("unsupportedPythonBehavior").kind, "no-match");
     assert.equal(search("conflictedMarker").kind, "no-match");

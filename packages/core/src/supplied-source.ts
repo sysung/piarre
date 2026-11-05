@@ -1,4 +1,5 @@
 import type { RecordReference } from "./inspection.js";
+import { isEligibleContextPath } from "./context-path.js";
 
 /** An immutable excerpt identity, never filesystem authority or a current-state claim. */
 export interface FileReference {
@@ -25,11 +26,11 @@ export function parseSuppliedReference(value: unknown): SuppliedReference {
       typeof value.revision !== "number" || !Number.isSafeInteger(value.revision) || value.revision < 1) throw new Error("Invalid supplied reference");
   const base = { projectId: value.projectId, recordId: value.recordId, revision: value.revision };
   if (value.kind !== "file") {
-    if ((value.kind !== "task" && value.kind !== "proposal" && value.kind !== "knowledge") || Object.keys(value).length !== 4) throw new Error("Invalid record reference");
+    if ((value.kind !== "task" && value.kind !== "proposal" && value.kind !== "knowledge" && value.kind !== "assignment") || Object.keys(value).length !== 4) throw new Error("Invalid record reference");
     return { ...base, kind: value.kind };
   }
   if (Object.keys(value).length !== 12 || !("path" in value) || typeof value.path !== "string" ||
-      !value.path || value.path.startsWith("/") || value.path.includes("\\") || value.path.split("/").some(part => !part || part === ".." || part.startsWith(".")) ||
+      !isEligibleContextPath(value.path) ||
       !("startLine" in value) || typeof value.startLine !== "number" || !Number.isSafeInteger(value.startLine) || value.startLine < 1 ||
       !("endLine" in value) || typeof value.endLine !== "number" || !Number.isSafeInteger(value.endLine) || value.endLine < value.startLine || value.endLine - value.startLine > 199 ||
       !("contentHash" in value) || typeof value.contentHash !== "string" || !/^[a-f0-9]{64}$/.test(value.contentHash) ||

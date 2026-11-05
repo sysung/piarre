@@ -4,13 +4,13 @@ import type { ProjectSnapshot, RecordedProposalGroup } from "./index.js";
 
 export type RecordReference = {
   readonly projectId: ProjectSnapshot["projectId"];
-  readonly kind: "proposal" | "task" | "knowledge";
+  readonly kind: "proposal" | "task" | "knowledge" | "assignment";
   readonly recordId: string;
   readonly revision: number;
 };
 
 export type ReferenceResolution =
-  | { readonly kind: "resolved"; readonly text: string; readonly source: "deterministic-draft" | "user-statement" }
+  | { readonly kind: "resolved"; readonly text: string; readonly source: "deterministic-draft" | "user-statement" | "recorded-assignment" }
   | { readonly kind: "wrong-project" | "missing" | "stale" };
 
 export function resolveRecordReference(
@@ -23,6 +23,18 @@ export function resolveRecordReference(
     if (!entry) return { kind: "missing" };
     if (entry.recordedAtRevision !== reference.revision) return { kind: "stale" };
     return { kind: "resolved", text: entry.content.text, source: "user-statement" };
+  }
+  if (reference.kind === "assignment") {
+    const group = project.coordination.groups.find(item => item.assignments.some(worker => worker.assignmentId === reference.recordId));
+    const worker = group?.assignments.find(item => item.assignmentId === reference.recordId);
+    if (!group || !worker) return { kind: "missing" };
+    if (reference.revision !== group.preparedAtRevision) return { kind: "stale" };
+    return { kind: "resolved", source: "recorded-assignment",
+      text: `Recorded ${worker.role} assignment
+Purpose: ${worker.purpose}
+Scope: ${worker.scope}
+Requested model: ${worker.requestedModel}
+Read-only reference. No authority to invoke or steer this assignment.` };
   }
   let proposal: RecordedProposalGroup | undefined;
   let text: string | undefined;
@@ -84,7 +96,7 @@ export interface RecommendationEntry {
   readonly kind: "submitted-goal" | "proposed-task" | "knowledge";
   readonly reference: RecordReference;
   readonly text: string;
-  readonly source: "deterministic-draft" | "user-statement";
+  readonly source: "deterministic-draft" | "user-statement" | "recorded-assignment";
 }
 export interface ProjectInspection {
   readonly recommendation: readonly RecommendationEntry[];

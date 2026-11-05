@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { ProjectSnapshot, ProposalDraft } from "../../../packages/core/src/index.js";
 
 export type ComposerMessage =
-  | { readonly kind: "preview"; readonly requestId: string; readonly goal: string }
+  | { readonly kind: "preview"; readonly requestId: string; readonly goal: string; readonly sessionId?: string }
   | { readonly kind: "discard"; readonly requestId: string }
   | { readonly kind: "save"; readonly requestId: string };
 
@@ -12,8 +12,8 @@ export function parseComposerMessage(value: unknown): ComposerMessage | undefine
       value.requestId.length < 1 || value.requestId.length > 128) return;
   if (value.kind === "preview" && "goal" in value && typeof value.goal === "string" &&
       value.goal.trim().length > 0 && value.goal.length <= 10000 &&
-      Object.keys(value).length === 3) {
-    return { kind: "preview", requestId: value.requestId, goal: value.goal.trim() };
+      (Object.keys(value).length === 3 || (Object.keys(value).length === 4 && "sessionId" in value && typeof value.sessionId === "string" && value.sessionId.length <= 2048))) {
+    return { kind: "preview", requestId: value.requestId, goal: value.goal.trim(), ...("sessionId" in value && typeof value.sessionId === "string" && { sessionId: value.sessionId }) };
   }
   if ((value.kind === "discard" || value.kind === "save") && Object.keys(value).length === 2) {
     return { kind: value.kind, requestId: value.requestId };
@@ -29,12 +29,12 @@ export type DraftState =
 export interface DraftOperations {
   readonly deleteProposal?: (project: ProjectSnapshot, groupId: string, commandId: string) => ProjectSnapshot | undefined;
   readonly prepare: (goal: string) => Promise<ProposalDraft>;
-  readonly save: (project: ProjectSnapshot, draft: ProposalDraft, commandId: string) => ProjectSnapshot | undefined;
+  readonly save: (project: ProjectSnapshot, draft: ProposalDraft, commandId: string, sessionId?: string) => ProjectSnapshot | undefined;
 }
 
 export class WorkspaceDraft {
   state: DraftState = { kind: "idle", requestId: undefined, message: "" };
-  private ticket: { readonly requestId: string; readonly project: ProjectSnapshot; readonly commandId: string } | undefined;
+  private ticket: { readonly requestId: string; readonly project: ProjectSnapshot; readonly commandId: string; readonly sessionId?: string } | undefined;
   private active = true;
 
   constructor(private project: ProjectSnapshot, private readonly operations: DraftOperations,
@@ -60,7 +60,7 @@ export class WorkspaceDraft {
       if (!ticket || state.kind !== "ready" || ticket.requestId !== message.requestId) return;
       this.ticket = undefined;
       try {
-        const saved = this.operations.save(ticket.project, state.draft, ticket.commandId);
+        const saved = this.operations.save(ticket.project, state.draft, ticket.commandId, ticket.sessionId);
         if (saved) {
           this.project = saved;
           this.clear("Proposal saved. Nothing has started.");
@@ -70,7 +70,7 @@ export class WorkspaceDraft {
       }
       return;
     }
-    const ticket = { requestId: message.requestId, project: this.project, commandId: randomUUID() };
+    const ticket = { requestId: message.requestId, project: this.project, commandId: randomUUID(), ...(message.sessionId && { sessionId: message.sessionId }) };
     this.ticket = ticket;
     this.state = { kind: "preparing", requestId: message.requestId, message: "Preparing your proposal…" };
     this.changed();

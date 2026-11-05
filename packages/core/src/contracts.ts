@@ -15,7 +15,19 @@ import type {
   ProposedTask,
 } from "./index.js";
 import { parseSubmittedStatement } from "./context.js";
-import type { ConversationEvent } from "./conversation.js";
+import type { ConversationEvent, SessionAction } from "./conversation.js";
+
+function parseSessionAction(value: unknown): SessionAction | undefined {
+  if (!isObject(value) || !("kind" in value) || !("id" in value)) return;
+  if (value.kind === "archive-session" && hasOnlyKeys(value, ["kind", "id"])) return { kind: value.kind, id: nonblank(value.id) };
+  if ((value.kind === "create-session" || value.kind === "rename-session") && "title" in value &&
+      hasOnlyKeys(value, value.kind === "create-session" && "parentId" in value ? ["kind", "id", "title", "parentId"] : ["kind", "id", "title"])) {
+    const title = nonblank(value.title);
+    if (title.length > 100) invalid();
+    return { kind: value.kind, id: nonblank(value.id), title,
+      ...(value.kind === "create-session" && "parentId" in value ? { parentId: nonblank(value.parentId) } : {}) };
+  }
+}
 
 function invalid(): never {
   throw new Error("Invalid interpreter output");
@@ -232,8 +244,10 @@ export function validateProjectCommand(value: unknown): ProjectCommand {
   if (executionAction) return { commandId, projectId, expectedProjectRevision, action: executionAction };
   const knowledgeAction = parseKnowledgeAction(action);
   if (knowledgeAction) return { commandId, projectId, expectedProjectRevision, action: knowledgeAction };
-  if (action.kind === "begin-conversation" && hasOnlyKeys(action, ["kind", "submitted", "sources"]) && "submitted" in action && "sources" in action) {
-    return { commandId, projectId, expectedProjectRevision, action: { kind: action.kind, submitted: parseSubmittedStatement(action.submitted), sources: conversationSources(action.sources) } };
+  const sessionAction = parseSessionAction(action);
+  if (sessionAction) return { commandId, projectId, expectedProjectRevision, action: sessionAction };
+  if (action.kind === "begin-conversation" && hasOnlyKeys(action, "sessionId" in action ? ["kind", "submitted", "sources", "sessionId"] : ["kind", "submitted", "sources"]) && "submitted" in action && "sources" in action) {
+    return { commandId, projectId, expectedProjectRevision, action: { kind: action.kind, submitted: parseSubmittedStatement(action.submitted), sources: conversationSources(action.sources), ...("sessionId" in action ? { sessionId: nonblank(action.sessionId) } : {}) } };
   }
   if (action.kind === "record-conversation-reply" && hasOnlyKeys(action, ["kind", "requestId", "text", "citations", "providerThreadId", "providerTurnId"])) {
     return { commandId, projectId, expectedProjectRevision, action: { kind: action.kind, ...replyFields(action) } };
@@ -246,9 +260,9 @@ export function validateProjectCommand(value: unknown): ProjectCommand {
     if (name.length > 200) throw new Error("Invalid project command");
     return { commandId, projectId, expectedProjectRevision, action: { kind: action.kind, name } };
   }
-  if (action.kind === "propose-tasks" && hasOnlyKeys(action, ["kind", "draft"]) && "draft" in action) {
+  if (action.kind === "propose-tasks" && hasOnlyKeys(action, "sessionId" in action ? ["kind", "draft", "sessionId"] : ["kind", "draft"]) && "draft" in action) {
     assertProposalDraft(action.draft);
-    return { commandId, projectId, expectedProjectRevision, action: { kind: action.kind, draft: action.draft } };
+    return { commandId, projectId, expectedProjectRevision, action: { kind: action.kind, draft: action.draft, ...("sessionId" in action && { sessionId: nonblank(action.sessionId) }) } };
   }
   if (action.kind === "delete-proposal" && hasOnlyKeys(action, ["kind", "groupId"]) && "groupId" in action) {
     return { commandId, projectId, expectedProjectRevision, action: { kind: action.kind, groupId: nonblank(action.groupId) } };
@@ -284,8 +298,13 @@ export function parseProjectEvent(value: unknown): ProjectEvent {
   const knowledgeEvent = parseKnowledgeEvent(value);
   if (knowledgeEvent) return knowledgeEvent;
   if (!isObject(value) || !("kind" in value)) invalid();
-  if (value.kind === "conversation-started" && hasOnlyKeys(value, ["kind", "submitted", "sources"]) && "submitted" in value && "sources" in value) {
-    return { kind: value.kind, submitted: parseSubmittedStatement(value.submitted), sources: conversationSources(value.sources) };
+  if (value.kind === "session-recorded" && hasOnlyKeys(value, ["kind", "action"]) && "action" in value) {
+    const action = parseSessionAction(value.action);
+    if (!action) invalid();
+    return { kind: value.kind, action };
+  }
+  if (value.kind === "conversation-started" && hasOnlyKeys(value, "sessionId" in value ? ["kind", "submitted", "sources", "sessionId"] : ["kind", "submitted", "sources"]) && "submitted" in value && "sources" in value) {
+    return { kind: value.kind, submitted: parseSubmittedStatement(value.submitted), sources: conversationSources(value.sources), ...("sessionId" in value ? { sessionId: nonblank(value.sessionId) } : {}) };
   }
   if (value.kind === "conversation-replied" && hasOnlyKeys(value, ["kind", "requestId", "text", "citations", "providerThreadId", "providerTurnId"])) {
     return { kind: value.kind, ...replyFields(value) };
@@ -304,7 +323,7 @@ export function parseProjectEvent(value: unknown): ProjectEvent {
   if (value.kind !== "proposal-created" || !hasOnlyKeys(value, ["kind", "group", "tasks"]) ||
       !("group" in value) || !("tasks" in value) || !isObject(value.group) || !Array.isArray(value.tasks)) invalid();
   const group = value.group;
-  if (!hasOnlyKeys(group, ["groupId", "goal", "source", "taskIds"]) ||
+  if (!hasOnlyKeys(group, "sessionId" in group ? ["groupId", "goal", "source", "taskIds", "sessionId"] : ["groupId", "goal", "source", "taskIds"]) ||
       !("groupId" in group) || !("goal" in group) || !("source" in group) || !("taskIds" in group) ||
       group.source !== "deterministic-draft") invalid();
   const tasks = value.tasks.map(storedTask);
@@ -317,5 +336,5 @@ export function parseProjectEvent(value: unknown): ProjectEvent {
   if (membership.size !== taskIds.length || taskIds.length !== tasks.length ||
       tasks.some((task) => task.groupId !== groupId || !membership.has(task.taskId))) invalid();
   return { kind: "proposal-created", group: { groupId, goal: nonblank(group.goal),
-    source: group.source, taskIds }, tasks };
+    source: group.source, taskIds, ...("sessionId" in group && { sessionId: nonblank(group.sessionId) }) }, tasks };
 }

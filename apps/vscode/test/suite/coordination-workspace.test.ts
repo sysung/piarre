@@ -1,3 +1,4 @@
+import { SidebarFixture as WorkView } from "./sidebar-fixture.js";
 import { ProjectRetrieval } from "../../src/project-retrieval.js";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -10,7 +11,7 @@ import type { CoordinationMessage } from "../../src/coordination-actions.js";
 import type { CodexConversationClient } from "../../src/codex-conversation-client.js";
 import { GoalInterpreter } from "../../src/goal-interpreter.js";
 import { SqliteProjectRepository } from "../../src/sqlite-project-repository.js";
-import { WorkView } from "../../src/work-view.js";
+
 
 type Client = Pick<CodexConversationClient, "connect" | "respond" | "interrupt" | "dispose">;
 // Prepared for the next explicitly approved GUI slot. Provider output and native spending
@@ -109,12 +110,14 @@ function journeyScript(): string {
   return `(async()=>{try{
     const wait=async condition=>{const deadline=Date.now()+20000;while(!condition()){if(Date.now()>deadline)throw new Error('Coordination browser condition timeout');await new Promise(resolve=>setTimeout(resolve,10));}};
     const overview=document.getElementById('agent-overview');let terminal=false;let sharedContext;window.addEventListener('message',({data})=>{if(data.kind==='coordination-journey-terminal')terminal=true;if(data.kind==='coordination-journey-context')sharedContext=data;});
+    document.querySelector('[data-pane="agents"]').click();
+    document.querySelector('[data-pane="chat"]').click();
     goal.value='private unsent fixture';goal.dispatchEvent(new Event('input'));goal.focus();goal.setSelectionRange(2,8);
-    const stable=()=>{if(goal.value!=='private unsent fixture'||document.activeElement!==goal||goal.selectionStart!==2||goal.selectionEnd!==8)throw new Error('Coordination update lost private input or selection');};
+    const stable=()=>{if(goal.value!=='private unsent fixture'||(activePane==='chat'&&document.activeElement!==goal)||goal.selectionStart!==2||goal.selectionEnd!==8)throw new Error('Coordination update lost private input or selection');};
     const click=(action,extra='')=>{const button=overview.querySelector('[data-coordination-action="'+action+'"]'+extra);if(!button)throw new Error('Missing coordination control '+action);button.click();};
     click('prepare');await wait(()=>sharedContext&&overview.querySelector('[data-coordination-action="approve"]'));stable();
     const canonical=value=>{if(Array.isArray(value))return value.map(canonical);if(value!==null&&typeof value==='object')return Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])]));return value;};
-    const inspectContext=()=>{
+    const inspectContext=()=>{setPane('agents');
     const context=[...overview.querySelectorAll('details[data-coordination-disclosure]')].find(detail=>detail.dataset.coordinationDisclosure===sharedContext.groupId+'-sources');
     if(!context||!context.querySelector('summary').textContent.includes('Exact shared source context'))throw new Error('Prepared shared source disclosure missing from current DOM');
     context.open=true;
@@ -126,6 +129,11 @@ function journeyScript(): string {
     if(JSON.stringify(canonical(JSON.parse(provenance.querySelector('pre').textContent)))!==JSON.stringify(canonical(sharedContext.source.reference)))throw new Error('Shared source provenance differs from captured identity');
     };
     inspectContext();stable();
+    const reference=overview.querySelector('[data-reference-assignment]');
+    if(!reference)throw new Error('Recorded agent has no reference control');
+    reference.click();
+    if(![...document.querySelectorAll('#context-records input:checked')].some(input=>input.value===reference.dataset.referenceAssignment))throw new Error('Agent reference did not reach composer');
+    goal.setSelectionRange(2,8); stable();
     click('steer');await wait(()=>overview.textContent.includes('Look for contradictory requirements'));stable();
     click('approve');await wait(()=>overview.textContent.includes('host-thread-1 / host-turn-1'));stable();
     const stops=[...overview.querySelectorAll('[data-coordination-action="stop"]')];if(stops.length!==2)throw new Error('Independent stop controls unavailable');

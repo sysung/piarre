@@ -49,7 +49,7 @@ suite("Execution review rendering", () => {
     send({ kind: "request-execution", runId: "run", requestedAt: 1100 });
     assert.ok(renderExecutionDesk(project).includes(key));
     assert.notEqual(renderExecutionControls(project), controls);
-    const shell = renderWorkspaceShell({ inspection: "", brief: "", agentOverview: renderExecutionDesk(project), executionControls: renderExecutionControls(project) });
+    const shell = renderWorkspaceShell({ projectId: "fixture", inspection: "", brief: "", agentOverview: renderExecutionDesk(project), executionControls: renderExecutionControls(project) });
     assert.match(shell, /id="execution-status" role="status" aria-live="polite" aria-atomic="true"/);
     assert.equal((shell.match(/id="execution-status"/g) ?? []).length, 1);
     assert.match(renderExecutionDesk(project), /data-review-key="recent-plans"/);

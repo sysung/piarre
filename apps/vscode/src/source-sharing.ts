@@ -4,9 +4,10 @@ import { fileURLToPath } from "node:url";
 import type { ProjectSnapshot } from "../../../packages/core/src/index.js";
 import type { SuppliedSource } from "../../../packages/core/src/supplied-source.js";
 import { ProjectRetrieval } from "./project-retrieval.js";
+import { portableContextPath } from "../../../packages/core/src/context-path.js";
 
-export async function selectSharedFiles(project: ProjectSnapshot): Promise<readonly SuppliedSource[] | undefined> {
-  const choice = await vscode.window.showQuickPick(["Project records only", "Choose current file excerpts"], { title: "Choose exactly what to share", ignoreFocusOut: true });
+export async function selectSharedFiles(project: ProjectSnapshot, chooseFiles = false): Promise<readonly SuppliedSource[] | undefined> {
+  const choice = chooseFiles ? "Choose current file excerpts" : await vscode.window.showQuickPick(["Project records only", "Choose current file excerpts"], { title: "Choose exactly what to share", ignoreFocusOut: true });
   if (!choice) return;
   if (choice === "Project records only") return [];
   const root = fileURLToPath(project.repositoryUri);
@@ -19,7 +20,7 @@ export async function selectSharedFiles(project: ProjectSnapshot): Promise<reado
     for (const file of files) {
       if (file.scheme !== "file") throw new Error("Only repository files can be shared");
       if (vscode.workspace.textDocuments.some(document => document.uri.toString() === file.toString() && document.isDirty)) throw new Error("Save the selected buffer before capturing disk evidence");
-      const relative = path.relative(root, file.fsPath);
+      const relative = portableContextPath(path.relative(root, file.fsPath), path.sep);
       const form = await vscode.window.showQuickPick(["File excerpt", "Tracked full-file diff against HEAD"], { title: `Share ${relative}`, ignoreFocusOut: true });
       if (!form) return;
       if (form === "Tracked full-file diff against HEAD") { sources.push(index.captureDiff(relative, project.revision)); continue; }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import * as vscode from "vscode";
-import { WorkView } from "../../src/work-view.js";
+import { SidebarFixture as WorkView } from "./sidebar-fixture.js";
 import { decideProjectEvent, parseProposalOutput, replay } from "../../../../packages/core/src/index.js";
 
 const project = replay([
@@ -61,7 +61,7 @@ suite("Provider settings in open Work views", () => {
       await change([]);
       assert.ok(panel.webview.html.includes("Estimated coding cost: Unknown"));
       assert.ok(!panel.webview.html.includes("$0.16 at the full token budget"));
-      panels[0]?.dispose();
+      view.close(); panels[0]?.dispose();
       await change(providers(4));
       assert.equal(panels.length, 2, "Settings changes must not reopen a closed view");
       view.show(project);

@@ -11,6 +11,7 @@ for await (const line of createInterface({ input: process.stdin })) {
   switch (request.method) {
     case "initialize": reply({}); break;
     case "initialized": break;
+    case "config/read": reply({ config: { features: { apps: false, plugins: false }, mcp_servers: {} } }); break;
     case "account/read": reply({ requiresOpenaiAuth: true, account: { type: "chatgpt", email: "private-account@example.com" } }); break;
     case "mcpServerStatus/list": reply({ data: [], nextCursor: null }); break;
     case "model/list":

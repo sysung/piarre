@@ -18,11 +18,24 @@ for await (const line of createInterface({ input: process.stdin })) {
       process.stdout.write(encoded.slice(0, 8)); process.stdout.write(encoded.slice(8)); break;
     }
     case "initialized": break;
+    case "config/read": {
+      const hasServer = ["inherited-mcp", "locked-mcp", "disabled-with-tools"].includes(mode);
+      const disabled = process.argv.includes("mcp_servers.my-server.enabled=false");
+      reply({ config: { features: { apps: mode === "locked-apps", plugins: false }, mcp_servers: hasServer ? { "my-server": { enabled: mode === "disabled-with-tools" ? false : mode === "locked-mcp" || !disabled } } : {} } }); break;
+    }
     case "account/read":
       assert.equal(request.params.refreshToken, false);
       reply({ account: mode === "login" ? null : { type: "chatgpt", email: "must-not-escape@example.com", planType: "plus" }, requiresOpenaiAuth: true }); break;
-    case "mcpServerStatus/list": reply({ data: mode === "mcp" ? [{ name: "unexpected" }] : [], nextCursor: null }); break;
+    case "mcpServerStatus/list": {
+      if (mode === "inherited-mcp") {
+        assert.ok(process.argv.includes("mcp_servers.my-server.enabled=false"), "The inventory must be checked only after process-local disabling");
+        reply({ data: [{ name: "my-server", tools: {}, resources: [], resourceTemplates: [] }], nextCursor: null });
+      } else if (mode === "disabled-with-tools") reply({ data: [{ name: "my-server", tools: { unexpected: {} }, resources: [], resourceTemplates: [] }], nextCursor: null });
+      else reply({ data: mode === "mcp" ? [{ name: "unexpected" }] : [], nextCursor: null }); break;
+    }
     case "thread/start":
+      assert.equal(request.params.config.features.apps, false, "Each thread must disable connected apps independently of startup");
+      if (mode === "inherited-mcp") assert.deepEqual(request.params.config.mcp_servers, { "my-server": { enabled: false } }, "Each thread must retain the verified per-server overrides");
       assert.equal(request.params.ephemeral, true); assert.equal(request.params.sandbox, "read-only"); assert.equal(request.params.approvalPolicy, "never");
       reply({ thread: { id: "thread-1" }, sandbox: { type: "readOnly", networkAccess: false }, approvalPolicy: "never" }); break;
     case "turn/start":

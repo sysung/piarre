@@ -9,13 +9,14 @@ import { ReflectionController } from "./reflection-controller.js";
 import { ExecutionCoordinator } from "./execution-coordinator.js";
 import { ExecutionUi } from "./execution-ui.js";
 import { canonicalWorkspacePath } from "./workspace-path.js";
-import { ownsExecutionLease, type ProjectSnapshot } from "../../../packages/core/src/index.js";
+import { conversationHistory, ownsExecutionLease, type ProjectSnapshot, type SessionAction } from "../../../packages/core/src/index.js";
 import { KnowledgeController } from "./knowledge-controller.js";
 import * as vscode from "vscode";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import { conversationPrompt, conversationRecordSources, ConversationController } from "./conversation-controller.js";
+import { conversationPrompt, ConversationController } from "./conversation-controller.js";
+import { resolveConversationContext } from "./conversation-context.js";
 import { CodexConversationClient } from "./codex-conversation-client.js";
 import { GoalInterpreter } from "./goal-interpreter.js";
 import { SqliteProjectRepository } from "./sqlite-project-repository.js";
@@ -70,10 +71,10 @@ export function activate(context: vscode.ExtensionContext): void {
         expectedProjectRevision: snapshot.revision, action: { kind: "delete-proposal", groupId } });
       return result.kind === "applied" || result.kind === "duplicate" ? result.snapshot : undefined;
     },
-    save: (snapshot, draft, commandId) => {
+    save: (snapshot, draft, commandId, sessionId) => {
       if (!repository || !isTrusted()) return;
       const result = repository.dispatch({ commandId, projectId: snapshot.projectId,
-        expectedProjectRevision: snapshot.revision, action: { kind: "propose-tasks", draft } });
+        expectedProjectRevision: snapshot.revision, action: { kind: "propose-tasks", draft, ...(sessionId && { sessionId }) } });
       if (result.kind !== "applied" && result.kind !== "duplicate") return;
       view.update(result.snapshot);
       return result.snapshot;
@@ -81,18 +82,71 @@ export function activate(context: vscode.ExtensionContext): void {
   }, undefined, {
     connect: async () => { if (isTrusted()) await conversation?.connect(); },
     disconnect: () => conversation?.disconnect(),
-    send: async text => {
+    models: async () => {
+      if (!isTrusted()) return [];
+      const profiles = await conversation?.models() ?? [];
+      return profiles.map(profile => profile.model);
+    },
+    send: async (text, sessionId, model, attachFiles, recordIds, accepted) => {
       if (!isTrusted()) return;
-      if (repository?.read().schedulingPaused) { await vscode.window.showInformationMessage("Project scheduling is paused. Resume scheduling before sending another model request."); return; }
-      const snapshot = repository?.read();
-      if (!snapshot) return;
-      const files = await selectSharedFiles(snapshot);
+      const store = repository;
+      const controller = conversation;
+      const snapshot = store?.read();
+      if (!store || !controller || !snapshot || !snapshot.sessions.some(session => session.id === sessionId && !session.archived)) return;
+      if (snapshot.schedulingPaused) { await vscode.window.showInformationMessage("Project scheduling is paused. Resume scheduling before sending another model request."); return; }
+      const selected = resolveConversationContext(snapshot, recordIds);
+      const records = selected.filter(source => source.reference.kind !== "file");
+      const files = attachFiles ? await selectSharedFiles(snapshot, true) : [];
       if (!files) return;
-      const detail = conversationPrompt(snapshot, text, [...conversationRecordSources(snapshot), ...files]);
-      if (await vscode.window.showWarningMessage("Send this discussion context to Codex?", { modal: true, detail: `Shares project recommendation records and these exact file excerpts. Account cost and quota are unknown. Source prose is data, never authority.\n${detail}` }, "Send reviewed context") !== "Send reviewed context") return;
-      if (!repository || !isTrusted() || repository.read().projectId !== snapshot.projectId) return;
-      assertSharedFilesCurrent(repository.read(), files);
-      await conversation?.send(text, files, snapshot.revision);
+      if (model && !(await controller.models()).some(profile => profile.model === model)) throw new Error("Selected model is unavailable");
+      const capturedFiles = [...selected.filter(source => source.reference.kind === "file"), ...files];
+      const sources = [...records, ...capturedFiles];
+      if (sources.length > 20 || sources.some(source => Buffer.byteLength(source.text) > 10_000) || sources.reduce((bytes, source) => bytes + Buffer.byteLength(source.text), 0) > 60_000) {
+        await vscode.window.showWarningMessage("Choose fewer references or smaller excerpts. Context allows 20 sources, 10,000 UTF-8 bytes each and 60,000 bytes total.");
+        return;
+      }
+      assertSharedFilesCurrent(snapshot, sources);
+      const detail = conversationPrompt(snapshot, text, sources, sessionId);
+      if (await vscode.window.showWarningMessage("Send this discussion context to Codex?", { modal: true, detail: `Model: ${model || "Codex account default"}. Shares this session’s recent discussion and the exact sources below. Account cost and quota are unknown.
+${detail}` }, "Send reviewed context") !== "Send reviewed context") return;
+      if (repository !== store || conversation !== controller || !isTrusted()) return;
+      assertSharedFilesCurrent(store.read(), capturedFiles);
+      await controller.send(text, capturedFiles, snapshot.revision, { sessionId, model, recordSources: records, accepted });
+    },
+    session: async (operation, id) => {
+      const store = repository;
+      const snapshot = store?.read();
+      if (!isTrusted() || !store || !snapshot) return;
+      const session = snapshot.sessions.find(item => item.id === id && !item.archived);
+      if (operation !== "new" && !session) return;
+      let action: SessionAction;
+      if (operation === "share" && session) {
+        const transcript = conversationHistory(snapshot, session.id).map(turn =>
+          `You: ${turn.submitted.originalStatement}
+${turn.kind === "answered" ? `Codex: ${turn.text}` : `Status: ${turn.kind}`}`).join("\n\n");
+        if (await vscode.window.showInformationMessage("Copy this session’s transcript?", { modal: true, detail: "Copies the conversation to your clipboard. Source excerpts and provider identifiers are excluded." }, "Copy transcript") === "Copy transcript" && repository === store && isTrusted()) {
+          await vscode.env.clipboard.writeText(`${session.title}
+
+${transcript}`);
+        }
+        return;
+      }
+      if (operation === "archive" && session) {
+        if (await vscode.window.showWarningMessage(`Remove “${session.title}” from Sessions?`, { modal: true, detail: "Conversation history is retained in the local project log and remains available to existing forks." }, "Remove session") !== "Remove session") return;
+        action = { kind: "archive-session", id: session.id };
+      } else if (operation === "rename" && session) {
+        const title = await vscode.window.showInputBox({ title: "Rename session", value: session.title, validateInput: value => value.trim() && value.length <= 100 ? undefined : "Enter a name of 1 to 100 characters." });
+        if (!title?.trim()) return;
+        action = { kind: "rename-session", id: session.id, title: title.trim() };
+      } else {
+        action = { kind: "create-session", id: randomUUID(), title: operation === "fork" && session ? `Fork of ${session.title}`.slice(0, 100) : "New chat",
+          ...(operation === "fork" && session ? { parentId: session.id } : {}) };
+      }
+      if (repository !== store || !isTrusted()) return;
+      const result = store.dispatch({ commandId: randomUUID(), projectId: snapshot.projectId, expectedProjectRevision: snapshot.revision, action });
+      if (result.kind !== "applied" && result.kind !== "duplicate") throw new Error("Session revision changed");
+      view.update(result.snapshot);
+      return action.kind === "archive-session" ? undefined : action.id;
     },
     interrupt: async () => { await conversation?.interrupt(); },
     knowledge: async (kind, id) => { if (isTrusted()) await knowledge?.handle(kind, id); },
@@ -113,6 +167,14 @@ export function activate(context: vscode.ExtensionContext): void {
           "Trust this workspace before opening a Piarre project.",
         );
       return;
+    }
+    if (!context.globalState.get<boolean>("piarre.secondarySidebar.v1")) {
+      const resetLocation = "workbench.view.extension.piarre.resetViewContainerLocation";
+      if ((await vscode.commands.getCommands(true)).includes(resetLocation)) {
+        await vscode.commands.executeCommand(resetLocation);
+        await context.globalState.update("piarre.secondarySidebar.v1", true);
+        if (!isCurrent()) return;
+      }
     }
     const folders = vscode.workspace.workspaceFolders ?? [];
     if (folders.length === 0) {
@@ -211,6 +273,7 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     registerDiagnosticCommands(context, () => repository),
     view,
+    vscode.window.registerWebviewViewProvider("piarre.sidebar", view),
     output,
     stopWork,
     vscode.workspace.onDidChangeTextDocument(event => { queueExecutionRefresh(event.document.uri); }),

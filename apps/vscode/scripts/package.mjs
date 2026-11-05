@@ -21,7 +21,7 @@ const listing = execFileSync("npx", ["vsce", "ls", "--no-dependencies"], {
   encoding: "utf8",
 });
 const files = listing.trim().split("\n").filter(Boolean);
-const expectedFiles = new Set(["README.md", "package.json", "dist/extension.js", "native/scoped-publication.py"]);
+const expectedFiles = new Set(["README.md", "package.json", "dist/extension.js", "native/scoped-publication.py", "media/piarre.svg"]);
 const unexpected = files.filter((file) => !expectedFiles.has(file));
 const missing = [...expectedFiles].filter((file) => !files.includes(file));
 

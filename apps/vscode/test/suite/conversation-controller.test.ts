@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { conversationHistory, defaultSessionId, type SessionAction } from "../../../../packages/core/src/index.js";
 import type { CodexConversationClient } from "../../src/codex-conversation-client.js";
 import { ConversationController, type ConversationState } from "../../src/conversation-controller.js";
 import { SqliteProjectRepository } from "../../src/sqlite-project-repository.js";
@@ -86,6 +87,36 @@ suite("Durable conversation controller", () => {
     assert.equal(turn.text, "A sourced inference");
     assert.equal(turn.providerThreadId, "provider-thread"); assert.equal(turn.providerTurnId, "provider-turn");
     assert.equal(creations, 1);
+  });
+
+  test("keeps inherited context at the fork revision through archive and restart", async () => {
+    function change(action: SessionAction) {
+      const snapshot = repository.read();
+      return repository.dispatch({ commandId: action.kind + action.id, projectId: snapshot.projectId,
+        expectedProjectRevision: snapshot.revision, action });
+    }
+    await controller.connect();
+    const legacy = controller.send("Original discussion");
+    assert.throws(() => change({ kind: "create-session", id: "blocked", parentId: defaultSessionId, title: "Pending fork" }));
+    client.complete(); await legacy;
+    assert.equal(change({ kind: "create-session", id: "fork", parentId: defaultSessionId, title: "Initial fork" }).kind, "applied");
+    await controller.send("Later source turn");
+    let accepted = false;
+    await controller.send("Fork follow-up", [], repository.read().revision, { sessionId: "fork", model: "fixture-model", accepted: () => { accepted = true; } });
+    assert.equal(accepted, true);
+    const request = client.requests.at(-1);
+    assert.equal(request?.model, "fixture-model");
+    assert.match(request.prompt, /Original discussion/);
+    assert.doesNotMatch(request.prompt, /Later source turn/);
+    assert.equal(change({ kind: "rename-session", id: "fork", title: "Review alternative" }).kind, "applied");
+    assert.equal(change({ kind: "archive-session", id: defaultSessionId }).kind, "applied");
+    const before = repository.read();
+    controller.dispose(); repository.close(); openRepository();
+    controller = new ConversationController(repository, () => undefined);
+    const reopened = repository.read();
+    assert.deepEqual(reopened, before);
+    assert.deepEqual(conversationHistory(reopened, "fork").map(turn => turn.submitted.originalStatement), ["Original discussion", "Fork follow-up"]);
+    assert.equal(reopened.sessions.find(session => session.id === "fork")?.title, "Review alternative");
   });
 
   test("restart records pending turn as unknown without connecting or retrying", () => {

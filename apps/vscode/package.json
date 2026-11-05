@@ -17,7 +17,8 @@
   ],
   "activationEvents": [
     "onCommand:piarre.open",
-    "workspaceContains:.git"
+    "workspaceContains:.git",
+    "onView:piarre.sidebar"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -473,6 +474,24 @@
           "description": "Codex CLI executable used for an explicit connection. Sign in through the CLI first. No shell arguments or credentials."
         }
       }
+    },
+    "viewsContainers": {
+      "secondarySidebar": [
+        {
+          "id": "piarre",
+          "title": "Piarre",
+          "icon": "media/piarre.svg"
+        }
+      ]
+    },
+    "views": {
+      "piarre": [
+        {
+          "id": "piarre.sidebar",
+          "name": "Piarre",
+          "type": "webview"
+        }
+      ]
     }
   },
   "capabilities": {
@@ -484,7 +503,8 @@
   "files": [
     "dist/extension.js",
     "README.md",
-    "native/scoped-publication.py"
+    "native/scoped-publication.py",
+    "media/piarre.svg"
   ],
   "scripts": {
     "build": "node esbuild.mjs",

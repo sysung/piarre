@@ -5,7 +5,7 @@ import { parseDefaultModel, parseObservedUsage, parseAccountFacts, parseModelPro
 const MAX_FRAME_BYTES = 1024 * 1024;
 const REQUEST_TIMEOUT_MS = 15_000;
 const TURN_TIMEOUT_MS = 120_000;
-const STARTUP_ARGS = ["app-server", "-c", "features.shell_tool=false", "-c", "features.unified_exec=false", "-c", "features.plugins=false", "-c", 'web_search="disabled"', "-c", "mcp_servers={}"];
+const STARTUP_ARGS = ["app-server", "-c", "features.apps=false", "-c", "features.shell_tool=false", "-c", "features.unified_exec=false", "-c", "features.plugins=false", "-c", 'web_search="disabled"', "-c", "mcp_servers={}"];
 const OUTPUT_SCHEMA = {
   type: "object", additionalProperties: false, required: ["summary", "sourceIndexes"],
   properties: { summary: { type: "string", minLength: 1 }, sourceIndexes: { type: "array", minItems: 1, items: { type: "integer", minimum: 0 } } },
@@ -39,6 +39,16 @@ function identifier(value: unknown): string {
   return value;
 }
 
+const connectionMessages = {
+  "not-found": "VS Code could not find Codex. Set Piarre’s Codex Executable setting to the full path of your Codex CLI, then try again.",
+  startup: "Codex could not start. Check the Codex Executable setting and CLI installation, then try again.",
+  protocol: "Codex returned an invalid or oversized response. Update the Codex CLI and try again.",
+  tools: "Piarre could not isolate Codex’s external tools. Check managed Codex settings, then try again.",
+};
+export class CodexConnectionError extends Error {
+  constructor(readonly code: keyof typeof connectionMessages) { super(connectionMessages[code]); }
+}
+
 /** A single read-only conversation connection. Provider threads never authorize Piarre work. */
 export class CodexConversationClient {
   private process?: ChildProcessWithoutNullStreams;
@@ -47,23 +57,27 @@ export class CodexConversationClient {
   private buffer = "";
   private readonly pending = new Map<number, Pending>();
   private active?: ActiveTurn;
+  private disabledServers = new Set<string>();
 
   constructor(private readonly options: { command?: string; args?: readonly string[] } = {}) {}
 
   async connect(): Promise<ConnectResult> {
     if (this.state !== "disconnected") throw new Error("Codex connection is already active or disposed.");
     this.state = "connecting";
-    const child = spawn(this.options.command ?? "codex", [...(this.options.args ?? STARTUP_ARGS)], { shell: false, stdio: "pipe", env: Object.fromEntries(["PATH", "HOME", "USER", "TMPDIR", "CODEX_HOME", "SYSTEMROOT"].flatMap((key) => process.env[key] === undefined ? [] : [[key, process.env[key]]])) });
-    this.process = child;
-    child.stdout.setEncoding("utf8");
-    child.stdout.on("data", (chunk: string) => { if (this.process === child) this.receive(chunk); });
-    child.stderr.resume();
-    child.stdin.on("error", () => { if (this.process === child) this.fail(new Error("Codex input disconnected.")); });
-    child.on("error", () => { if (this.process === child) this.fail(new Error("Codex could not start.")); });
-    child.on("close", () => { if (this.process === child) this.fail(new Error("Codex disconnected before completion.")); });
     try {
-      await this.request("initialize", { clientInfo: { name: "piarre", version: "0.0.1" }, capabilities: { experimentalApi: false } });
-      this.send({ method: "initialized", params: {} });
+      await this.startProcess([]);
+      let configured = await this.readToolConfiguration();
+      this.disabledServers = new Set(Object.keys(configured));
+      if (Object.values(configured).some(server => object(server).enabled !== false)) {
+        const overrides = [...this.disabledServers].flatMap(name => ["-c", `mcp_servers.${name}.enabled=false`]);
+        this.fail(new Error("Restarting the isolated Codex connection."));
+        this.state = "connecting";
+        await this.startProcess(overrides);
+        configured = await this.readToolConfiguration();
+      }
+      if (Object.entries(configured).some(([name, server]) => !this.disabledServers.has(name) || object(server).enabled !== false)) {
+        throw new CodexConnectionError("tools");
+      }
       const account = object(await this.request("account/read", { refreshToken: false }));
       if (typeof account.requiresOpenaiAuth !== "boolean") throw new Error("Malformed Codex account response.");
       if (account.account === null || account.account === undefined) {
@@ -78,6 +92,29 @@ export class CodexConversationClient {
       this.dispose();
       throw error;
     }
+  }
+
+  private async startProcess(overrides: readonly string[]): Promise<void> {
+    const child = spawn(this.options.command ?? "codex", [...(this.options.args ?? STARTUP_ARGS), ...overrides], { shell: false, stdio: "pipe", env: Object.fromEntries(["PATH", "HOME", "USER", "TMPDIR", "CODEX_HOME", "SYSTEMROOT"].flatMap((key) => process.env[key] === undefined ? [] : [[key, process.env[key]]])) });
+    this.process = child;
+    child.stdout.setEncoding("utf8");
+    child.stdout.on("data", (chunk: string) => { if (this.process === child) this.receive(chunk); });
+    child.stderr.resume();
+    child.stdin.on("error", () => { if (this.process === child) this.fail(new Error("Codex input disconnected.")); });
+    child.on("error", (error: NodeJS.ErrnoException) => { if (this.process === child) this.fail(new CodexConnectionError(error.code === "ENOENT" ? "not-found" : "startup")); });
+    child.on("close", () => { if (this.process === child) this.fail(new Error("Codex disconnected before completion.")); });
+    await this.request("initialize", { clientInfo: { name: "piarre", version: "0.0.1" }, capabilities: { experimentalApi: false } });
+    this.send({ method: "initialized", params: {} });
+  }
+
+  private async readToolConfiguration(): Promise<Record<string, unknown>> {
+    const config = object(object(await this.request("config/read", { includeLayers: false })).config);
+    const features = object(config.features);
+    if (features.apps !== false || features.plugins !== false) throw new CodexConnectionError("tools");
+    const servers = object(config.mcp_servers ?? {});
+    const names = Object.keys(servers);
+    if (names.length > 64 || names.some(name => !/^[A-Za-z0-9_-]{1,128}$/.test(name))) throw new CodexConnectionError("tools");
+    return servers;
   }
 
   /** Explicit preflight only; connection and activation never query usage/model metadata. */
@@ -126,7 +163,8 @@ export class CodexConversationClient {
     try {
       const started = object(await this.request("thread/start", {
         cwd: input.cwd, model: input.model, ephemeral: true, sandbox: "read-only", approvalPolicy: "never",
-        config: { web_search: "disabled", features: { shell_tool: false, unified_exec: false, plugins: false } },
+        config: { web_search: "disabled", features: { apps: false, shell_tool: false, unified_exec: false, plugins: false },
+          mcp_servers: Object.fromEntries([...this.disabledServers].map(name => [name, { enabled: false }])) },
       }));
       const threadId = identifier(object(started.thread).id);
       input.onThreadMetadata?.(parseThreadMetadata(started));
@@ -174,9 +212,14 @@ export class CodexConversationClient {
   }
 
   private async checkTools(threadId?: string): Promise<void> {
-    const result = object(await this.request("mcpServerStatus/list", { threadId }));
-    if (!Array.isArray(result.data) || result.data.length !== 0 || (result.nextCursor !== null && result.nextCursor !== undefined)) {
-      throw new Error("External Codex tools are configured; conversation is blocked.");
+    const result = object(await this.request("mcpServerStatus/list", { threadId, limit: 100 }));
+    if (!Array.isArray(result.data) || result.data.length > 64 || (result.nextCursor !== null && result.nextCursor !== undefined)) throw new CodexConnectionError("tools");
+    for (const entry of result.data) {
+      const server = object(entry);
+      if (typeof server.name !== "string" || !this.disabledServers.has(server.name) ||
+          Object.keys(object(server.tools)).length !== 0 ||
+          !Array.isArray(server.resources) || server.resources.length !== 0 ||
+          !Array.isArray(server.resourceTemplates) || server.resourceTemplates.length !== 0) throw new CodexConnectionError("tools");
     }
   }
 
@@ -206,7 +249,7 @@ export class CodexConversationClient {
         this.frame(object(JSON.parse(line)));
       }
       if (Buffer.byteLength(this.buffer) > MAX_FRAME_BYTES) throw new Error("Codex frame exceeds size limit.");
-    } catch { this.fail(new Error("Malformed or oversized Codex protocol frame.")); }
+    } catch { this.fail(new CodexConnectionError("protocol")); }
   }
 
   private frame(frame: Record<string, unknown>): void {

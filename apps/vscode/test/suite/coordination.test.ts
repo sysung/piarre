@@ -10,6 +10,8 @@ import { renderCoordination } from "../../src/coordination-view.js";
 import { SqliteProjectRepository } from "../../src/sqlite-project-repository.js";
 import { GoalInterpreter } from "../../src/goal-interpreter.js";
 import { CodexConversationClient } from "../../src/codex-conversation-client.js";
+import { selectableConversationSources } from "../../src/conversation-controller.js";
+import { resolveConversationContext } from "../../src/conversation-context.js";
 
 type Client = Pick<CodexConversationClient, "connect" | "respond" | "interrupt" | "dispose">;
 type Reply = Awaited<ReturnType<Client["respond"]>>;
@@ -57,6 +59,17 @@ suite("Canonical bounded read-only coordination", () => {
     clients = []; controller = new CoordinationController(repository, () => undefined, createClient);
   });
   teardown(() => { controller.dispose(); repository.close(); rmSync(directory, { recursive: true, force: true }); });
+  test("every recorded assignment stays referenceable beyond the recommendation window", () => {
+    const oldest = prepare(1, "oldest-reference").assignments[0]; assert.ok(oldest);
+    for (let index = 0; index < 11; index++) prepare(1, `newer-reference-${String(index)}`);
+    const snapshot = repository.read();
+    assert.ok(selectableConversationSources(snapshot).some(source => source.reference.recordId === oldest.assignmentId));
+    const selected = resolveConversationContext(snapshot, [oldest.assignmentId]);
+    assert.equal(selected.length, 1);
+    assert.equal(selected[0]?.reference.recordId, oldest.assignmentId);
+    assert.throws(() => resolveConversationContext(snapshot, [oldest.assignmentId, oldest.assignmentId]), /distinct/);
+    assert.equal(clients.length, 0, "Referencing does not start an assignment or model");
+  });
   test("captures and returns a linked idea durably without calls or parent mutation", () => {
     const before = repository.read();
     const idea = { requestId: "idea-message", parentTaskId: taskId, text: "Consider calendar support <untrusted>", returnPoint: "Review criterion 1 on refund task" };

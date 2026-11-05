@@ -1,3 +1,4 @@
+import { SidebarFixture as WorkView } from "./sidebar-fixture.js";
 import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -10,7 +11,7 @@ import { ExecutionCoordinator } from "../../src/execution-coordinator.js";
 import type { ExecutionMessage } from "../../src/execution-actions.js";
 import { GoalInterpreter } from "../../src/goal-interpreter.js";
 import { SqliteProjectRepository } from "../../src/sqlite-project-repository.js";
-import { WorkView } from "../../src/work-view.js";
+
 
 const nodeExecutable = process.env.PIARRE_TEST_NODE ?? process.execPath;
 type Client = Pick<CodexConversationClient, "connect" | "readExecutionContext" | "proposePatch" | "interrupt" | "dispose">;
@@ -114,7 +115,7 @@ suite("Agent workspace actual execution journey", () => {
       };
       const view = new WorkView((...args) => {
         const panel = vscode.window.createWebviewPanel(...args);
-        if (args[0] === "piarre.work") mainPanel = panel; else if (args[0] === "piarre.execution") reviewPanel = panel;
+        if (args[0] === "piarre.sidebar.fixture") mainPanel = panel; else if (args[0] === "piarre.execution") reviewPanel = panel;
         panel.webview.onDidReceiveMessage((message: unknown) => {
           if (typeof message !== "object" || message === null || !("kind" in message)) return;
           if (message.kind === "journey-result") finish(message);
@@ -169,9 +170,12 @@ function mainScript(scenario: Scenario): string {
   window.addEventListener('message',({data})=>{if(data.kind==='journey-prepared')prepared=true;if(data.kind==='journey-terminal')terminal=data;});
   try {
     const overview=document.getElementById('agent-overview'), discussion=document.getElementById('discussion');
-    if(discussion.open || overview.closest('details:not([open])') || getComputedStyle(overview).display==='none')throw new Error('Agent work must be visible and discussion collapsed');
+    if(!discussion.hidden || document.getElementById('welcome').hidden)throw new Error('Empty project must start with chat welcome');
+    document.querySelector('[data-pane="agents"]').click();
+    if(overview.closest('[hidden]'))throw new Error('Agents navigation must expose work');
     const controls=document.getElementById('execution-controls');
     if(controls.closest('#inspection') || !controls.querySelector('[data-execution-action="pause-all"]'))throw new Error('Execution controls unavailable outside inspection');
+    document.querySelector('[data-pane="chat"]').click();
     goal.value='private unsent task'; goal.dispatchEvent(new Event('input')); goal.focus(); goal.setSelectionRange(2,8);
     const stable=()=>{if(goal.value!=='private unsent task'||document.activeElement!==goal||goal.selectionStart!==2||goal.selectionEnd!==8)throw new Error('External update lost unsent input, focus or selection');};
     const marker=document.createElement('span'); marker.id='journey-refresh-marker'; overview.append(marker);

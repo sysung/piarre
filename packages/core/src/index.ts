@@ -12,8 +12,9 @@ export type { RecordedKnowledge, KnowledgeImpact, KnowledgeAction, KnowledgeEven
 export { parseProposalOutput, parseProjectEvent, validateProjectCommand } from "./contracts.js";
 export { parseSubmittedStatement, parseInterpretationOutput, parseKnowledgeCorrection } from "./context.js";
 export type { SubmittedStatement, KnowledgeSource, SourcedText, Interpretation, KnowledgeVersion, KnowledgeEntry, KnowledgeCorrection } from "./context.js";
-import { applyConversationEvent, conversationEvent, type ConversationAction, type ConversationEvent, type ConversationTurn } from "./conversation.js";
-export type { ConversationAction, ConversationEvent, ConversationTurn, ConversationSource } from "./conversation.js";
+import { applyConversationEvent, conversationEvent, defaultSessionId, type ConversationSession, type ConversationAction, type ConversationEvent, type ConversationTurn } from "./conversation.js";
+export { conversationHistory, defaultSessionId } from "./conversation.js";
+export type { ConversationAction, ConversationEvent, ConversationTurn, ConversationSource, ConversationSession, SessionAction } from "./conversation.js";
 
 export interface ProjectSnapshot {
   readonly projectId: string;
@@ -22,6 +23,7 @@ export interface ProjectSnapshot {
   readonly revision: number;
   readonly proposals: readonly RecordedProposalGroup[];
   readonly tasks: readonly ProposedTask[];
+  readonly sessions: readonly ConversationSession[];
   readonly conversation: readonly ConversationTurn[];
   readonly coordination: CoordinationState;
   readonly knowledge: readonly RecordedKnowledge[];
@@ -73,6 +75,7 @@ export interface ProposalDraft {
 }
 
 export interface ProposalGroup {
+  readonly sessionId?: string;
   readonly groupId: string;
   readonly goal: string;
   readonly source: "deterministic-draft";
@@ -98,7 +101,7 @@ export interface ProjectCommand {
   readonly action: CoordinationAction | ConversationAction | KnowledgeAction | ExecutionAction | ReflectionAction
     | { readonly kind: "rename-project"; readonly name: string }
     | { readonly kind: "delete-proposal"; readonly groupId: string }
-    | { readonly kind: "propose-tasks"; readonly draft: ProposalDraft };
+    | { readonly kind: "propose-tasks"; readonly draft: ProposalDraft; readonly sessionId?: string };
 }
 
 export type ProjectEvent = CoordinationEvent | ConversationEvent | KnowledgeEvent | ExecutionEvent | ReflectionEvent
@@ -137,6 +140,7 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
         revision: 1,
         proposals: [],
         tasks: [],
+        sessions: [{ id: defaultSessionId, title: "Project chat" }],
         conversation: [],
         coordination: { ideas: [], groups: [] },
         knowledge: [],
@@ -163,6 +167,7 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
       case "knowledge-corrected":
         snapshot = applyKnowledgeEvent(snapshot, event);
         break;
+      case "session-recorded":
       case "conversation-started":
       case "conversation-replied":
       case "conversation-ended":
@@ -188,6 +193,7 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
         const knownGroups = new Set(snapshot.proposals.map(({ groupId }) => groupId));
         const knownTasks = new Set(snapshot.tasks.map(({ taskId }) => taskId));
         if (
+          (event.group.sessionId !== undefined && !snapshot.sessions.some(session => session.id === event.group.sessionId && !session.archived)) ||
           knownGroups.has(event.group.groupId) ||
           event.tasks.length === 0 ||
           event.group.taskIds.length !== event.tasks.length
@@ -264,6 +270,9 @@ export function decideProjectEvent(command: ProjectCommand): ProjectEvent {
     case "confirm-knowledge":
     case "correct-knowledge":
       return knowledgeEvent(command.action, command.commandId);
+    case "create-session":
+    case "rename-session":
+    case "archive-session":
     case "begin-conversation":
     case "record-conversation-reply":
     case "end-conversation":
@@ -306,6 +315,7 @@ export function decideProjectEvent(command: ProjectCommand): ProjectEvent {
         group: {
           groupId,
           goal: command.action.draft.goal,
+          ...(command.action.sessionId && { sessionId: command.action.sessionId }),
           source: command.action.draft.source,
           taskIds: tasks.map(({ taskId }) => taskId),
         },

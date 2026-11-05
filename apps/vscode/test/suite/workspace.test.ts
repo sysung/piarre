@@ -1,3 +1,4 @@
+import { SidebarFixture as WorkView } from "./sidebar-fixture.js";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -6,7 +7,7 @@ import * as vscode from "vscode";
 import { SqliteProjectRepository } from "../../src/sqlite-project-repository.js";
 import { WorkspaceDraft, parseComposerMessage } from "../../src/workspace-draft.js";
 import { GoalInterpreter } from "../../src/goal-interpreter.js";
-import { WorkView, renderWorkView, renderSessionBrief } from "../../src/work-view.js";
+import { renderWorkView, renderSessionBrief } from "../../src/work-view.js";
 import type { ProposalDraft } from "../../../../packages/core/src/index.js";
 
 suite("Typed workspace previews", () => {
@@ -173,7 +174,9 @@ suite("Typed workspace previews", () => {
       let closed = false;
       detail.onDidDispose(() => { closed = true; });
       panels[0]?.dispose();
-      assert.equal(closed, true, "Manual Work tab closure must close its details");
+      assert.equal(closed, false, "Sidebar disposal must preserve editor reviews");
+      view.close();
+      assert.equal(closed, true, "Explicit project closure closes reviews");
     } finally { view.dispose(); }
   });
 
@@ -262,7 +265,8 @@ const nativeApi = acquireVsCodeApi();
 const bridgeCalls = [];
 const api = {
   postMessage: value => { bridgeCalls.push(value); return nativeApi.postMessage(value); },
-  setState: value => { bridgeCalls.push(value); return nativeApi.setState(value); },
+  setState: value => nativeApi.setState(value),
+  getState: () => nativeApi.getState(),
 };
 `).replace("</script>", `
 window.addEventListener('message', ({data}) => { if (data.kind === 'test-checked') document.body.dataset.checked = 'yes'; });
@@ -276,24 +280,20 @@ window.addEventListener('message', ({data}) => { if (data.kind === 'test-checked
   };
   try {
     if (!document.getElementById('session-brief').textContent.includes('No next action established by recorded plans.')) throw new Error('Empty brief invents saved work');
+    const flow = document.getElementById('chat-flow');
+    const greeting = document.getElementById('welcome');
+    if (greeting.hidden || getComputedStyle(greeting).display === 'none') throw new Error('Empty chat must show the welcome');
+    if (document.getElementById('discussion').tagName !== 'SECTION') throw new Error('Conversation must be a regular chat surface');
+    if (document.getElementById('execution-controls').closest('[hidden]') === null) throw new Error('Idle execution controls are visible in the chat');
+    const greetingBox = greeting.getBoundingClientRect(), flowBox = flow.getBoundingClientRect();
+    if (Math.abs(greetingBox.top + greetingBox.height / 2 - flowBox.top - flowBox.height / 2) > 2) throw new Error('Welcome is not centered above the composer');
     const columns = document.querySelector('.workspace-columns');
     const planning = document.querySelector('.planning');
-    const desk = document.querySelector('.inspection-desk');
-    const narrow = document.querySelector('main').getBoundingClientRect().width <= 900;
-    const left = planning.getBoundingClientRect(); const right = desk.getBoundingClientRect();
-    if (narrow ? right.top < left.bottom - 1 : right.left < left.right - 1) throw new Error('Workspace does not follow responsive reading order');
+    const sidebar = document.getElementById('workspace');
+    if (!columns.contains(sidebar) || !planning.contains(goal) || !planning.contains(document.getElementById('welcome'))) throw new Error('Chat and workspace are not in the primary shell');
     if (getComputedStyle(columns).display !== 'grid' || document.documentElement.scrollWidth > document.documentElement.clientWidth) throw new Error('Workspace overflows or loses its grid');
-    if (desk.closest('details:not([open])')) throw new Error('Project inspection is hidden');
-    const main = document.querySelector('main');
-    for (const width of [320, 1280]) {
-      api.postMessage({kind:"test-phase",phase:"layout measurement " + width});
-      main.style.width = width + 'px';
-      const a = planning.getBoundingClientRect(); const b = desk.getBoundingClientRect();
-      if (width === 320 ? b.top < a.bottom - 1 : b.left < a.right - 1) throw new Error('Incorrect layout at ' + width + 'px');
-      if (main.scrollWidth > width) throw new Error('Horizontal overflow at ' + width + 'px: ' + main.scrollWidth);
-    }
-    api.postMessage({kind:'test-phase',phase:'layout restore'});
-    main.style.removeProperty('width');
+    document.querySelector('[data-pane="agents"]').click();
+    if (document.getElementById('agent-overview').closest('[hidden]')) throw new Error('Agents tab did not expose the work overview');
     api.postMessage({kind:'test-phase',phase:'execution announcements and disclosure focus'});
     const liveStatus = document.getElementById('execution-status');
     if (liveStatus.getAttribute('role') !== 'status' || liveStatus.getAttribute('aria-live') !== 'polite') throw new Error('Execution progress has no persistent polite status');
@@ -314,6 +314,7 @@ window.addEventListener('message', ({data}) => { if (data.kind === 'test-checked
     await Promise.resolve(); announcementObserver.disconnect();
     if (repeatedAnnouncements) throw new Error('Unchanged inspection repeated the live announcement');
     api.postMessage({kind:'test-phase',phase:'privacy and save journey'});
+    document.querySelector('[data-pane="chat"]').click();
     goal.value = '<script>unsent & private</scr' + 'ipt>';
     goal.dispatchEvent(new Event('input'));
     if (bridgeCalls.some(value => JSON.stringify(value).includes('unsent & private'))) throw new Error('Unsent input crossed the renderer state bridge');
@@ -327,15 +328,22 @@ window.addEventListener('message', ({data}) => { if (data.kind === 'test-checked
     await waitFor(() => !document.getElementById('inspection-marker'));
     if (!document.getElementById('session-brief').textContent.includes('No next action established by recorded plans.')) throw new Error('Refresh corrupted the project brief');
     if (goal.value !== content || document.activeElement !== goal || goal.selectionStart !== 3) throw new Error('Unsent input or focus lost: ' + JSON.stringify({value: goal.value, active: document.activeElement.tagName, start: goal.selectionStart}));
-    window.dispatchEvent(new MessageEvent('message', {data: {kind:'conversation', state:{kind:'ready',message:'Connected for test'},html:'<article>Inferred reply</article>'}}));
+    window.dispatchEvent(new MessageEvent('message', {data: {kind:'conversation', state:{kind:'ready',message:'Connected for test'},sessions:[{id:'project-chat',title:'Project chat',status:'Open',html:'<article>Inferred reply</article>'}]}}));
     if (goal.value !== content || document.activeElement !== goal || goal.selectionStart !== 3) throw new Error('Conversation update disturbed unsent input');
     if (send.disabled || document.getElementById('connect-codex').hidden !== true) throw new Error('Ready conversation controls unavailable');
-    window.dispatchEvent(new MessageEvent('message', {data: {kind:'conversation', state:{kind:'busy',message:'Waiting'},html:'<article>Pending reply</article>'}}));
+    window.dispatchEvent(new MessageEvent('message', {data: {kind:'conversation', state:{kind:'busy',message:'Waiting'},sessions:[{id:'project-chat',title:'Project chat',status:'Reply in progress',html:'<article>Pending reply</article>'}]}}));
     if (!send.disabled || document.getElementById('stop-conversation').hidden) throw new Error('Busy controls do not expose stop');
     document.getElementById('stop-conversation').click();
     if (!bridgeCalls.some(value => value.kind === 'stop-conversation')) throw new Error('Stop did not reach host');
     if (bridgeCalls.some(value => value.kind === 'send-conversation')) throw new Error('Refresh sent private text');
-    window.dispatchEvent(new MessageEvent('message', {data: {kind:'conversation', state:{kind:'disconnected',message:'Disconnected'},html:''}}));
+    window.dispatchEvent(new MessageEvent('message', {data: {kind:'conversation', state:{kind:'ready',message:'Connected for test'},sessions:[{id:'project-chat',title:'Project chat',status:'Open',html:''}]}}));
+    composer.requestSubmit(send);
+    const outbound = bridgeCalls.find(value => value.kind === 'send-conversation');
+    if (outbound?.sessionId !== 'project-chat' || outbound?.text !== content || goal.value !== content) throw new Error('Send did not retain its draft pending acknowledgement');
+    window.dispatchEvent(new MessageEvent('message', {data:{kind:'send-finished',requestId:outbound.requestId}}));
+    if (goal.value !== content || send.disabled) throw new Error('Cancelled send lost the draft or prevented retry');
+
+    window.dispatchEvent(new MessageEvent('message', {data: {kind:'conversation', state:{kind:'disconnected',message:'Disconnected'},sessions:[{id:'project-chat',title:'Project chat',status:'Open',html:''}]}}));
     document.getElementById('composer').requestSubmit();
     await waitFor(() => !save.hidden);
     if (!composer.hidden || preview.hidden) throw new Error('Review did not replace goal entry');

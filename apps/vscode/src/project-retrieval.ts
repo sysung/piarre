@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import type { SuppliedSource } from "../../../packages/core/src/supplied-source.js";
+import { isEligibleContextDirectory, isEligibleContextPath, isRepositorySkillPath } from "../../../packages/core/src/context-path.js";
 import { createHash } from "node:crypto";
 import { constants, accessSync, closeSync, fstatSync, lstatSync, openSync, readFileSync, readdirSync, realpathSync } from "node:fs";
 import path from "node:path";
@@ -35,13 +36,11 @@ export type RetrievalResult =
   | { readonly kind: "stale" | "error"; readonly reason: string; readonly hits: readonly []; readonly coverage: RetrievalCoverage };
 
 type IndexedSource = { readonly identity: string; readonly contentHash: string; readonly origin: RetrievalSource; readonly text: string };
-const supported = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".md", ".json", ".yaml", ".yml", ".toml", ".tf", ".sql"]);
-const excludedDirectories = new Set(["node_modules", "vendor", "dist", "dist-test", "dist-package", "coverage", "build"]);
 const MAX_FILES = 500;
 const MAX_BYTES = 2_000_000;
 const MAX_FILE_BYTES = 100_000;
 const MAX_RECORDS = 500;
-const limitation = "Bounded literal and Unicode full-text lookup only; no semantic understanding, automatic contradiction resolution, runtime evidence, or complete dependency coverage. Hidden, secret-named, generated, unsupported and oversized files are excluded. Directory checks cover identity, ownership, mode and effective read/search access, not an identical ACL metadata snapshot. Results are source excerpts, not verified facts.";
+const limitation = "Bounded literal and Unicode full-text lookup only; no semantic understanding, automatic contradiction resolution, runtime evidence, or complete dependency coverage. Hidden files except exact repository .agents/skills/<name>/SKILL.md paths, secret-named, generated, unsupported and oversized files are excluded. Directory checks cover identity, ownership, mode and effective read/search access, not an identical ACL metadata snapshot. Results are source excerpts, not verified facts.";
 const hash = (text: string): string => createHash("sha256").update(text).digest("hex");
 
 export class ProjectRetrieval {
@@ -62,10 +61,10 @@ export class ProjectRetrieval {
   }
 
   private readFile(relative: string): string {
-    if (path.isAbsolute(relative) || relative.split(path.sep).some(part => part === ".." || part.startsWith("."))) throw new Error("Unsafe retrieval path.");
+    if (!isEligibleContextPath(relative)) throw new Error("Unsafe retrieval path.");
     const absolute = path.join(this.root, relative);
     let cursor = this.root;
-    for (const part of relative.split(path.sep)) {
+    for (const part of relative.split("/")) {
       cursor = path.join(cursor, part);
       if (lstatSync(cursor).isSymbolicLink()) throw new Error("Symbolic links are excluded.");
     }
@@ -112,14 +111,16 @@ export class ProjectRetrieval {
       if (depth > 12) { issues.push(`Directory depth limit: ${directory}`); return; }
       for (const entry of readdirSync(path.join(this.root, directory), { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
         if (++entries > 5000) { issues.push("Directory entry limit reached; coverage is incomplete."); return; }
-        const relative = path.join(directory, entry.name);
-        if (entry.name.startsWith(".") || /(?:secret|credential|private[-_]?key|token|password)/i.test(entry.name)) continue;
+        const relative = path.posix.join(directory, entry.name);
+        const eligibleDirectory = isEligibleContextDirectory(relative);
+        const eligibleFile = isEligibleContextPath(relative);
+        if (!eligibleDirectory && !eligibleFile) continue;
         if (entry.isSymbolicLink()) { issues.push(`Excluded symbolic link: ${relative}`); manifest.push([relative, "symlink"]); continue; }
-        if (entry.isDirectory()) { if (!excludedDirectories.has(entry.name)) walk(relative, depth + 1); continue; }
+        if (entry.isDirectory()) { if (eligibleDirectory) walk(relative, depth + 1); continue; }
         if (!entry.isFile()) continue;
         const stat = lstatSync(path.join(this.root, relative));
         manifest.push([relative, stat.size, stat.mtimeMs, stat.mode, stat.uid, stat.gid, stat.dev, stat.ino, stat.ctimeMs]);
-        if (!supported.has(path.extname(entry.name).toLowerCase())) { issues.push(`Unsupported source: ${relative}`); continue; }
+        if (!eligibleFile) { issues.push(`Unsupported source: ${relative}`); continue; }
         paths.push(relative);
       }
     };
@@ -214,6 +215,28 @@ export class ProjectRetrieval {
     const contentHash = hash(fullText);
     return { text, reference: { kind: "file", projectId: this.options.projectId, recordId: `${relative}:${String(startLine)}:${String(Math.min(endLine, lines.length))}:${contentHash}`, revision,
       path: relative, startLine, endLine: Math.min(endLine, lines.length), contentHash, inventoryHash: hash(scan.manifest), excerptHash: hash(text), version: "worktree-at-capture", representation: { kind: "file-excerpt" } } };
+  }
+
+  listSkillFiles(): readonly string[] {
+    return this.scan().paths.filter(isRepositorySkillPath).slice(0, MAX_FILES).filter(relative => {
+      try { return Boolean(this.readFile(relative).trim()); }
+      catch { return false; }
+    });
+  }
+
+  captureSkillFile(relative: string, revision: number): SuppliedSource {
+    if (!isRepositorySkillPath(relative)) throw new Error("Choose an eligible repository SKILL.md file");
+    const lines = this.readFile(relative).match(/[^\n]*\n|[^\n]+$/g) ?? [];
+    let bytes = 0;
+    let endLine = 0;
+    for (const line of lines.slice(0, 200)) {
+      const size = Buffer.byteLength(line);
+      if (bytes + size > 10_000) break;
+      bytes += size;
+      endLine++;
+    }
+    if (!endLine) throw new Error("Skill excerpt is empty or its first line exceeds 10,000 UTF-8 bytes");
+    return this.captureFile(relative, revision, 1, endLine);
   }
 
   captureDiff(relative: string, revision: number): SuppliedSource {

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import path from "node:path";
-import { CodexConversationClient } from "../../src/codex-conversation-client";
+import { CodexConversationClient, CodexConnectionError } from "../../src/codex-conversation-client";
 
 function client(mode = "success"): CodexConversationClient {
   return new CodexConversationClient({ command: process.env.PIARRE_TEST_NODE ?? process.execPath, args: [path.resolve(__dirname, "../../test/fixtures/fake-codex-conversation.mjs"), mode] });
@@ -14,6 +14,32 @@ suite("Codex conversation process adapter", () => {
       assert.deepEqual(await connection.connect(), { kind: "ready", authType: "chatgpt" });
       await assert.rejects(connection.connect(), /already active/);
     } finally { connection.dispose(); }
+  });
+
+  test("connects with inherited servers disabled in the child process", async () => {
+    const connection = client("inherited-mcp");
+    try {
+      assert.deepEqual(await connection.connect(), { kind: "ready", authType: "chatgpt" });
+      const response = await connection.respond({ prompt: "Check the isolated chat", cwd: process.cwd() });
+      assert.equal(response.status, "completed");
+      assert.deepEqual(response.output, { summary: "Safe answer", sourceIndexes: [0] });
+    }
+    finally { connection.dispose(); }
+  });
+
+  for (const mode of ["locked-mcp", "locked-apps", "disabled-with-tools"]) {
+    test(`blocks ${mode} instead of admitting external tools`, async () => {
+      const connection = client(mode);
+      try { await assert.rejects(connection.connect(), error => error instanceof CodexConnectionError && error.code === "tools"); }
+      finally { connection.dispose(); }
+    });
+  }
+
+  test("reports a missing CLI without exposing the configured path", async () => {
+    const command = path.join(process.cwd(), "missing-codex-fixture");
+    const connection = new CodexConversationClient({ command });
+    try { await assert.rejects(connection.connect(), error => error instanceof CodexConnectionError && error.code === "not-found" && !error.message.includes(command)); }
+    finally { connection.dispose(); }
   });
 
   test("patch mode uses a private bounded output schema while retaining read-only policy", async () => {
@@ -54,7 +80,7 @@ suite("Codex conversation process adapter", () => {
 
   test("fails closed when external tools are configured", async () => {
     const connection = client("mcp");
-    try { await assert.rejects(connection.connect(), /External Codex tools/); }
+    try { await assert.rejects(connection.connect(), /isolate Codex/); }
     finally { connection.dispose(); }
   });
 
