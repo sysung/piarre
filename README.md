@@ -75,3 +75,7 @@ The **Metadata with recording link** choice links an existing HTTPS recording wi
 
 Review the local JSON, then use **Piarre: Export Diagnostic Bundle**. Export asks separately, writes a new file without overwriting an existing file and verifies the exact saved bytes. Use **Piarre: Delete Diagnostic Bundle** to remove a retained local bundle and verify that its path no longer exists. Exported copies and open editor buffers remain. Deletion does not promise secure erasure of storage blocks, backups or provider retention. Remote analysis, if desired, is a separate user-controlled sharing action outside this workflow.
 Local macOS Host tests open VS Code windows. Enable them deliberately with `PIARRE_GUI_TESTS=1 npm test` or `PIARRE_GUI_TESTS=1 npm run test:package --workspace apps/vscode`. Without that flag, the launcher stops before creating a profile or opening a window. CI Host runs remain enabled. `npm run check`, packaging, compilation and filtered Node tests do not need the flag.
+
+## Isolated Docker desktop
+
+Run `npm run docker:up` to open Piarre in a browser-hosted VS Code desktop with its own profile. The default workspace is the LeetCode folder supplied for UAT; pass another absolute directory with `npm run docker:up -- "/path/to/repository"`. See [the Docker guide](docker/README.md) for sign-in, mount overrides, and stopping the container.

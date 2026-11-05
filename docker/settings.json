@@ -1,0 +1,11 @@
+{
+  "update.mode": "none",
+  "extensions.autoUpdate": false,
+  "extensions.autoCheckUpdates": false,
+  "telemetry.telemetryLevel": "off",
+  "chat.disableAIFeatures": true,
+  "workbench.startupEditor": "none",
+  "workbench.colorTheme": "Default Dark Modern",
+  "window.title": "Piarre Docker · ${rootName}",
+  "piarre.codexExecutable": "/usr/local/bin/codex"
+}

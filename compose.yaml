@@ -1,0 +1,24 @@
+name: piarre-sandbox
+x-workspace: &workspace "${PIARRE_WORKSPACE:-/Users/sysung98/Library/CloudStorage/GoogleDrive-sysung98@gmail.com/My Drive/Obsidian/Steven's Vault/Career/Nvidia/leet}"
+services:
+  piarre:
+    build:
+      context: .
+    ports:
+      - "127.0.0.1:${PIARRE_PORT:-6080}:6080"
+    shm_size: 512mb
+    environment:
+      PIARRE_WORKSPACE_SOURCE: *workspace
+      PIARRE_SCREEN: "${PIARRE_SCREEN:-1600x1000x24}"
+    volumes:
+      - type: bind
+        source: *workspace
+        target: /workspace
+        bind:
+          create_host_path: false
+      - code-profile:/home/node/.config/piarre-code
+      - codex-login:/home/node/.codex
+    stop_grace_period: 15s
+volumes:
+  code-profile:
+  codex-login:

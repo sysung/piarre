@@ -1,0 +1,16 @@
+.git
+**/node_modules
+**/dist
+**/dist-test
+**/dist-package
+**/.vscode-test
+**/*.tsbuildinfo
+**/*.vsix
+.artifacts
+.codex
+.agents
+.aws
+.env
+.env.*
+**/auth.json
+.DS_Store

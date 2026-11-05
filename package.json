@@ -20,7 +20,11 @@
     "test:acceptance": "node scripts/accept-candidate.mjs",
     "package:candidate": "node scripts/package-candidate.mjs",
     "candidate": "node scripts/candidate-profile.mjs",
-    "test:candidate": "node --test test/candidate-profile.test.mjs"
+    "test:candidate": "node --test test/candidate-profile.test.mjs",
+    "docker:up": "node scripts/docker-piarre.mjs up",
+    "docker:down": "node scripts/docker-piarre.mjs down",
+    "docker:login": "node scripts/docker-piarre.mjs login",
+    "test:docker": "node --test test/docker-profile.test.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
