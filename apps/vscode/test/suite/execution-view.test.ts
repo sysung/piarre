@@ -1,6 +1,7 @@
 import { forecastFixture, consentFixture } from "./forecast-fixture.js";
 import assert from "node:assert/strict";
-import { replay, executionDependenciesReady, type ExecutionAction, type ExecutionPlanDraft, type ProjectEvent, type ProjectSnapshot } from "../../../../packages/core/src/index.js";
+import { sessionStatus } from "../../src/session-status.js";
+import { currentKnowledge, decideProjectEvent, executionReviewCurrent, type ProjectCommand, replay, executionDependenciesReady, type ExecutionAction, type ExecutionPlanDraft, type ProjectEvent, type ProjectSnapshot } from "../../../../packages/core/src/index.js";
 import { applyExecutionEvent } from "../../../../packages/core/src/execution.js";
 import { renderWorkspaceShell } from "../../src/workspace-shell.js";
 import { renderExecutionControls, renderExecutionDesk, renderExecutionResult, taskExecutionStatus } from "../../src/execution-view.js";
@@ -18,13 +19,13 @@ suite("Execution review rendering", () => {
     history.push({ kind: "execution-recorded", commandId: `event-${String(history.length)}`, action });
     project = replay(history);
   };
-  const approve = (): void => {
-    send({ kind: "prepare-execution-plan", plan: draft });
+  const approve = (planDraft: ExecutionPlanDraft = draft): void => {
+    send({ kind: "prepare-execution-plan", plan: planDraft });
     const plan = project.executionPlans[0]; assert.ok(plan);
     send({ kind: "approve-execution", planId: plan.planId, planRevision: plan.recordedAtRevision, runId: "run", spendingConsent: consentFixture(plan, "run"), approvedAt: 1000, expiresAt: 5000, ownerPid: 1, ownerId: "owner" });
   };
-  const complete = (outcome: "needs-review" | "failed" = "needs-review", manifestHash = hash): void => {
-    approve();
+  const complete = (outcome: "needs-review" | "failed" = "needs-review", manifestHash = hash, planDraft: ExecutionPlanDraft = draft): void => {
+    approve(planDraft);
     send({ kind: "request-execution", runId: "run", requestedAt: 1100 });
     send({ kind: "observe-execution-provider", runId: "run", model: "fixture-model", modelProvider: "openai", observedAt: 1101 });
     send({ kind: "bind-execution-thread", runId: "run", threadId: "thread" });
@@ -37,6 +38,49 @@ suite("Execution review rendering", () => {
     send({ kind: "finish-execution", runId: "run", summary: "Generated <candidate>", outcome, manifestHash });
   };
   setup(() => { history = [...events]; project = replay(history); });
+  const change = (action: ProjectCommand["action"]): void => {
+    history.push(decideProjectEvent({ commandId: `session-${String(history.length)}`, projectId: project.projectId, expectedProjectRevision: project.revision, action }));
+    project = replay(history);
+  };
+  const accept = (): void => {
+    const run = project.executionRuns[0]; assert.ok(run); assert.equal(run.state.kind, "terminal");
+    send({ kind: "begin-workspace-operation", runId: "run", request: { kind: "integrate", resultId: run.state.result.resultId, resultRevision: run.state.result.recordedAtRevision, expectedManifestHash: hash, targetManifestHash: hash } });
+    const writing = project.executionRuns[0]?.workspace; assert.equal(writing?.kind, "writing");
+    send({ kind: "finish-workspace-operation", runId: "run", operationId: writing.operationId, manifestHash: hash, observedAt: 1700 });
+    send({ kind: "accept-execution-result", runId: "run", resultId: run.state.result.resultId, resultRevision: run.state.result.recordedAtRevision });
+    assert.equal(sessionStatus(project, "project-chat"), "Complete");
+  };
+  test("session completion becomes attention after deferral and stays historical after reversal", () => {
+    complete(); accept();
+    change({ kind: "propose-task-triage", taskId: "task", basedOnTriageRevision: null, desired: { priority: "normal", disposition: { kind: "deferred", reason: "Review policy" } }, rationale: "User review", origin: { kind: "user" } });
+    const proposal = project.taskTriage.proposals[0]; assert.ok(proposal);
+    change({ kind: "adopt-task-triage", proposalId: proposal.proposalId, proposalRevision: proposal.recordedAtRevision, triageRevision: null });
+    assert.equal(sessionStatus(project, "project-chat"), "Needs your attention");
+    const decision = project.taskTriage.decisions[0]; assert.ok(decision);
+    change({ kind: "reverse-task-triage", taskId: "task", decisionId: decision.decisionId, triageRevision: decision.recordedAtRevision });
+    assert.equal(sessionStatus(project, "project-chat"), "Needs your attention");
+  });
+  test("confirmed correction removes session completion without rewriting accepted historical work", () => {
+    change({ kind: "observe-knowledge", topic: "Policy", category: "business", affectedTaskIds: ["task"], submitted: { requestId: "old-policy", projectId: project.projectId, contextRevision: project.revision, originalStatement: "30 days" } });
+    let knowledge = currentKnowledge(project)[0]; assert.ok(knowledge);
+    change({ kind: "confirm-knowledge", target: { projectId: project.projectId, knowledgeId: knowledge.knowledgeId, recordedAtRevision: knowledge.recordedAtRevision } });
+    knowledge = currentKnowledge(project)[0]; assert.ok(knowledge);
+    complete("needs-review", hash, { ...draft, knowledge: [{ projectId: project.projectId, knowledgeId: knowledge.knowledgeId, recordedAtRevision: knowledge.recordedAtRevision }] }); accept();
+    change({ kind: "correct-knowledge", target: { projectId: project.projectId, knowledgeId: knowledge.knowledgeId, recordedAtRevision: knowledge.recordedAtRevision }, affectedTaskIds: ["task"], submitted: { requestId: "new-policy", projectId: project.projectId, contextRevision: project.revision, originalStatement: "45 days" } });
+    const run = project.executionRuns[0]; assert.ok(run); assert.equal(run.acceptance.kind, "accepted"); assert.equal(run.reviewFreshness.kind, "current");
+    assert.equal(executionReviewCurrent(project, run), false);
+    assert.equal(sessionStatus(project, "project-chat"), "Needs your attention");
+  });
+  test("unknown run or workspace requires reconciliation instead of an ordinary progress dot", () => {
+    approve(); send({ kind: "mark-execution-unknown", runId: "run", reason: "Provider ownership unknown" });
+    assert.equal(sessionStatus(project, "project-chat"), "Something went wrong");
+    history = [...events]; project = replay(history); complete();
+    const run = project.executionRuns[0]; assert.ok(run); assert.equal(run.state.kind, "terminal");
+    send({ kind: "begin-workspace-operation", runId: "run", request: { kind: "integrate", resultId: run.state.result.resultId, resultRevision: run.state.result.recordedAtRevision, expectedManifestHash: hash, targetManifestHash: hash } });
+    assert.equal(sessionStatus(project, "project-chat"), "Reply or work in progress");
+    send({ kind: "mark-workspace-unknown", runId: "run", reason: "Publication interrupted" });
+    assert.equal(sessionStatus(project, "project-chat"), "Something went wrong");
+  });
   test("stop and pause is disclosed, while status and disclosure identities survive progress updates", () => {
     approve();
     const plan = project.executionPlans[0]; assert.ok(plan);

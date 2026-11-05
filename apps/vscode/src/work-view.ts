@@ -1,3 +1,4 @@
+import { sessionStatus } from "./session-status.js";
 import { renderKnowledgeRelationships } from "./knowledge-relationship-view.js";
 import type { KnowledgeOperation } from "./knowledge-controller.js";
 import { renderActivity, type ActivityQuery, type ActivityPage } from "./observed-activity.js";
@@ -470,18 +471,8 @@ document.addEventListener('focusin', remember);
     if (panel.visible && this.visit?.projectId === project.projectId) this.visit.observed(project.revision);
     void panel.webview.postMessage({ kind: "conversation", state: this.conversationState, localModel: this.conversation?.localModel?.() ?? localDiscussionDefaults.model,
       sessions: project.sessions.filter(session => !session.archived).map(session => {
-        const turn = conversationHistory(project, session.id).at(-1);
         const proposals = project.proposals.filter(group => (group.sessionId ?? defaultSessionId) === session.id);
-        const tasks = proposals.flatMap(group => group.taskIds);
-        const recentRuns = [...project.executionRuns].reverse();
-        const latestRuns = tasks.map(taskId => recentRuns.find(run => run.grant.plan.taskId === taskId));
-        const status = turn?.kind === "pending" || latestRuns.some(run => run && run.state.kind !== "terminal") ? "Reply or work in progress"
-          : turn?.kind === "failed" || turn?.kind === "unknown" || latestRuns.some(run => run?.state.kind === "terminal" &&
-            (run.state.result.outcome === "failed" || run.state.result.outcome === "unknown")) ? "Something went wrong"
-          : turn?.kind === "interrupted" || latestRuns.some(run => run?.state.kind === "terminal" &&
-            run.state.result.outcome === "needs-review" && run.acceptance.kind === "unreviewed") ? "Needs your attention"
-          : tasks.length > 0 && latestRuns.every(run => run?.acceptance.kind === "accepted" && run.reviewFreshness.kind === "current") ? "Complete"
-          : "In progress";
+        const status = sessionStatus(project, session.id);
         return { ...session, status, html: renderConversation(project, session.id),
           artifacts: proposals.map(group => ({ id: group.groupId, title: group.goal,
             runs: project.executionRuns.filter(run => group.taskIds.includes(run.grant.plan.taskId)).map(run => run.runId) })) };

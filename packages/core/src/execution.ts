@@ -172,6 +172,9 @@ export function executionDependenciesReady(project: ProjectSnapshot, taskId: str
   };
   return visit(taskId);
 }
+export function executionReviewCurrent(project: ProjectSnapshot, run: ExecutionRun): boolean {
+  return planFreshness(project, run.grant.plan) === "current" && executionDependenciesReady(project, run.grant.plan.taskId) && run.reviewFreshness.kind === "current";
+}
 export function hasUncertainProvider(run: ExecutionRun): boolean { return (run.providerTurn.kind === "thread" || run.providerTurn.kind === "turn") && run.providerOutcome.kind === "unobserved"; }
 export function ownsExecutionLease(run: ExecutionRun): boolean { return activeRecovery(run) !== undefined || run.state.kind !== "terminal" || run.workspace.kind === "writing" || run.workspace.kind === "unknown"; }
 export function currentExecutionPlan(project: ProjectSnapshot, taskId: string): ExecutionPlan | undefined {

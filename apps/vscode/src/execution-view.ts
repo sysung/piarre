@@ -1,12 +1,11 @@
 import { currentTaskTriage, taskTriageRevision, latestTaskTriageDecision, orderedTriageTasks } from "../../../packages/core/src/task-triage.js";
 import { executionForecastText } from "../../../packages/core/src/execution-forecast.js";
 import { accountContextText } from "./codex-account-context.js";
-import { currentExecutionPlan, executionDependenciesReady, hasUncertainProvider, ownsExecutionLease, planFreshness, type CheckEvidence, type ExecutionPlan, type ExecutionRun, type ProjectSnapshot } from "../../../packages/core/src/index.js";
+import { executionReviewCurrent as current, currentExecutionPlan, executionDependenciesReady, hasUncertainProvider, ownsExecutionLease, planFreshness, type CheckEvidence, type ExecutionPlan, type ExecutionRun, type ProjectSnapshot } from "../../../packages/core/src/index.js";
 
 const escape = (value: string): string => value.replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character] ?? character);
 const button = (action: string, label: string, id?: string): string => `<button type="button" data-execution-action="${escape(action)}"${id === undefined ? "" : ` data-execution-id="${escape(id)}"`}>${escape(label)}</button>`;
 const title = (project: ProjectSnapshot, run: ExecutionRun): string => project.tasks.find(task => task.taskId === run.grant.plan.taskId)?.title ?? run.grant.plan.objective;
-const current = (project: ProjectSnapshot, run: ExecutionRun): boolean => planFreshness(project, run.grant.plan) === "current" && executionDependenciesReady(project, run.grant.plan.taskId) && run.reviewFreshness.kind === "current";
 
 function status(project: ProjectSnapshot, run: ExecutionRun): string {
   if (run.workspace.kind === "unknown") return "Workspace state unknown · reconcile before continuing";

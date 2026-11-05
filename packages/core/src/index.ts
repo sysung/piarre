@@ -9,7 +9,7 @@ import { applyReflectionEvent, type Reflection, type ReflectionAction, type Refl
 export { renderReflection, reflectionArtifactPath, reflectionDrift } from "./reflection.js";
 export type { Reflection, ReflectionAction, ExplanationPreference, ExpertisePreference } from "./reflection.js";
 import { applyExecutionEvent, ownsExecutionLease, type ExecutionAction, type ExecutionEvent, type ExecutionPlan, type ExecutionRun } from "./execution.js";
-export { currentExecutionPlan, planFreshness, executionDependenciesReady, hasUncertainProvider, ownsExecutionLease } from "./execution.js";
+export { currentExecutionPlan, executionReviewCurrent, planFreshness, executionDependenciesReady, hasUncertainProvider, ownsExecutionLease } from "./execution.js";
 export type { ExecutionAction, ExecutionEvent, ExecutionPlan, ExecutionPlanDraft, ExecutionRun, ExecutionResult, ExecutionCheck, CheckEvidence } from "./execution.js";
 import { applyKnowledgeEvent, knowledgeEvent, type KnowledgeAction, type KnowledgeEvent, type RecordedKnowledge, type KnowledgeImpact } from "./knowledge.js";
 export { currentKnowledge, knowledgeConflicts } from "./knowledge.js";
