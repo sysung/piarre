@@ -109,7 +109,8 @@ async function bundle(directory, output) {
     "apps/vscode/src/conversation-context.ts": ["resolveConversationContext"],
     "apps/vscode/src/sqlite-project-repository.ts": ["SqliteProjectRepository"],
     "apps/vscode/src/docker-model-runner-conversation-client.ts": ["DockerModelRunnerConversationClient", "localDiscussionDefaults", "parseLocalDiscussionConfiguration"],
-    "packages/core/src/index.ts": ["currentKnowledge", "defaultSessionId", "resolveRecordReference"],
+    "packages/core/src/index.ts": ["currentKnowledge", "defaultSessionId"],
+    "packages/core/src/inspection.ts": ["resolveRecordReference"],
   };
   const imports = Object.entries(sources).map(([file, names]) =>
     `import { ${names.join(", ")} } from ${JSON.stringify(path.join(directory, file))};`).join("\n");
