@@ -1,0 +1,284 @@
+[
+  {
+    "id": "h-01",
+    "split": "holdout",
+    "project": "fulfillment",
+    "kind": "generated",
+    "turns": [
+      {
+        "facts": [
+          {
+            "topic": "Regional label policy",
+            "text": "The outbound label queue sends domestic orders to Cedar and international orders to Maple. Orders cannot enter both queues."
+          }
+        ],
+        "question": "A new outbound order is waiting. Which label queue should I put it in?",
+        "expectation": {
+          "kind": "clarify",
+          "must": ["\\b(domestic|international|destination|country)\\b"],
+          "forbid": ["\\b(send|route|put|use) (the order |it )?(to |in )?(Cedar|Maple)\\s*[.!]$"],
+          "cite": ["Regional label policy"]
+        }
+      }
+    ]
+  },
+  {
+    "id": "h-02",
+    "split": "holdout",
+    "project": "support",
+    "kind": "generated",
+    "turns": [
+      {
+        "facts": [
+          {
+            "topic": "Workspace restoration",
+            "text": "A suspended workspace can be restored by reopening its record. A deleted workspace requires recovery review before restoration can be considered."
+          }
+        ],
+        "question": "The owner wants their workspace back. What should I do next?",
+        "expectation": {
+          "kind": "clarify",
+          "must": ["\\b(suspended|deleted|workspace status|workspace state)\\b"],
+          "forbid": ["\\b(the workspace is|it is|it was) (suspended|deleted)\\s*[.!]$"],
+          "cite": ["Workspace restoration"]
+        }
+      }
+    ]
+  },
+  {
+    "id": "h-03",
+    "split": "holdout",
+    "project": "support",
+    "kind": "generated",
+    "turns": [
+      {
+        "facts": [
+          {
+            "topic": "Escalation trigger",
+            "text": "Escalate an access case immediately when the account is locked. If the customer can still sign in, collect a fresh diagnostic first."
+          }
+        ],
+        "question": "A customer reports an access problem. Should I escalate this now?",
+        "expectation": {
+          "kind": "clarify",
+          "must": ["\\b(locked|lockout|sign in|log in|login)\\b"],
+          "forbid": ["^\\s*(yes|no)[,.!]"],
+          "cite": ["Escalation trigger"]
+        }
+      }
+    ]
+  },
+  {
+    "id": "h-04",
+    "split": "holdout",
+    "project": "fulfillment",
+    "kind": "generated",
+    "turns": [
+      {
+        "facts": [
+          {
+            "topic": "Warehouse inspection protocol",
+            "text": "A broken outer seal requires a quarantine inspection. A superficial carton scuff with the seal intact can go through standard intake."
+          }
+        ],
+        "question": "The receiving note only says the carton looks damaged. Which intake procedure should I use?",
+        "expectation": {
+          "kind": "clarify",
+          "must": ["\\b(seal|scuff)\\b"],
+          "forbid": ["\\b(use|choose|proceed with) (the )?(quarantine inspection|standard intake)\\s*[.!]$"],
+          "cite": ["Warehouse inspection protocol"]
+        }
+      }
+    ]
+  },
+  {
+    "id": "h-05",
+    "split": "holdout",
+    "project": "fulfillment",
+    "kind": "generated",
+    "turns": [
+      {
+        "facts": [
+          {
+            "topic": "Refrigerated dispatch",
+            "text": "Refrigerated consignments need a temperature logger. Room-temperature consignments do not need a logger."
+          }
+        ],
+        "question": "This consignment is refrigerated. Does it need a temperature logger?",
+        "expectation": {
+          "kind": "answer",
+          "must": ["\\btemperature logger\\b", "\\b(yes|need(?:s|ed)?|require(?:s|d)?|include|must)\\b"],
+          "forbid": ["\\b(does not|doesn't|no need|not required)\\b"],
+          "cite": ["Refrigerated dispatch"]
+        }
+      }
+    ]
+  },
+  {
+    "id": "h-06",
+    "split": "holdout",
+    "project": "support",
+    "kind": "generated",
+    "turns": [
+      {
+        "facts": [
+          {
+            "topic": "Attachment retention rationale",
+            "text": "Rejected identity attachments are retained for six hours so a supervisor can investigate an incorrect rejection before automatic removal."
+          }
+        ],
+        "question": "Why does the service temporarily keep rejected identity attachments, and for how long?",
+        "expectation": {
+          "kind": "answer",
+          "must": ["\\b(6|six)[ -]hours?\\b", "\\b(investigat\\w*|review\\w*|correct\\w*|check\\w*)\\b", "\\b(reject\\w*|decision)\\b"],
+          "forbid": ["\\b(24|twenty-four|seven|7)[ -](hours?|days?)\\b"],
+          "cite": ["Attachment retention rationale"]
+        }
+      }
+    ]
+  },
+  {
+    "id": "h-07",
+    "split": "holdout",
+    "project": "fulfillment",
+    "kind": "generated",
+    "turns": [
+      {
+        "facts": [
+          {
+            "topic": "Tracking update schedule",
+            "text": "The tracking export runs every Tuesday. This policy covers export timing only."
+          }
+        ],
+        "question": "Based on the supplied policy, did yesterday's tracking export successfully reach the carrier?",
+        "expectation": {
+          "kind": "abstain",
+          "must": ["\\b(cannot|can't|unknown|unverified|does not|doesn't|not (show|establish|confirm|provide|say|document|known)|no (evidence|receipt|confirmation))\\b"],
+          "forbid": ["^\\s*(yes|no)[,.!]"],
+          "cite": ["Tracking update schedule"]
+        }
+      }
+    ]
+  },
+  {
+    "id": "h-08",
+    "split": "holdout",
+    "project": "support",
+    "kind": "generated",
+    "turns": [
+      {
+        "facts": [
+          {
+            "topic": "Priority threshold alpha",
+            "text": "The published onboarding support playbook says standard new tickets become priority after nine hours."
+          },
+          {
+            "topic": "Priority threshold beta",
+            "text": "The published service desk runbook says standard new tickets become priority after eleven hours. Neither document identifies an owner who can resolve the discrepancy."
+          }
+        ],
+        "question": "What threshold should I apply to a standard new ticket today? Explain what the current sources let you conclude.",
+        "expectation": {
+          "kind": "abstain",
+          "must": ["\\b(9|nine)\\b", "\\b(11|eleven)\\b", "\\b(conflict\\w*|contradict\\w*|disagree\\w*|inconsisten\\w*|discrepanc\\w*|unclear|cannot|can't)\\b"],
+          "forbid": ["^\\s*(use|apply) (a |the )?(9|nine|11|eleven)\\b"],
+          "cite": ["Priority threshold alpha", "Priority threshold beta"]
+        }
+      }
+    ]
+  },
+  {
+    "id": "h-09",
+    "split": "holdout",
+    "project": "fulfillment",
+    "kind": "generated",
+    "turns": [
+      {
+        "facts": [
+          {
+            "topic": "Pallet inspection sampling",
+            "text": "The approved carton sampling rate for a routine inbound pallet is 3 cartons."
+          }
+        ],
+        "question": "How many cartons should be sampled for a routine inbound pallet?",
+        "expectation": {
+          "kind": "answer",
+          "must": ["\\b(3|three)\\b"],
+          "forbid": ["\\b(8|eight)\\b"],
+          "cite": ["Pallet inspection sampling"]
+        }
+      },
+      {
+        "facts": [
+          {
+            "topic": "Pallet inspection sampling",
+            "text": "The confirmed carton sampling rate for a routine inbound pallet is now 8 cartons, superseding the prior rate."
+          }
+        ],
+        "question": "A routine pallet just arrived. What's the currently approved sample count?",
+        "expectation": {
+          "kind": "answer",
+          "must": ["\\b(8|eight)\\b"],
+          "forbid": ["^\\s*(3|three)\\b"],
+          "cite": ["Pallet inspection sampling"]
+        }
+      }
+    ]
+  },
+  {
+    "id": "h-10",
+    "split": "holdout",
+    "project": "support",
+    "kind": "generated",
+    "turns": [
+      {
+        "facts": [
+          {
+            "topic": "Incident paging channel",
+            "text": "The confirmed paging channel for billing incidents is Iris."
+          },
+          {
+            "topic": "Incident report owner",
+            "text": "The on-duty incident lead must file the billing incident report."
+          }
+        ],
+        "question": "Who files the billing incident report and what channel receives the page?",
+        "expectation": {
+          "kind": "answer",
+          "must": ["\\bincident lead\\b", "\\bIris\\b"],
+          "forbid": ["\\bTopaz\\b"],
+          "cite": ["Incident paging channel", "Incident report owner"]
+        }
+      },
+      {
+        "facts": [
+          {
+            "topic": "Incident paging channel",
+            "text": "The confirmed paging channel for billing incidents has changed to Topaz. Iris is no longer current."
+          }
+        ],
+        "question": "A new billing incident just opened. Where should the alert go, and who still owns the write-up?",
+        "expectation": {
+          "kind": "answer",
+          "must": ["\\bincident lead\\b", "\\bTopaz\\b"],
+          "forbid": ["\\b(page|send|use|alert) (the (incident |billing )?(team |alert |page )?)?(to |via |on )?Iris\\b"],
+          "cite": ["Incident paging channel", "Incident report owner"]
+        }
+      }
+    ]
+  },
+  {
+    "id": "h-11",
+    "split": "holdout",
+    "project": "fulfillment",
+    "kind": "control",
+    "control": "stale-source"
+  },
+  {
+    "id": "h-12",
+    "split": "holdout",
+    "project": "support",
+    "kind": "control",
+    "control": "isolated-project"
+  }
+]
