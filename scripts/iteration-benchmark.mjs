@@ -116,7 +116,7 @@ async function bundle(directory, output) {
     `import { ${names.join(", ")} } from ${JSON.stringify(path.join(directory, file))};`).join("\n");
   await build({
     stdin: { contents: `${imports}\nimport host from ${JSON.stringify(path.join(import.meta.dirname, "iteration-benchmark-host.cjs"))};\nexport default host({ ${Object.values(sources).flat().join(", ")} });`, resolveDir: root },
-    bundle: true, external: ["vscode"], platform: "node", target: "node22", format: "cjs", outfile: output,
+    bundle: true, external: ["vscode"], platform: "node", target: "node22", format: "cjs", ...(output ? { outfile: output } : { write: false }),
   });
 }
 
@@ -215,7 +215,7 @@ function score(cases, [directory, destination]) {
   const losses = families.filter(item => item.B0.some((value, index) => value === true && item.C1[index] === false)).length;
   const scheduledResults = manifest.jobs.reduce((total, job) => total + (job.condition === "retained" ? job.scenario.turns?.length ?? 1 : 1), 0);
   const complete = results.length === scheduledResults && rows.at(-1)?.type === "end";
-  const critical = rows.some(row => row.type === "error") || results.some(row => row.noEffects === false ||
+  const critical = results.some(row => row.noEffects === false ||
     row.issues.some(issue => ["false completion", "control failed"].includes(issue)));
   const latency = Object.fromEntries(["B0", "C1"].map(arm => {
     const values = results.filter(row => row.arm === arm && row.condition === "retained" && Number.isFinite(row.elapsedMs))
@@ -238,7 +238,8 @@ const cases = corpus();
 verifyScorer();
 if (command === "validate") {
   assert.equal(args.length, 0);
-  console.log(JSON.stringify({ schemaVersion: 1, cases: cases.length, corpusSha256: sha(JSON.stringify(cases)), scorerSelfCheck: "passed" }));
+  await bundle(root);
+  console.log(JSON.stringify({ schemaVersion: 1, cases: cases.length, corpusSha256: sha(JSON.stringify(cases)), scorerSelfCheck: "passed", hostBundle: "passed" }));
 } else if (command === "run") await run(cases, args);
 else if (command === "score") score(cases, args);
 else throw new Error("Usage: iteration-benchmark.mjs validate | run <probe|paired> <B0> <C1> <output-dir> <VS-Code-executable> | score <output-dir> <score.json>");

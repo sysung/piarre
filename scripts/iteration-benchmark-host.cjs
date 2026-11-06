@@ -11,12 +11,13 @@ module.exports = ({ ConversationController, resolveConversationContext, SqlitePr
   DockerModelRunnerConversationClient, localDiscussionDefaults, parseLocalDiscussionConfiguration, currentKnowledge, defaultSessionId, resolveRecordReference }) => {
   return async function runCase({ scenario, condition, endpoint, deadline, markAttempt, emit }) {
     assert(vscode.workspace.isTrusted);
+    assert.equal(vscode.version, "1.144.0");
     const configuration = parseLocalDiscussionConfiguration({ ...localDiscussionDefaults, endpoint });
     const directory = mkdtempSync(path.join(tmpdir(), "piarre-bench-"));
     const root = path.join(directory, "workspace");
     mkdirSync(root);
     const identity = { name: scenario.project, repositoryUri: pathToFileURL(root).href };
-    const databasePath = path.join(directory, "project.sqlite");
+    let databasePath = path.join(directory, "project.sqlite");
     let repository = new SqliteProjectRepository(databasePath);
     let controller;
     let state;
@@ -77,10 +78,13 @@ module.exports = ({ ConversationController, resolveConversationContext, SqlitePr
         if (Date.now() + 60_000 > deadline) return false;
         if (index) reopen();
         if (condition === "reset") {
-          for (const fact of scenario.turns[0].facts ?? []) apply(fact);
+          for (const step of scenario.turns) {
+            for (const fact of step.facts ?? []) apply(fact);
+          }
           reopen();
           repository.close();
-          repository = new SqliteProjectRepository(path.join(directory, "reset.sqlite"));
+          databasePath = path.join(directory, "reset.sqlite");
+          repository = new SqliteProjectRepository(databasePath);
           repository.open(identity);
           assert.deepEqual(currentKnowledge(repository.read()), []);
         }
