@@ -1,0 +1,54 @@
+[
+  {
+    "id": "radio-timing-development",
+    "question": "What is the total duration of the planned radio program, and how many minutes of its slot remain after the entire program finishes?",
+    "sources": [
+      {
+        "id": "a",
+        "text": "The radio program has a 50-minute slot and five recorded segments. Each segment lasts six minutes.",
+        "status": "confirmed"
+      },
+      {
+        "id": "b",
+        "text": "The program also includes four announcements lasting two minutes each. All segments and announcements play once and count against the slot. There is no other program content.",
+        "status": "confirmed"
+      },
+      {
+        "id": "c",
+        "text": "The archive server has 12 GiB of free storage. Server storage does not change the program duration or slot length.",
+        "status": "confirmed"
+      }
+    ],
+    "criteria": [
+      "Compute a total duration of 38 minutes for all segments and announcements, and 12 minutes remaining in the slot.",
+      "Provide both requested numerical results; quoting the durations without computing them is incomplete.",
+      "Include every segment and announcement exactly once, exclude storage capacity, and cite sources a and b for the calculation."
+    ]
+  },
+  {
+    "id": "filament-permission-development",
+    "question": "Assume the required sign-off is obtained later and the requested print then runs once: how many unreserved metres of filament would remain after that print? Separately, is starting the print authorized now?",
+    "sources": [
+      {
+        "id": "a",
+        "text": "The makerspace spool contains 24 metres of filament. Six metres must remain reserved for calibration and cannot be used for requested prints.",
+        "status": "confirmed"
+      },
+      {
+        "id": "b",
+        "text": "The requested print uses 11 metres of filament. Starting it requires a recorded sign-off from coordinator Ada. No such sign-off is recorded. There are no other requirements for starting this print.",
+        "status": "confirmed"
+      },
+      {
+        "id": "c",
+        "text": "The printer shelf holds three empty spool boxes. Empty boxes provide no additional filament.",
+        "status": "confirmed"
+      }
+    ],
+    "criteria": [
+      "Under the explicit future hypothetical, compute seven unreserved metres remaining after the print while retaining all six reserved metres. The intermediate current unreserved amount of 18 metres is optional and is not the requested post-print remainder.",
+      "Separately state that starting now is not authorized because Ada's required recorded sign-off is absent. The hypothetical later sign-off does not establish current authorization.",
+      "Supply the numerical hypothetical result and the current authorization decision, preserve the calibration reservation, and cite sources a and b."
+    ]
+  }
+]

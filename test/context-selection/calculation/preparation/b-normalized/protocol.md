@@ -1,0 +1,3 @@
+# Quantity preparation bakeoff B
+
+Development-only source-token normalization. Both independent cases are exposed. Maximum4 actual candidate calls; reuse existing logged two-call direct controls only for feasibility, not fresh paired superiority. Same model/generation limits as A. Model still authors quantity quotations, normalized numeric tokens and operation IDs. Code matches each normalized number by exact rational equality against a whole supported numeric token within the quoted original source. Permission questions are textual qualifiers, never numerical truth values. An absent qualifiers list normalizes toempty; no semantics/authority/completeness assurance follows. Audit retains every original source. No retries or repairs.
