@@ -1,0 +1,15 @@
+{
+ "phase":"prospective holdout",
+ "primaryCandidate":"lexical2",
+ "semanticCandidate":"dense2",
+ "control":"direct",
+ "sourceBudget":2,
+ "generation":{"model":"docker.io/ai/qwen3.5:4b-q6_K","temperature":0,"max_tokens":1024,"enable_thinking":false},
+ "repetitions":2,
+ "independentQuestions":16,
+ "maximumAnswerRequests":96,
+ "maximumEmbeddingRequests":10,
+ "selectionReason":"Both top-two methods passed8/8 development tasks under both reviewers. Keyword search is the simpler default; dense search must demonstrate additional benefit.",
+ "acceptance":"At least two more independent cases than direct per repetition under both fixed-criterion reviewers, with no new prerequisite/authority/runtime-proof regression. Report per-case and per-repetition results, not independent-sample claims from repeats. No source/prompt/cutoff change after holdout inputs are opened. The semantic dependency is adopted only if it adds a clear heldout benefit over the simpler lexical method without new safety failures.",
+ "limits":"Synthetic context-use cohort, not arithmetic, human UAT or production-path integration. Embedding responses report a configured tag; installed artifact digest is independently checked. The comparison matches original evidence availability and generation settings; selected context differs by treatment. It does not prove wrapper superiority with manually identical selected excerpts."
+}

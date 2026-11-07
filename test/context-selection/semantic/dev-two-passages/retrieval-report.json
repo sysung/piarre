@@ -1,0 +1,639 @@
+{
+  "summary": [
+    {
+      "method": "lexical",
+      "requiredSources": 11,
+      "recalled": 11,
+      "questionsWithRequiredEvidence": 8,
+      "completeCoverage": 8,
+      "noRequiredEvidence": 0,
+      "noRequiredEvidenceWithCandidates": 0
+    },
+    {
+      "method": "dense",
+      "requiredSources": 11,
+      "recalled": 11,
+      "questionsWithRequiredEvidence": 8,
+      "completeCoverage": 8,
+      "noRequiredEvidence": 0,
+      "noRequiredEvidenceWithCandidates": 0
+    },
+    {
+      "method": "hybrid",
+      "requiredSources": 11,
+      "recalled": 11,
+      "questionsWithRequiredEvidence": 8,
+      "completeCoverage": 8,
+      "noRequiredEvidence": 0,
+      "noRequiredEvidenceWithCandidates": 0
+    },
+    {
+      "method": "lexical2",
+      "requiredSources": 11,
+      "recalled": 11,
+      "questionsWithRequiredEvidence": 8,
+      "completeCoverage": 8,
+      "noRequiredEvidence": 0,
+      "noRequiredEvidenceWithCandidates": 0
+    },
+    {
+      "method": "dense2",
+      "requiredSources": 11,
+      "recalled": 11,
+      "questionsWithRequiredEvidence": 8,
+      "completeCoverage": 8,
+      "noRequiredEvidence": 0,
+      "noRequiredEvidenceWithCandidates": 0
+    }
+  ],
+  "rows": [
+    {
+      "id": "ldq01",
+      "project": "linden",
+      "method": "lexical",
+      "expected": [
+        "ld01"
+      ],
+      "selected": [
+        "ld01"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "ldq01",
+      "project": "linden",
+      "method": "dense",
+      "expected": [
+        "ld01"
+      ],
+      "selected": [
+        "ld01",
+        "ld08",
+        "ld07"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "ldq01",
+      "project": "linden",
+      "method": "hybrid",
+      "expected": [
+        "ld01"
+      ],
+      "selected": [
+        "ld01",
+        "ld08",
+        "ld07"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "ldq01",
+      "project": "linden",
+      "method": "lexical2",
+      "expected": [
+        "ld01"
+      ],
+      "selected": [
+        "ld01"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "ldq01",
+      "project": "linden",
+      "method": "dense2",
+      "expected": [
+        "ld01"
+      ],
+      "selected": [
+        "ld01",
+        "ld08"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "ldq02",
+      "project": "linden",
+      "method": "lexical",
+      "expected": [
+        "ld02"
+      ],
+      "selected": [
+        "ld12",
+        "ld02",
+        "ld01"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "ldq02",
+      "project": "linden",
+      "method": "dense",
+      "expected": [
+        "ld02"
+      ],
+      "selected": [
+        "ld12",
+        "ld02",
+        "ld10"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "ldq02",
+      "project": "linden",
+      "method": "hybrid",
+      "expected": [
+        "ld02"
+      ],
+      "selected": [
+        "ld12",
+        "ld02",
+        "ld01"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "ldq02",
+      "project": "linden",
+      "method": "lexical2",
+      "expected": [
+        "ld02"
+      ],
+      "selected": [
+        "ld12",
+        "ld02"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "ldq02",
+      "project": "linden",
+      "method": "dense2",
+      "expected": [
+        "ld02"
+      ],
+      "selected": [
+        "ld12",
+        "ld02"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "ldq03",
+      "project": "linden",
+      "method": "lexical",
+      "expected": [
+        "ld05"
+      ],
+      "selected": [
+        "ld05",
+        "ld04"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "ldq03",
+      "project": "linden",
+      "method": "dense",
+      "expected": [
+        "ld05"
+      ],
+      "selected": [
+        "ld05",
+        "ld06",
+        "ld01"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "ldq03",
+      "project": "linden",
+      "method": "hybrid",
+      "expected": [
+        "ld05"
+      ],
+      "selected": [
+        "ld05",
+        "ld04",
+        "ld06"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "ldq03",
+      "project": "linden",
+      "method": "lexical2",
+      "expected": [
+        "ld05"
+      ],
+      "selected": [
+        "ld05",
+        "ld04"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "ldq03",
+      "project": "linden",
+      "method": "dense2",
+      "expected": [
+        "ld05"
+      ],
+      "selected": [
+        "ld05",
+        "ld06"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "ldq04",
+      "project": "linden",
+      "method": "lexical",
+      "expected": [
+        "ld11"
+      ],
+      "selected": [
+        "ld11"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "ldq04",
+      "project": "linden",
+      "method": "dense",
+      "expected": [
+        "ld11"
+      ],
+      "selected": [
+        "ld11",
+        "ld08",
+        "ld09"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "ldq04",
+      "project": "linden",
+      "method": "hybrid",
+      "expected": [
+        "ld11"
+      ],
+      "selected": [
+        "ld11",
+        "ld08",
+        "ld09"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "ldq04",
+      "project": "linden",
+      "method": "lexical2",
+      "expected": [
+        "ld11"
+      ],
+      "selected": [
+        "ld11"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "ldq04",
+      "project": "linden",
+      "method": "dense2",
+      "expected": [
+        "ld11"
+      ],
+      "selected": [
+        "ld11",
+        "ld08"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "ldq05",
+      "project": "linden",
+      "method": "lexical",
+      "expected": [
+        "ld03",
+        "ld04"
+      ],
+      "selected": [
+        "ld03",
+        "ld04",
+        "ld10"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "ldq05",
+      "project": "linden",
+      "method": "dense",
+      "expected": [
+        "ld03",
+        "ld04"
+      ],
+      "selected": [
+        "ld03",
+        "ld04",
+        "ld10"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "ldq05",
+      "project": "linden",
+      "method": "hybrid",
+      "expected": [
+        "ld03",
+        "ld04"
+      ],
+      "selected": [
+        "ld03",
+        "ld04",
+        "ld10"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "ldq05",
+      "project": "linden",
+      "method": "lexical2",
+      "expected": [
+        "ld03",
+        "ld04"
+      ],
+      "selected": [
+        "ld03",
+        "ld04"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "ldq05",
+      "project": "linden",
+      "method": "dense2",
+      "expected": [
+        "ld03",
+        "ld04"
+      ],
+      "selected": [
+        "ld03",
+        "ld04"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "ldq06",
+      "project": "linden",
+      "method": "lexical",
+      "expected": [
+        "ld06",
+        "ld07"
+      ],
+      "selected": [
+        "ld07",
+        "ld06",
+        "ld05"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "ldq06",
+      "project": "linden",
+      "method": "dense",
+      "expected": [
+        "ld06",
+        "ld07"
+      ],
+      "selected": [
+        "ld07",
+        "ld06",
+        "ld05"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "ldq06",
+      "project": "linden",
+      "method": "hybrid",
+      "expected": [
+        "ld06",
+        "ld07"
+      ],
+      "selected": [
+        "ld07",
+        "ld06",
+        "ld05"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "ldq06",
+      "project": "linden",
+      "method": "lexical2",
+      "expected": [
+        "ld06",
+        "ld07"
+      ],
+      "selected": [
+        "ld07",
+        "ld06"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "ldq06",
+      "project": "linden",
+      "method": "dense2",
+      "expected": [
+        "ld06",
+        "ld07"
+      ],
+      "selected": [
+        "ld07",
+        "ld06"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "ldq07",
+      "project": "linden",
+      "method": "lexical",
+      "expected": [
+        "ld08",
+        "ld09"
+      ],
+      "selected": [
+        "ld08",
+        "ld09"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "ldq07",
+      "project": "linden",
+      "method": "dense",
+      "expected": [
+        "ld08",
+        "ld09"
+      ],
+      "selected": [
+        "ld09",
+        "ld08",
+        "ld07"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "ldq07",
+      "project": "linden",
+      "method": "hybrid",
+      "expected": [
+        "ld08",
+        "ld09"
+      ],
+      "selected": [
+        "ld08",
+        "ld09",
+        "ld07"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "ldq07",
+      "project": "linden",
+      "method": "lexical2",
+      "expected": [
+        "ld08",
+        "ld09"
+      ],
+      "selected": [
+        "ld08",
+        "ld09"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "ldq07",
+      "project": "linden",
+      "method": "dense2",
+      "expected": [
+        "ld08",
+        "ld09"
+      ],
+      "selected": [
+        "ld09",
+        "ld08"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "ldq08",
+      "project": "linden",
+      "method": "lexical",
+      "expected": [
+        "ld10"
+      ],
+      "selected": [
+        "ld10"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "ldq08",
+      "project": "linden",
+      "method": "dense",
+      "expected": [
+        "ld10"
+      ],
+      "selected": [
+        "ld10",
+        "ld04",
+        "ld07"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "ldq08",
+      "project": "linden",
+      "method": "hybrid",
+      "expected": [
+        "ld10"
+      ],
+      "selected": [
+        "ld10",
+        "ld04",
+        "ld07"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "ldq08",
+      "project": "linden",
+      "method": "lexical2",
+      "expected": [
+        "ld10"
+      ],
+      "selected": [
+        "ld10"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "ldq08",
+      "project": "linden",
+      "method": "dense2",
+      "expected": [
+        "ld10"
+      ],
+      "selected": [
+        "ld10",
+        "ld04"
+      ],
+      "recalled": 1,
+      "complete": true
+    }
+  ]
+}

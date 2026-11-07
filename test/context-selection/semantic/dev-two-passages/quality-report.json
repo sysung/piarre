@@ -1,0 +1,54 @@
+{
+  "sol": {
+    "dense2": {
+      "samples": 8,
+      "strictPass": 8,
+      "faithful": 8,
+      "complete": 8,
+      "citationOk": 8,
+      "safetyIssues": 0
+    },
+    "direct": {
+      "samples": 8,
+      "strictPass": 6,
+      "faithful": 6,
+      "complete": 8,
+      "citationOk": 6,
+      "safetyIssues": 2
+    },
+    "lexical2": {
+      "samples": 8,
+      "strictPass": 8,
+      "faithful": 8,
+      "complete": 8,
+      "citationOk": 8,
+      "safetyIssues": 0
+    }
+  },
+  "astra": {
+    "dense2": {
+      "samples": 8,
+      "strictPass": 8,
+      "faithful": 8,
+      "complete": 8,
+      "citationOk": 8,
+      "safetyIssues": 0
+    },
+    "direct": {
+      "samples": 8,
+      "strictPass": 7,
+      "faithful": 7,
+      "complete": 8,
+      "citationOk": 7,
+      "safetyIssues": 1
+    },
+    "lexical2": {
+      "samples": 8,
+      "strictPass": 8,
+      "faithful": 8,
+      "complete": 8,
+      "citationOk": 8,
+      "safetyIssues": 0
+    }
+  }
+}

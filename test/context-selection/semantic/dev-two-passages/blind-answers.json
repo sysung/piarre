@@ -1,0 +1,1223 @@
+{
+  "method": "Criteria were independently authored before outputs. Labels conceal arms. Supplied-source count may reveal the full-pool control, so review is partially blinded. Judge meaning, not exact phrasing or punctuation. Clear declarative requests count as clarification. Every material claim must be supported by actually supplied original evidence. Rejected responses are incomplete; do not score discarded content as accepted. No private criteria entered inference.",
+  "cases": [
+    {
+      "id": "ldq01",
+      "project": "linden",
+      "question": "How does Linden avoid creating another task when a caller resends the same submission?",
+      "sources": [
+        {
+          "id": "ld01",
+          "project": "linden",
+          "title": "Repeated submissions",
+          "text": "Linden stores a submission token with its saved result. Reusing that token returns the saved result without creating another task. A different payload under the same token is rejected.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld02",
+          "project": "linden",
+          "title": "Current checkpoint retention",
+          "text": "The confirmed checkpoint retention period is 14 days. This replaces the former 30-day period. Checkpoints remain recoverable during the current retention period.",
+          "standing": "confirmed",
+          "revision": 4
+        },
+        {
+          "id": "ld03",
+          "project": "linden",
+          "title": "Deployment manifest",
+          "text": "The deployment manifest targets the west cluster. A manifest records intended placement; it does not establish that the service is running there.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld04",
+          "project": "linden",
+          "title": "Deployment evidence inventory",
+          "text": "The deployment evidence inventory contains the west-cluster manifest but no execution receipt or live service observation.",
+          "standing": "observation",
+          "revision": 2
+        },
+        {
+          "id": "ld05",
+          "project": "linden",
+          "title": "Approval after source edits",
+          "text": "If a file cited by a reviewed proposal changes, that proposal requires a new review before execution. The earlier approval cannot authorize execution against the changed file.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld06",
+          "project": "linden",
+          "title": "Customer export prerequisite",
+          "text": "Exporting a customer dataset requires a recorded sign-off from the privacy steward. A project manager request does not substitute for that sign-off.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld07",
+          "project": "linden",
+          "title": "Meadow export request",
+          "text": "The project manager requested export of the Meadow customer dataset. No privacy-steward sign-off is recorded for this export.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld08",
+          "project": "linden",
+          "title": "Workspace visibility routing",
+          "text": "A private workspace uses an invite link. A public workspace uses a directory listing. Visibility must be recorded before either sharing route is selected.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld09",
+          "project": "linden",
+          "title": "Orchid workspace record",
+          "text": "The Orchid workspace has a green icon. Its visibility field is empty. Green icons are used by both private and public workspaces.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld10",
+          "project": "linden",
+          "title": "Diagnostic collection setting",
+          "text": "Diagnostic collection is disabled in the current configuration. These records contain no decision note explaining why this default was chosen.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld11",
+          "project": "linden",
+          "title": "Command palette shortcut",
+          "text": "The command palette opens with Alt+K. Ctrl+K opens the repository search panel. Shortcut bindings do not change when the project theme changes.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld12",
+          "project": "linden",
+          "title": "Former checkpoint policy",
+          "text": "The former checkpoint policy retained checkpoints for 30 days. This historical policy has been superseded and does not govern current retention.",
+          "standing": "historical",
+          "revision": 1
+        }
+      ],
+      "criteria": {
+        "behavior": "answer",
+        "requiredSourceIds": [
+          "ld01"
+        ],
+        "requirements": [
+          "Explain that repeated use of the submission token returns the saved result rather than creating another task.",
+          "Payload-conflict handling is optional unless discussed."
+        ],
+        "forbidden": [
+          "Invent a different deduplication mechanism.",
+          "Claim that retries create new tasks."
+        ]
+      },
+      "answers": [
+        {
+          "label": "d7842dcb1703",
+          "text": "Based on the provided project records, Linden avoids creating a new task when a caller resends the same submission by utilizing a **submission token** associated with the saved result.\n\nThe specific mechanism is as follows:\n*   **Token Reuse**: When a submission token is reused, the system returns the previously saved result instead of initiating a new task.\n*   **Payload Validation**: If a different payload is submitted under the same token, the submission is rejected.\n\nSource: [ld01]",
+          "suppliedSourceIds": [
+            "ld01"
+          ]
+        },
+        {
+          "label": "2661a4b1d7ff",
+          "text": "Based on the supplied project records, Linden avoids creating another task when a caller resends the same submission by **storing a submission token with the saved result and reusing that token to return the saved result without creating a new task**.\n\nSupporting source ID: [ld01]\n\n**Conditions and Constraints:**\n*   **Token Reuse:** The system relies on a specific submission token associated with the saved result.\n*   **Payload Validation:** If a different payload is submitted under the same token, the submission is **rejected**.\n*   **Record Status:** This is a confirmed standing record (Revision 1).\n\n**Missing Fact Check:**\nThe records do not specify the mechanism used to generate or validate the \"submission token\" (e.g., UUID, hash, session ID). Without knowing how the token is generated or validated, it is impossible to confirm the exact technical implementation of the deduplication logic.\n\n**Question:** What specific identifier or mechanism is used to generate the submission token that allows Linden to recognize a resubmission as a duplicate?",
+          "suppliedSourceIds": [
+            "ld01",
+            "ld02",
+            "ld03",
+            "ld04",
+            "ld05",
+            "ld06",
+            "ld07",
+            "ld08",
+            "ld09",
+            "ld10",
+            "ld11",
+            "ld12"
+          ]
+        },
+        {
+          "label": "874be21d7ac9",
+          "text": "Based on the supplied project records, Linden avoids creating another task when a caller resends the same submission by **reusing a previously saved submission token**.\n\nThe specific mechanism is detailed in record **[ld01] Repeated submissions**:\n*   Linden stores a submission token along with the result of that submission.\n*   When a request is made using this existing token, the system returns the **saved result** instead of initiating a new task.\n*   The system enforces this by rejecting any request that contains a different payload under the same token.\n\nRecord **[ld08] Workspace visibility routing** does not pertain to task creation logic or submission tokens.\n\n**Answer:** Linden avoids creating a new task by returning the saved result associated with a reused submission token.",
+          "suppliedSourceIds": [
+            "ld01",
+            "ld08"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ldq02",
+      "project": "linden",
+      "question": "How long are checkpoints retained under the current confirmed policy?",
+      "sources": [
+        {
+          "id": "ld01",
+          "project": "linden",
+          "title": "Repeated submissions",
+          "text": "Linden stores a submission token with its saved result. Reusing that token returns the saved result without creating another task. A different payload under the same token is rejected.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld02",
+          "project": "linden",
+          "title": "Current checkpoint retention",
+          "text": "The confirmed checkpoint retention period is 14 days. This replaces the former 30-day period. Checkpoints remain recoverable during the current retention period.",
+          "standing": "confirmed",
+          "revision": 4
+        },
+        {
+          "id": "ld03",
+          "project": "linden",
+          "title": "Deployment manifest",
+          "text": "The deployment manifest targets the west cluster. A manifest records intended placement; it does not establish that the service is running there.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld04",
+          "project": "linden",
+          "title": "Deployment evidence inventory",
+          "text": "The deployment evidence inventory contains the west-cluster manifest but no execution receipt or live service observation.",
+          "standing": "observation",
+          "revision": 2
+        },
+        {
+          "id": "ld05",
+          "project": "linden",
+          "title": "Approval after source edits",
+          "text": "If a file cited by a reviewed proposal changes, that proposal requires a new review before execution. The earlier approval cannot authorize execution against the changed file.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld06",
+          "project": "linden",
+          "title": "Customer export prerequisite",
+          "text": "Exporting a customer dataset requires a recorded sign-off from the privacy steward. A project manager request does not substitute for that sign-off.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld07",
+          "project": "linden",
+          "title": "Meadow export request",
+          "text": "The project manager requested export of the Meadow customer dataset. No privacy-steward sign-off is recorded for this export.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld08",
+          "project": "linden",
+          "title": "Workspace visibility routing",
+          "text": "A private workspace uses an invite link. A public workspace uses a directory listing. Visibility must be recorded before either sharing route is selected.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld09",
+          "project": "linden",
+          "title": "Orchid workspace record",
+          "text": "The Orchid workspace has a green icon. Its visibility field is empty. Green icons are used by both private and public workspaces.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld10",
+          "project": "linden",
+          "title": "Diagnostic collection setting",
+          "text": "Diagnostic collection is disabled in the current configuration. These records contain no decision note explaining why this default was chosen.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld11",
+          "project": "linden",
+          "title": "Command palette shortcut",
+          "text": "The command palette opens with Alt+K. Ctrl+K opens the repository search panel. Shortcut bindings do not change when the project theme changes.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld12",
+          "project": "linden",
+          "title": "Former checkpoint policy",
+          "text": "The former checkpoint policy retained checkpoints for 30 days. This historical policy has been superseded and does not govern current retention.",
+          "standing": "historical",
+          "revision": 1
+        }
+      ],
+      "criteria": {
+        "behavior": "answer",
+        "requiredSourceIds": [
+          "ld02"
+        ],
+        "requirements": [
+          "Identify 14 days as the current retention period. Older values need not be repeated."
+        ],
+        "forbidden": [
+          "Apply the superseded 30-day period."
+        ]
+      },
+      "answers": [
+        {
+          "label": "affbca863396",
+          "text": "Under the current confirmed policy, checkpoints are retained for **14 days**.\n\nThis is established by record **[ld02]**, which states: \"The confirmed checkpoint retention period is 14 days. This replaces the former 30-day period.\" Record **[ld12]** confirms that the previous 30-day policy is historical and no longer governs current retention.\n\n**Conditions and Constraints:**\n*   **Recoverability:** Checkpoints remain recoverable only during this 14-day retention period ([ld02]).\n*   **Policy Status:** The 14-day period is the active confirmed standing; the 30-day period is superseded ([ld02], [ld12]).",
+          "suppliedSourceIds": [
+            "ld01",
+            "ld02",
+            "ld03",
+            "ld04",
+            "ld05",
+            "ld06",
+            "ld07",
+            "ld08",
+            "ld09",
+            "ld10",
+            "ld11",
+            "ld12"
+          ]
+        },
+        {
+          "label": "c6b4909c44a1",
+          "text": "Under the current confirmed policy, checkpoints are retained for **14 days**.\n\nThis is established by record **[ld02]**, which states: \"The confirmed checkpoint retention period is 14 days. This replaces the former 30-day period.\" Record **[ld12]** confirms that the previous 30-day policy is historical and no longer governs current retention.",
+          "suppliedSourceIds": [
+            "ld12",
+            "ld02"
+          ]
+        },
+        {
+          "label": "cd84b419d719",
+          "text": "Under the current confirmed policy, checkpoints are retained for **14 days**.\n\nThis is established by record **[ld02]**, which states: \"The confirmed checkpoint retention period is 14 days. This replaces the former 30-day period.\" Record **[ld12]** confirms that the previous 30-day policy is historical and no longer governs current retention.",
+          "suppliedSourceIds": [
+            "ld12",
+            "ld02"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ldq03",
+      "project": "linden",
+      "question": "Can an earlier approval still authorize execution after a cited file has been edited?",
+      "sources": [
+        {
+          "id": "ld01",
+          "project": "linden",
+          "title": "Repeated submissions",
+          "text": "Linden stores a submission token with its saved result. Reusing that token returns the saved result without creating another task. A different payload under the same token is rejected.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld02",
+          "project": "linden",
+          "title": "Current checkpoint retention",
+          "text": "The confirmed checkpoint retention period is 14 days. This replaces the former 30-day period. Checkpoints remain recoverable during the current retention period.",
+          "standing": "confirmed",
+          "revision": 4
+        },
+        {
+          "id": "ld03",
+          "project": "linden",
+          "title": "Deployment manifest",
+          "text": "The deployment manifest targets the west cluster. A manifest records intended placement; it does not establish that the service is running there.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld04",
+          "project": "linden",
+          "title": "Deployment evidence inventory",
+          "text": "The deployment evidence inventory contains the west-cluster manifest but no execution receipt or live service observation.",
+          "standing": "observation",
+          "revision": 2
+        },
+        {
+          "id": "ld05",
+          "project": "linden",
+          "title": "Approval after source edits",
+          "text": "If a file cited by a reviewed proposal changes, that proposal requires a new review before execution. The earlier approval cannot authorize execution against the changed file.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld06",
+          "project": "linden",
+          "title": "Customer export prerequisite",
+          "text": "Exporting a customer dataset requires a recorded sign-off from the privacy steward. A project manager request does not substitute for that sign-off.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld07",
+          "project": "linden",
+          "title": "Meadow export request",
+          "text": "The project manager requested export of the Meadow customer dataset. No privacy-steward sign-off is recorded for this export.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld08",
+          "project": "linden",
+          "title": "Workspace visibility routing",
+          "text": "A private workspace uses an invite link. A public workspace uses a directory listing. Visibility must be recorded before either sharing route is selected.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld09",
+          "project": "linden",
+          "title": "Orchid workspace record",
+          "text": "The Orchid workspace has a green icon. Its visibility field is empty. Green icons are used by both private and public workspaces.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld10",
+          "project": "linden",
+          "title": "Diagnostic collection setting",
+          "text": "Diagnostic collection is disabled in the current configuration. These records contain no decision note explaining why this default was chosen.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld11",
+          "project": "linden",
+          "title": "Command palette shortcut",
+          "text": "The command palette opens with Alt+K. Ctrl+K opens the repository search panel. Shortcut bindings do not change when the project theme changes.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld12",
+          "project": "linden",
+          "title": "Former checkpoint policy",
+          "text": "The former checkpoint policy retained checkpoints for 30 days. This historical policy has been superseded and does not govern current retention.",
+          "standing": "historical",
+          "revision": 1
+        }
+      ],
+      "criteria": {
+        "behavior": "answer_constraint",
+        "requiredSourceIds": [
+          "ld05"
+        ],
+        "requirements": [
+          "Reject reuse of the earlier approval for the changed cited file and require a new review before execution."
+        ],
+        "forbidden": [
+          "Treat new review as optional.",
+          "Treat generic permission as a substitute for the required review."
+        ]
+      },
+      "answers": [
+        {
+          "label": "68301324cfcf",
+          "text": "Based on the supplied project records, an earlier approval **cannot** authorize execution after a cited file has been edited.\n\n**Rationale:**\nRecord [ld05] explicitly states that if a file cited by a reviewed proposal changes, the proposal requires a new review before execution. It further confirms that \"The earlier approval cannot authorize execution against the changed file.\"\n\n**Supporting Source ID:** [ld05]",
+          "suppliedSourceIds": [
+            "ld01",
+            "ld02",
+            "ld03",
+            "ld04",
+            "ld05",
+            "ld06",
+            "ld07",
+            "ld08",
+            "ld09",
+            "ld10",
+            "ld11",
+            "ld12"
+          ]
+        },
+        {
+          "label": "fafc3342f258",
+          "text": "Based on the supplied project records, an earlier approval **cannot** authorize execution after a cited file has been edited.\n\nThe record **[ld05]** explicitly states that if a file cited by a reviewed proposal changes, the proposal requires a new review before execution. It further confirms that \"The earlier approval cannot authorize execution against the changed file.\"\n\nTherefore, the condition of the file being edited invalidates the authority of the prior approval for that specific execution.",
+          "suppliedSourceIds": [
+            "ld05",
+            "ld06"
+          ]
+        },
+        {
+          "label": "e8dbe7d21b98",
+          "text": "Based on the supplied project records, an earlier approval **cannot** authorize execution after a cited file has been edited.\n\nThe record **[ld05]** explicitly states that if a file cited by a reviewed proposal changes, the proposal requires a new review before execution. It further confirms that \"The earlier approval cannot authorize execution against the changed file.\"\n\nTherefore, the condition of the file being edited invalidates the authority of the prior approval for that specific execution.",
+          "suppliedSourceIds": [
+            "ld05",
+            "ld04"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ldq04",
+      "project": "linden",
+      "question": "Which key combination opens the menu for invoking commands?",
+      "sources": [
+        {
+          "id": "ld01",
+          "project": "linden",
+          "title": "Repeated submissions",
+          "text": "Linden stores a submission token with its saved result. Reusing that token returns the saved result without creating another task. A different payload under the same token is rejected.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld02",
+          "project": "linden",
+          "title": "Current checkpoint retention",
+          "text": "The confirmed checkpoint retention period is 14 days. This replaces the former 30-day period. Checkpoints remain recoverable during the current retention period.",
+          "standing": "confirmed",
+          "revision": 4
+        },
+        {
+          "id": "ld03",
+          "project": "linden",
+          "title": "Deployment manifest",
+          "text": "The deployment manifest targets the west cluster. A manifest records intended placement; it does not establish that the service is running there.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld04",
+          "project": "linden",
+          "title": "Deployment evidence inventory",
+          "text": "The deployment evidence inventory contains the west-cluster manifest but no execution receipt or live service observation.",
+          "standing": "observation",
+          "revision": 2
+        },
+        {
+          "id": "ld05",
+          "project": "linden",
+          "title": "Approval after source edits",
+          "text": "If a file cited by a reviewed proposal changes, that proposal requires a new review before execution. The earlier approval cannot authorize execution against the changed file.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld06",
+          "project": "linden",
+          "title": "Customer export prerequisite",
+          "text": "Exporting a customer dataset requires a recorded sign-off from the privacy steward. A project manager request does not substitute for that sign-off.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld07",
+          "project": "linden",
+          "title": "Meadow export request",
+          "text": "The project manager requested export of the Meadow customer dataset. No privacy-steward sign-off is recorded for this export.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld08",
+          "project": "linden",
+          "title": "Workspace visibility routing",
+          "text": "A private workspace uses an invite link. A public workspace uses a directory listing. Visibility must be recorded before either sharing route is selected.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld09",
+          "project": "linden",
+          "title": "Orchid workspace record",
+          "text": "The Orchid workspace has a green icon. Its visibility field is empty. Green icons are used by both private and public workspaces.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld10",
+          "project": "linden",
+          "title": "Diagnostic collection setting",
+          "text": "Diagnostic collection is disabled in the current configuration. These records contain no decision note explaining why this default was chosen.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld11",
+          "project": "linden",
+          "title": "Command palette shortcut",
+          "text": "The command palette opens with Alt+K. Ctrl+K opens the repository search panel. Shortcut bindings do not change when the project theme changes.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld12",
+          "project": "linden",
+          "title": "Former checkpoint policy",
+          "text": "The former checkpoint policy retained checkpoints for 30 days. This historical policy has been superseded and does not govern current retention.",
+          "standing": "historical",
+          "revision": 1
+        }
+      ],
+      "criteria": {
+        "behavior": "answer",
+        "requiredSourceIds": [
+          "ld11"
+        ],
+        "requirements": [
+          "Identify Alt+K as the command palette shortcut."
+        ],
+        "forbidden": [
+          "Substitute Ctrl+K or infer a theme-dependent binding."
+        ]
+      },
+      "answers": [
+        {
+          "label": "bab6cd35f6b3",
+          "text": "Based on the provided project records, the key combination that opens the menu for invoking commands is **Alt+K**.\n\n*   **Source ID [ld11]** explicitly states: \"The command palette opens with Alt+K.\"\n*   **Source ID [ld11]** distinguishes this from **Ctrl+K**, which opens the repository search panel.\n*   **Source ID [ld11]** confirms that these shortcut bindings do not change when the project theme changes.\n\nNo additional questions are required as the confirmed record directly answers the query.",
+          "suppliedSourceIds": [
+            "ld11"
+          ]
+        },
+        {
+          "label": "c7d1779517fd",
+          "text": "Based on the supplied project records, the key combination that opens the menu for invoking commands is **Alt+K**.\n\nThis is confirmed by record **[ld11]**, which explicitly states: \"The command palette opens with Alt+K.\" The record further clarifies that **Ctrl+K** opens the repository search panel, distinguishing it from the command palette.\n\nNo conflicting confirmed facts were found in the provided records regarding this specific shortcut. Other records address unrelated topics such as checkpoint retention ([ld02], [ld12]), deployment manifests ([ld03], [ld04]), export prerequisites ([ld06], [ld07]), workspace visibility ([ld08], [ld09]), and diagnostic settings ([ld10]), none of which contradict the command palette shortcut defined in [ld11].",
+          "suppliedSourceIds": [
+            "ld01",
+            "ld02",
+            "ld03",
+            "ld04",
+            "ld05",
+            "ld06",
+            "ld07",
+            "ld08",
+            "ld09",
+            "ld10",
+            "ld11",
+            "ld12"
+          ]
+        },
+        {
+          "label": "9a2ae7c9f46f",
+          "text": "Based on the supplied project records, the key combination that opens the menu for invoking commands is **Alt+K**.\n\n*   **Source ID [ld11]** explicitly states: \"The command palette opens with Alt+K.\"\n*   **Source ID [ld11]** further clarifies that \"Ctrl+K opens the repository search panel,\" distinguishing it from the command palette.\n*   **Source ID [ld11]** notes that \"Shortcut bindings do not change when the project theme changes,\" confirming the stability of this binding.\n\nNo conflicting confirmed facts were found in the provided records.",
+          "suppliedSourceIds": [
+            "ld11",
+            "ld08"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ldq05",
+      "project": "linden",
+      "question": "Do these records establish that the service is running in the west cluster?",
+      "sources": [
+        {
+          "id": "ld01",
+          "project": "linden",
+          "title": "Repeated submissions",
+          "text": "Linden stores a submission token with its saved result. Reusing that token returns the saved result without creating another task. A different payload under the same token is rejected.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld02",
+          "project": "linden",
+          "title": "Current checkpoint retention",
+          "text": "The confirmed checkpoint retention period is 14 days. This replaces the former 30-day period. Checkpoints remain recoverable during the current retention period.",
+          "standing": "confirmed",
+          "revision": 4
+        },
+        {
+          "id": "ld03",
+          "project": "linden",
+          "title": "Deployment manifest",
+          "text": "The deployment manifest targets the west cluster. A manifest records intended placement; it does not establish that the service is running there.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld04",
+          "project": "linden",
+          "title": "Deployment evidence inventory",
+          "text": "The deployment evidence inventory contains the west-cluster manifest but no execution receipt or live service observation.",
+          "standing": "observation",
+          "revision": 2
+        },
+        {
+          "id": "ld05",
+          "project": "linden",
+          "title": "Approval after source edits",
+          "text": "If a file cited by a reviewed proposal changes, that proposal requires a new review before execution. The earlier approval cannot authorize execution against the changed file.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld06",
+          "project": "linden",
+          "title": "Customer export prerequisite",
+          "text": "Exporting a customer dataset requires a recorded sign-off from the privacy steward. A project manager request does not substitute for that sign-off.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld07",
+          "project": "linden",
+          "title": "Meadow export request",
+          "text": "The project manager requested export of the Meadow customer dataset. No privacy-steward sign-off is recorded for this export.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld08",
+          "project": "linden",
+          "title": "Workspace visibility routing",
+          "text": "A private workspace uses an invite link. A public workspace uses a directory listing. Visibility must be recorded before either sharing route is selected.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld09",
+          "project": "linden",
+          "title": "Orchid workspace record",
+          "text": "The Orchid workspace has a green icon. Its visibility field is empty. Green icons are used by both private and public workspaces.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld10",
+          "project": "linden",
+          "title": "Diagnostic collection setting",
+          "text": "Diagnostic collection is disabled in the current configuration. These records contain no decision note explaining why this default was chosen.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld11",
+          "project": "linden",
+          "title": "Command palette shortcut",
+          "text": "The command palette opens with Alt+K. Ctrl+K opens the repository search panel. Shortcut bindings do not change when the project theme changes.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld12",
+          "project": "linden",
+          "title": "Former checkpoint policy",
+          "text": "The former checkpoint policy retained checkpoints for 30 days. This historical policy has been superseded and does not govern current retention.",
+          "standing": "historical",
+          "revision": 1
+        }
+      ],
+      "criteria": {
+        "behavior": "abstain_runtime",
+        "requiredSourceIds": [
+          "ld03",
+          "ld04"
+        ],
+        "requirements": [
+          "State that these records do not establish live placement; the manifest records intent and runtime evidence is absent.",
+          "Do not require exact phrasing or a quotation."
+        ],
+        "forbidden": [
+          "Treat the manifest as proof of live deployment.",
+          "Conclude that the service definitely is not running there."
+        ]
+      },
+      "answers": [
+        {
+          "label": "555ceba65eb0",
+          "text": "Based on the supplied project records, the answer is **no**.\n\nThe records do not establish that the service is running in the west cluster. While the deployment manifest ([ld03]) confirms the *intent* to target the west cluster, it explicitly states that a manifest records intended placement and does not establish runtime status. Furthermore, the deployment evidence inventory ([ld04]) is categorized as an \"observation\" rather than a confirmed record, and it specifically notes the absence of an execution receipt or live service observation.\n\nTherefore, there is no confirmed evidence of deployment or runtime proof in the provided records.\n\n**Missing Fact:**\nDo you have an execution receipt or a live service observation confirming the service is currently running in the west cluster?",
+          "suppliedSourceIds": [
+            "ld03",
+            "ld04"
+          ]
+        },
+        {
+          "label": "abfdeb7ef0bf",
+          "text": "Based on the supplied project records, the answer is **no**; the records do not establish that the service is running in the west cluster.\n\nWhile record **[ld03]** confirms that the deployment manifest *targets* the west cluster, it explicitly states that a manifest \"records intended placement; it does not establish that the service is running there.\" Furthermore, record **[ld04]** (standing: observation) notes that the inventory contains the west-cluster manifest but lacks an \"execution receipt or live service observation.\"\n\nTo determine if the service is actually running, the following fact is missing:\n**Is there a recorded execution receipt or live service observation confirming the service is currently running in the west cluster?**",
+          "suppliedSourceIds": [
+            "ld01",
+            "ld02",
+            "ld03",
+            "ld04",
+            "ld05",
+            "ld06",
+            "ld07",
+            "ld08",
+            "ld09",
+            "ld10",
+            "ld11",
+            "ld12"
+          ]
+        },
+        {
+          "label": "5320616a2c75",
+          "text": "Based on the supplied project records, the answer is **no**.\n\nThe records do not establish that the service is running in the west cluster. While the deployment manifest ([ld03]) confirms the *intent* to target the west cluster, it explicitly states that a manifest records intended placement and does not establish runtime status. Furthermore, the deployment evidence inventory ([ld04]) is categorized as an \"observation\" rather than a confirmed record, and it specifically notes the absence of an execution receipt or live service observation.\n\nTherefore, there is no confirmed evidence of deployment or runtime proof in the provided records.\n\n**Missing Fact:**\nDo you have an execution receipt or a live service observation confirming the service is currently running in the west cluster?",
+          "suppliedSourceIds": [
+            "ld03",
+            "ld04"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ldq06",
+      "project": "linden",
+      "question": "Is the Meadow customer export authorized now by the project manager request?",
+      "sources": [
+        {
+          "id": "ld01",
+          "project": "linden",
+          "title": "Repeated submissions",
+          "text": "Linden stores a submission token with its saved result. Reusing that token returns the saved result without creating another task. A different payload under the same token is rejected.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld02",
+          "project": "linden",
+          "title": "Current checkpoint retention",
+          "text": "The confirmed checkpoint retention period is 14 days. This replaces the former 30-day period. Checkpoints remain recoverable during the current retention period.",
+          "standing": "confirmed",
+          "revision": 4
+        },
+        {
+          "id": "ld03",
+          "project": "linden",
+          "title": "Deployment manifest",
+          "text": "The deployment manifest targets the west cluster. A manifest records intended placement; it does not establish that the service is running there.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld04",
+          "project": "linden",
+          "title": "Deployment evidence inventory",
+          "text": "The deployment evidence inventory contains the west-cluster manifest but no execution receipt or live service observation.",
+          "standing": "observation",
+          "revision": 2
+        },
+        {
+          "id": "ld05",
+          "project": "linden",
+          "title": "Approval after source edits",
+          "text": "If a file cited by a reviewed proposal changes, that proposal requires a new review before execution. The earlier approval cannot authorize execution against the changed file.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld06",
+          "project": "linden",
+          "title": "Customer export prerequisite",
+          "text": "Exporting a customer dataset requires a recorded sign-off from the privacy steward. A project manager request does not substitute for that sign-off.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld07",
+          "project": "linden",
+          "title": "Meadow export request",
+          "text": "The project manager requested export of the Meadow customer dataset. No privacy-steward sign-off is recorded for this export.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld08",
+          "project": "linden",
+          "title": "Workspace visibility routing",
+          "text": "A private workspace uses an invite link. A public workspace uses a directory listing. Visibility must be recorded before either sharing route is selected.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld09",
+          "project": "linden",
+          "title": "Orchid workspace record",
+          "text": "The Orchid workspace has a green icon. Its visibility field is empty. Green icons are used by both private and public workspaces.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld10",
+          "project": "linden",
+          "title": "Diagnostic collection setting",
+          "text": "Diagnostic collection is disabled in the current configuration. These records contain no decision note explaining why this default was chosen.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld11",
+          "project": "linden",
+          "title": "Command palette shortcut",
+          "text": "The command palette opens with Alt+K. Ctrl+K opens the repository search panel. Shortcut bindings do not change when the project theme changes.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld12",
+          "project": "linden",
+          "title": "Former checkpoint policy",
+          "text": "The former checkpoint policy retained checkpoints for 30 days. This historical policy has been superseded and does not govern current retention.",
+          "standing": "historical",
+          "revision": 1
+        }
+      ],
+      "criteria": {
+        "behavior": "answer_constraint",
+        "requiredSourceIds": [
+          "ld06",
+          "ld07"
+        ],
+        "requirements": [
+          "State that export is not authorized now: the recorded privacy-steward sign-off is missing and the manager request is insufficient."
+        ],
+        "forbidden": [
+          "Authorize export on the manager request.",
+          "Replace the named recorded sign-off with generic user permission."
+        ]
+      },
+      "answers": [
+        {
+          "label": "72b8cdeaa449",
+          "text": "No, the Meadow customer export is not authorized.\n\nWhile the project manager has requested the export (Source: [ld07]), this request does not satisfy the mandatory prerequisite for authorization. Confirmed records establish that exporting a customer dataset requires a recorded sign-off from the privacy steward (Source: [ld06]). Since no privacy-steward sign-off is recorded for this specific export (Source: [ld07]), the necessary condition for authorization is not met.\n\n**Missing Fact:** Is a privacy-steward sign-off currently being obtained or has it been recorded in a different record not listed here?",
+          "suppliedSourceIds": [
+            "ld07",
+            "ld06"
+          ]
+        },
+        {
+          "label": "d9599fc80d4a",
+          "text": "No, the Meadow customer export is not authorized.\n\nWhile the project manager has requested the export (Source: [ld07]), this request does not satisfy the mandatory prerequisite for authorization. Confirmed records establish that exporting a customer dataset requires a recorded sign-off from the privacy steward (Source: [ld06]). Since no privacy-steward sign-off is recorded for this specific export (Source: [ld07]), the necessary condition for authorization is not met.\n\n**Missing Fact:** Is a privacy-steward sign-off currently being obtained or has it been recorded in a different record not listed here?",
+          "suppliedSourceIds": [
+            "ld07",
+            "ld06"
+          ]
+        },
+        {
+          "label": "79bf23e1885d",
+          "text": "Based on the supplied project records, the Meadow customer export is **not authorized** by the project manager request.\n\nThe records establish the following conflicting and mandatory conditions:\n\n1.  **Mandatory Prerequisite Missing**: Record [ld06] confirms that exporting a customer dataset requires a recorded sign-off from the privacy steward. It explicitly states that a project manager request does not substitute for that sign-off.\n2.  **Current Status of Request**: Record [ld07] confirms that while the project manager requested the export of the Meadow customer dataset, **no privacy-steward sign-off is recorded** for this export.\n3.  **Nature of Evidence**: Record [ld01] notes that reusing a submission token returns a saved result without creating a new task, implying that the current state reflects the lack of a new, valid approval. Record [ld05] further clarifies that if a file cited by a proposal changes, a new review is required; however, in this case, the missing element is the steward's sign-off entirely, not a changed file.\n\nSince the mandatory prerequisite (privacy steward sign-off) is absent and the project manager request cannot substitute for it, the export is not authorized.\n\n**Missing Fact Check**:\nTo fully verify the current authorization status, one concrete question is required:\n*Has a privacy steward sign-off been recorded for the Meadow customer export request since the initial project manager submission?*",
+          "suppliedSourceIds": [
+            "ld01",
+            "ld02",
+            "ld03",
+            "ld04",
+            "ld05",
+            "ld06",
+            "ld07",
+            "ld08",
+            "ld09",
+            "ld10",
+            "ld11",
+            "ld12"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ldq07",
+      "project": "linden",
+      "question": "Should I share the green Orchid workspace through an invite link or the directory listing?",
+      "sources": [
+        {
+          "id": "ld01",
+          "project": "linden",
+          "title": "Repeated submissions",
+          "text": "Linden stores a submission token with its saved result. Reusing that token returns the saved result without creating another task. A different payload under the same token is rejected.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld02",
+          "project": "linden",
+          "title": "Current checkpoint retention",
+          "text": "The confirmed checkpoint retention period is 14 days. This replaces the former 30-day period. Checkpoints remain recoverable during the current retention period.",
+          "standing": "confirmed",
+          "revision": 4
+        },
+        {
+          "id": "ld03",
+          "project": "linden",
+          "title": "Deployment manifest",
+          "text": "The deployment manifest targets the west cluster. A manifest records intended placement; it does not establish that the service is running there.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld04",
+          "project": "linden",
+          "title": "Deployment evidence inventory",
+          "text": "The deployment evidence inventory contains the west-cluster manifest but no execution receipt or live service observation.",
+          "standing": "observation",
+          "revision": 2
+        },
+        {
+          "id": "ld05",
+          "project": "linden",
+          "title": "Approval after source edits",
+          "text": "If a file cited by a reviewed proposal changes, that proposal requires a new review before execution. The earlier approval cannot authorize execution against the changed file.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld06",
+          "project": "linden",
+          "title": "Customer export prerequisite",
+          "text": "Exporting a customer dataset requires a recorded sign-off from the privacy steward. A project manager request does not substitute for that sign-off.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld07",
+          "project": "linden",
+          "title": "Meadow export request",
+          "text": "The project manager requested export of the Meadow customer dataset. No privacy-steward sign-off is recorded for this export.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld08",
+          "project": "linden",
+          "title": "Workspace visibility routing",
+          "text": "A private workspace uses an invite link. A public workspace uses a directory listing. Visibility must be recorded before either sharing route is selected.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld09",
+          "project": "linden",
+          "title": "Orchid workspace record",
+          "text": "The Orchid workspace has a green icon. Its visibility field is empty. Green icons are used by both private and public workspaces.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld10",
+          "project": "linden",
+          "title": "Diagnostic collection setting",
+          "text": "Diagnostic collection is disabled in the current configuration. These records contain no decision note explaining why this default was chosen.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld11",
+          "project": "linden",
+          "title": "Command palette shortcut",
+          "text": "The command palette opens with Alt+K. Ctrl+K opens the repository search panel. Shortcut bindings do not change when the project theme changes.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld12",
+          "project": "linden",
+          "title": "Former checkpoint policy",
+          "text": "The former checkpoint policy retained checkpoints for 30 days. This historical policy has been superseded and does not govern current retention.",
+          "standing": "historical",
+          "revision": 1
+        }
+      ],
+      "criteria": {
+        "behavior": "clarify",
+        "requiredSourceIds": [
+          "ld08",
+          "ld09"
+        ],
+        "requirements": [
+          "Request or ask the user to record whether Orchid is private or public before selecting a route. Conditional route guidance is optional.",
+          "A concise declarative request for the missing visibility fact counts as clarification. A claim-free clarification can omit citations."
+        ],
+        "forbidden": [
+          "Infer visibility from the green icon.",
+          "Select either sharing route while visibility is missing."
+        ]
+      },
+      "answers": [
+        {
+          "label": "7303d48197bf",
+          "text": "Based on the provided records, the correct sharing method cannot be determined because the visibility status of the workspace is missing.\n\n*   **Record [ld08]** establishes that a **private** workspace requires an **invite link**, while a **public** workspace requires a **directory listing**. It further mandates that visibility must be recorded before selecting a sharing route.\n*   **Record [ld09]** confirms the Orchid workspace has a **green icon** and states that green icons are used by **both private and public** workspaces. However, the **visibility field is empty** for this specific workspace.\n\nBecause the visibility field is empty and the icon color alone does not distinguish between private and public workspaces, the required visibility status is missing. Without this fact, it is impossible to confirm whether the workspace is private (requiring an invite link) or public (requiring a directory listing).\n\n**Question:** What is the current visibility status (private or public) of the Orchid workspace?",
+          "suppliedSourceIds": [
+            "ld09",
+            "ld08"
+          ]
+        },
+        {
+          "label": "3637363c8d1b",
+          "text": "Based on the supplied project records, the correct sharing method cannot be determined because a mandatory prerequisite is missing.\n\n**Analysis:**\n*   **Record [ld08]** states that visibility must be recorded before either sharing route (invite link for private, directory listing for public) is selected.\n*   **Record [ld09]** confirms the Orchid workspace has a green icon but explicitly states its **visibility field is empty**.\n*   **Record [ld09]** further notes that green icons are used by both private and public workspaces, meaning the icon alone does not distinguish the sharing method.\n\n**Conclusion:**\nYou cannot determine whether to use an invite link or a directory listing because the visibility status of the Orchid workspace is not recorded.\n\n**Missing Fact:**\nWhat is the recorded visibility status (private or public) for the Orchid workspace?",
+          "suppliedSourceIds": [
+            "ld01",
+            "ld02",
+            "ld03",
+            "ld04",
+            "ld05",
+            "ld06",
+            "ld07",
+            "ld08",
+            "ld09",
+            "ld10",
+            "ld11",
+            "ld12"
+          ]
+        },
+        {
+          "label": "4736b5f06bc6",
+          "text": "Based on the provided records, I cannot determine whether you should share the green Orchid workspace via an invite link or a directory listing.\n\nThe records establish that the Orchid workspace has a green icon ([ld09]), but green icons are used by both private and public workspaces, meaning the icon alone does not confirm the workspace's visibility status. Furthermore, record [ld08] explicitly states that **visibility must be recorded** before either sharing route is selected. Since record [ld09] indicates the visibility field is empty, the required condition to determine the correct sharing method has not been met.\n\n**Missing Fact:** What is the recorded visibility status (private or public) of the Orchid workspace?",
+          "suppliedSourceIds": [
+            "ld08",
+            "ld09"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ldq08",
+      "project": "linden",
+      "question": "Why was diagnostic collection disabled by default?",
+      "sources": [
+        {
+          "id": "ld01",
+          "project": "linden",
+          "title": "Repeated submissions",
+          "text": "Linden stores a submission token with its saved result. Reusing that token returns the saved result without creating another task. A different payload under the same token is rejected.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld02",
+          "project": "linden",
+          "title": "Current checkpoint retention",
+          "text": "The confirmed checkpoint retention period is 14 days. This replaces the former 30-day period. Checkpoints remain recoverable during the current retention period.",
+          "standing": "confirmed",
+          "revision": 4
+        },
+        {
+          "id": "ld03",
+          "project": "linden",
+          "title": "Deployment manifest",
+          "text": "The deployment manifest targets the west cluster. A manifest records intended placement; it does not establish that the service is running there.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld04",
+          "project": "linden",
+          "title": "Deployment evidence inventory",
+          "text": "The deployment evidence inventory contains the west-cluster manifest but no execution receipt or live service observation.",
+          "standing": "observation",
+          "revision": 2
+        },
+        {
+          "id": "ld05",
+          "project": "linden",
+          "title": "Approval after source edits",
+          "text": "If a file cited by a reviewed proposal changes, that proposal requires a new review before execution. The earlier approval cannot authorize execution against the changed file.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld06",
+          "project": "linden",
+          "title": "Customer export prerequisite",
+          "text": "Exporting a customer dataset requires a recorded sign-off from the privacy steward. A project manager request does not substitute for that sign-off.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld07",
+          "project": "linden",
+          "title": "Meadow export request",
+          "text": "The project manager requested export of the Meadow customer dataset. No privacy-steward sign-off is recorded for this export.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld08",
+          "project": "linden",
+          "title": "Workspace visibility routing",
+          "text": "A private workspace uses an invite link. A public workspace uses a directory listing. Visibility must be recorded before either sharing route is selected.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld09",
+          "project": "linden",
+          "title": "Orchid workspace record",
+          "text": "The Orchid workspace has a green icon. Its visibility field is empty. Green icons are used by both private and public workspaces.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld10",
+          "project": "linden",
+          "title": "Diagnostic collection setting",
+          "text": "Diagnostic collection is disabled in the current configuration. These records contain no decision note explaining why this default was chosen.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld11",
+          "project": "linden",
+          "title": "Command palette shortcut",
+          "text": "The command palette opens with Alt+K. Ctrl+K opens the repository search panel. Shortcut bindings do not change when the project theme changes.",
+          "standing": "confirmed",
+          "revision": 1
+        },
+        {
+          "id": "ld12",
+          "project": "linden",
+          "title": "Former checkpoint policy",
+          "text": "The former checkpoint policy retained checkpoints for 30 days. This historical policy has been superseded and does not govern current retention.",
+          "standing": "historical",
+          "revision": 1
+        }
+      ],
+      "criteria": {
+        "behavior": "abstain_rationale",
+        "requiredSourceIds": [
+          "ld10"
+        ],
+        "requirements": [
+          "State that the reason for the disabled default is not established in these records. Asking for the decision note is optional.",
+          "A concise absence-of-evidence statement needs no citation; additional configuration claims do."
+        ],
+        "forbidden": [
+          "Invent privacy, cost, performance, or another rationale.",
+          "Treat configuration as proof of its rationale."
+        ]
+      },
+      "answers": [
+        {
+          "label": "219ee35f9789",
+          "text": "Based on the supplied project records, the reason diagnostic collection was disabled by default cannot be established.\n\nWhile record **[ld10]** confirms that \"Diagnostic collection is disabled in the current configuration,\" it explicitly states: \"These records contain no decision note explaining why this default was chosen.\"\n\nNo other confirmed records provide a rationale, intent, or mandatory prerequisite for this specific setting. Therefore, the evidence cannot establish the answer or rationale for why the setting was disabled.",
+          "suppliedSourceIds": [
+            "ld01",
+            "ld02",
+            "ld03",
+            "ld04",
+            "ld05",
+            "ld06",
+            "ld07",
+            "ld08",
+            "ld09",
+            "ld10",
+            "ld11",
+            "ld12"
+          ]
+        },
+        {
+          "label": "88e210481674",
+          "text": "Based on the supplied project records, the reason diagnostic collection was disabled by default cannot be established.\n\nThe record [ld10] confirms that diagnostic collection is disabled in the current configuration, but it explicitly states: \"These records contain no decision note explaining why this default was chosen.\"\n\nTherefore, the rationale for this setting is not present in the provided data.",
+          "suppliedSourceIds": [
+            "ld10"
+          ]
+        },
+        {
+          "label": "de8bb334226f",
+          "text": "Based on the supplied project records, the reason diagnostic collection was disabled by default **cannot be established**.\n\nThe records explicitly state that while the current configuration shows diagnostic collection as disabled, there is **no decision note** within the available records explaining why this default was chosen ([ld10]).\n\n*   **[ld10]** confirms the setting is disabled but notes: \"These records contain no decision note explaining why this default was chosen.\"\n*   **[ld04]** indicates a lack of execution receipt or live service observation, meaning the deployment evidence does not provide context on the intent behind the configuration.\n\n**Missing Fact:** The specific rationale or decision note regarding the default setting.\n\n**Question:** Is there a separate decision record, meeting minute, or email correspondence that documents the reasoning for disabling diagnostic collection by default?",
+          "suppliedSourceIds": [
+            "ld10",
+            "ld04"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,122 @@
+{
+  "d7842dcb1703": {
+    "id": "ldq01",
+    "arm": "lexical2",
+    "repetition": 1
+  },
+  "874be21d7ac9": {
+    "id": "ldq01",
+    "arm": "dense2",
+    "repetition": 1
+  },
+  "2661a4b1d7ff": {
+    "id": "ldq01",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "cd84b419d719": {
+    "id": "ldq02",
+    "arm": "dense2",
+    "repetition": 1
+  },
+  "affbca863396": {
+    "id": "ldq02",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "c6b4909c44a1": {
+    "id": "ldq02",
+    "arm": "lexical2",
+    "repetition": 1
+  },
+  "68301324cfcf": {
+    "id": "ldq03",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "e8dbe7d21b98": {
+    "id": "ldq03",
+    "arm": "lexical2",
+    "repetition": 1
+  },
+  "fafc3342f258": {
+    "id": "ldq03",
+    "arm": "dense2",
+    "repetition": 1
+  },
+  "bab6cd35f6b3": {
+    "id": "ldq04",
+    "arm": "lexical2",
+    "repetition": 1
+  },
+  "9a2ae7c9f46f": {
+    "id": "ldq04",
+    "arm": "dense2",
+    "repetition": 1
+  },
+  "c7d1779517fd": {
+    "id": "ldq04",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "555ceba65eb0": {
+    "id": "ldq05",
+    "arm": "dense2",
+    "repetition": 1
+  },
+  "abfdeb7ef0bf": {
+    "id": "ldq05",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "5320616a2c75": {
+    "id": "ldq05",
+    "arm": "lexical2",
+    "repetition": 1
+  },
+  "79bf23e1885d": {
+    "id": "ldq06",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "d9599fc80d4a": {
+    "id": "ldq06",
+    "arm": "lexical2",
+    "repetition": 1
+  },
+  "72b8cdeaa449": {
+    "id": "ldq06",
+    "arm": "dense2",
+    "repetition": 1
+  },
+  "4736b5f06bc6": {
+    "id": "ldq07",
+    "arm": "lexical2",
+    "repetition": 1
+  },
+  "7303d48197bf": {
+    "id": "ldq07",
+    "arm": "dense2",
+    "repetition": 1
+  },
+  "3637363c8d1b": {
+    "id": "ldq07",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "de8bb334226f": {
+    "id": "ldq08",
+    "arm": "dense2",
+    "repetition": 1
+  },
+  "219ee35f9789": {
+    "id": "ldq08",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "88e210481674": {
+    "id": "ldq08",
+    "arm": "lexical2",
+    "repetition": 1
+  }
+}
