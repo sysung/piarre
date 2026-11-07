@@ -1,0 +1,495 @@
+{
+  "sourceHash": "9a3eca64a3b0f2f640a47a061fe4f35bb061e3bb39ce31833aed2ec0a4f841c5",
+  "questionHash": "8331256e7687f2bc1489186dd6a6dfe808ebd8250caeb1084266c9aa0e8be0bb",
+  "modelDigest": "3e86173a1f6e9ab8e3c4a90f1ec00d80d4f07ecc532c42ff7b7f7d1419a828ab",
+  "results": [
+    {
+      "id": "ldq01",
+      "project": "linden",
+      "method": "lexical",
+      "hits": [
+        {
+          "id": "ld01",
+          "score": -12.152633582892769,
+          "fingerprint": "b37d66271aca4374a7fe85e1d7523952f10a4f1df02c64cb0cc02eaa4a2a0831"
+        }
+      ]
+    },
+    {
+      "id": "ldq01",
+      "project": "linden",
+      "method": "dense",
+      "hits": [
+        {
+          "id": "ld01",
+          "score": 0.6941055258605399,
+          "fingerprint": "b37d66271aca4374a7fe85e1d7523952f10a4f1df02c64cb0cc02eaa4a2a0831"
+        },
+        {
+          "id": "ld08",
+          "score": 0.35820704405710263,
+          "fingerprint": "2a83268a709337b36ec849c0439018850e3aedadedc98e39c7aaf6b062fcd74c"
+        },
+        {
+          "id": "ld07",
+          "score": 0.3438419250619155,
+          "fingerprint": "9c3762aae402de68f5db260f9f2b067772573d50eca3ad00d2c92a5ce19e3737"
+        }
+      ]
+    },
+    {
+      "id": "ldq01",
+      "project": "linden",
+      "method": "hybrid",
+      "hits": [
+        {
+          "id": "ld01",
+          "score": 0.03278688524590164,
+          "fingerprint": "b37d66271aca4374a7fe85e1d7523952f10a4f1df02c64cb0cc02eaa4a2a0831"
+        },
+        {
+          "id": "ld08",
+          "score": 0.016129032258064516,
+          "fingerprint": "2a83268a709337b36ec849c0439018850e3aedadedc98e39c7aaf6b062fcd74c"
+        },
+        {
+          "id": "ld07",
+          "score": 0.015873015873015872,
+          "fingerprint": "9c3762aae402de68f5db260f9f2b067772573d50eca3ad00d2c92a5ce19e3737"
+        }
+      ]
+    },
+    {
+      "id": "ldq02",
+      "project": "linden",
+      "method": "lexical",
+      "hits": [
+        {
+          "id": "ld12",
+          "score": -8.629242694299384,
+          "fingerprint": "927ed5a5066d2f05d65346abce6c4171afe1efa125781dad1b2ce88b02c38b57"
+        },
+        {
+          "id": "ld02",
+          "score": -3.6183695911730793,
+          "fingerprint": "cdeecd3380130dd96245cc92a35269eafd8b5cea4147a1650e2af8e0d30ece8f"
+        },
+        {
+          "id": "ld01",
+          "score": -1.8973438494658026,
+          "fingerprint": "b37d66271aca4374a7fe85e1d7523952f10a4f1df02c64cb0cc02eaa4a2a0831"
+        }
+      ]
+    },
+    {
+      "id": "ldq02",
+      "project": "linden",
+      "method": "dense",
+      "hits": [
+        {
+          "id": "ld12",
+          "score": 0.817578288646481,
+          "fingerprint": "927ed5a5066d2f05d65346abce6c4171afe1efa125781dad1b2ce88b02c38b57"
+        },
+        {
+          "id": "ld02",
+          "score": 0.7762725357646382,
+          "fingerprint": "cdeecd3380130dd96245cc92a35269eafd8b5cea4147a1650e2af8e0d30ece8f"
+        },
+        {
+          "id": "ld10",
+          "score": 0.40079605564252785,
+          "fingerprint": "10c8d67923b528384c61bf1d7d153ae30dbb222ab41f22d52baa8d875399a9dd"
+        }
+      ]
+    },
+    {
+      "id": "ldq02",
+      "project": "linden",
+      "method": "hybrid",
+      "hits": [
+        {
+          "id": "ld12",
+          "score": 0.03278688524590164,
+          "fingerprint": "927ed5a5066d2f05d65346abce6c4171afe1efa125781dad1b2ce88b02c38b57"
+        },
+        {
+          "id": "ld02",
+          "score": 0.03225806451612903,
+          "fingerprint": "cdeecd3380130dd96245cc92a35269eafd8b5cea4147a1650e2af8e0d30ece8f"
+        },
+        {
+          "id": "ld01",
+          "score": 0.03149801587301587,
+          "fingerprint": "b37d66271aca4374a7fe85e1d7523952f10a4f1df02c64cb0cc02eaa4a2a0831"
+        }
+      ]
+    },
+    {
+      "id": "ldq03",
+      "project": "linden",
+      "method": "lexical",
+      "hits": [
+        {
+          "id": "ld05",
+          "score": -16.69682496931898,
+          "fingerprint": "1b235c7703bf6c6edf2c0faab53b02c16595b77c5ec74a4ea56cc8d35d2f3737"
+        },
+        {
+          "id": "ld04",
+          "score": -1.5567288091504123,
+          "fingerprint": "d118f49176177f9c9c5e6cd274854a97e03c9528f063db74f3a6ef03fc798be8"
+        }
+      ]
+    },
+    {
+      "id": "ldq03",
+      "project": "linden",
+      "method": "dense",
+      "hits": [
+        {
+          "id": "ld05",
+          "score": 0.7617698853486249,
+          "fingerprint": "1b235c7703bf6c6edf2c0faab53b02c16595b77c5ec74a4ea56cc8d35d2f3737"
+        },
+        {
+          "id": "ld06",
+          "score": 0.378583559546372,
+          "fingerprint": "d8a810b5814b6cdfc693b57ac3c413d0852c77193da10080d7d270f1eeefa587"
+        },
+        {
+          "id": "ld01",
+          "score": 0.3343546518806371,
+          "fingerprint": "b37d66271aca4374a7fe85e1d7523952f10a4f1df02c64cb0cc02eaa4a2a0831"
+        }
+      ]
+    },
+    {
+      "id": "ldq03",
+      "project": "linden",
+      "method": "hybrid",
+      "hits": [
+        {
+          "id": "ld05",
+          "score": 0.03278688524590164,
+          "fingerprint": "1b235c7703bf6c6edf2c0faab53b02c16595b77c5ec74a4ea56cc8d35d2f3737"
+        },
+        {
+          "id": "ld04",
+          "score": 0.031054405392392875,
+          "fingerprint": "d118f49176177f9c9c5e6cd274854a97e03c9528f063db74f3a6ef03fc798be8"
+        },
+        {
+          "id": "ld06",
+          "score": 0.016129032258064516,
+          "fingerprint": "d8a810b5814b6cdfc693b57ac3c413d0852c77193da10080d7d270f1eeefa587"
+        }
+      ]
+    },
+    {
+      "id": "ldq04",
+      "project": "linden",
+      "method": "lexical",
+      "hits": [
+        {
+          "id": "ld11",
+          "score": -5.531504595807375,
+          "fingerprint": "f95d6432aa8dd1a41916ef95b6e537f80b3ee8e95f4dec11b493eb44d094f95f"
+        }
+      ]
+    },
+    {
+      "id": "ldq04",
+      "project": "linden",
+      "method": "dense",
+      "hits": [
+        {
+          "id": "ld11",
+          "score": 0.5861763556767879,
+          "fingerprint": "f95d6432aa8dd1a41916ef95b6e537f80b3ee8e95f4dec11b493eb44d094f95f"
+        },
+        {
+          "id": "ld08",
+          "score": 0.36289332658678597,
+          "fingerprint": "2a83268a709337b36ec849c0439018850e3aedadedc98e39c7aaf6b062fcd74c"
+        },
+        {
+          "id": "ld09",
+          "score": 0.3212964937692365,
+          "fingerprint": "a602fb0112b2dccb51478e532346714bc5b73060bbad2c28c5f07bee8a26262d"
+        }
+      ]
+    },
+    {
+      "id": "ldq04",
+      "project": "linden",
+      "method": "hybrid",
+      "hits": [
+        {
+          "id": "ld11",
+          "score": 0.03278688524590164,
+          "fingerprint": "f95d6432aa8dd1a41916ef95b6e537f80b3ee8e95f4dec11b493eb44d094f95f"
+        },
+        {
+          "id": "ld08",
+          "score": 0.016129032258064516,
+          "fingerprint": "2a83268a709337b36ec849c0439018850e3aedadedc98e39c7aaf6b062fcd74c"
+        },
+        {
+          "id": "ld09",
+          "score": 0.015873015873015872,
+          "fingerprint": "a602fb0112b2dccb51478e532346714bc5b73060bbad2c28c5f07bee8a26262d"
+        }
+      ]
+    },
+    {
+      "id": "ldq05",
+      "project": "linden",
+      "method": "lexical",
+      "hits": [
+        {
+          "id": "ld03",
+          "score": -8.576120275328654,
+          "fingerprint": "dc323449b5b7faf92f30bde9d0c080603c9cc67807e2b63a9818b7f9a65cbb28"
+        },
+        {
+          "id": "ld04",
+          "score": -4.670186427451237,
+          "fingerprint": "d118f49176177f9c9c5e6cd274854a97e03c9528f063db74f3a6ef03fc798be8"
+        },
+        {
+          "id": "ld10",
+          "score": -2.1146430390122575,
+          "fingerprint": "10c8d67923b528384c61bf1d7d153ae30dbb222ab41f22d52baa8d875399a9dd"
+        }
+      ]
+    },
+    {
+      "id": "ldq05",
+      "project": "linden",
+      "method": "dense",
+      "hits": [
+        {
+          "id": "ld03",
+          "score": 0.6282714427699162,
+          "fingerprint": "dc323449b5b7faf92f30bde9d0c080603c9cc67807e2b63a9818b7f9a65cbb28"
+        },
+        {
+          "id": "ld04",
+          "score": 0.5650051010493552,
+          "fingerprint": "d118f49176177f9c9c5e6cd274854a97e03c9528f063db74f3a6ef03fc798be8"
+        },
+        {
+          "id": "ld10",
+          "score": 0.4112764025888169,
+          "fingerprint": "10c8d67923b528384c61bf1d7d153ae30dbb222ab41f22d52baa8d875399a9dd"
+        }
+      ]
+    },
+    {
+      "id": "ldq05",
+      "project": "linden",
+      "method": "hybrid",
+      "hits": [
+        {
+          "id": "ld03",
+          "score": 0.03278688524590164,
+          "fingerprint": "dc323449b5b7faf92f30bde9d0c080603c9cc67807e2b63a9818b7f9a65cbb28"
+        },
+        {
+          "id": "ld04",
+          "score": 0.03225806451612903,
+          "fingerprint": "d118f49176177f9c9c5e6cd274854a97e03c9528f063db74f3a6ef03fc798be8"
+        },
+        {
+          "id": "ld10",
+          "score": 0.031746031746031744,
+          "fingerprint": "10c8d67923b528384c61bf1d7d153ae30dbb222ab41f22d52baa8d875399a9dd"
+        }
+      ]
+    },
+    {
+      "id": "ldq06",
+      "project": "linden",
+      "method": "lexical",
+      "hits": [
+        {
+          "id": "ld07",
+          "score": -11.213586910283762,
+          "fingerprint": "9c3762aae402de68f5db260f9f2b067772573d50eca3ad00d2c92a5ce19e3737"
+        },
+        {
+          "id": "ld06",
+          "score": -7.696071614817751,
+          "fingerprint": "d8a810b5814b6cdfc693b57ac3c413d0852c77193da10080d7d270f1eeefa587"
+        },
+        {
+          "id": "ld05",
+          "score": -1.8973429179719872,
+          "fingerprint": "1b235c7703bf6c6edf2c0faab53b02c16595b77c5ec74a4ea56cc8d35d2f3737"
+        }
+      ]
+    },
+    {
+      "id": "ldq06",
+      "project": "linden",
+      "method": "dense",
+      "hits": [
+        {
+          "id": "ld07",
+          "score": 0.80698549681747,
+          "fingerprint": "9c3762aae402de68f5db260f9f2b067772573d50eca3ad00d2c92a5ce19e3737"
+        },
+        {
+          "id": "ld06",
+          "score": 0.6191549556006607,
+          "fingerprint": "d8a810b5814b6cdfc693b57ac3c413d0852c77193da10080d7d270f1eeefa587"
+        },
+        {
+          "id": "ld05",
+          "score": 0.35878695355470025,
+          "fingerprint": "1b235c7703bf6c6edf2c0faab53b02c16595b77c5ec74a4ea56cc8d35d2f3737"
+        }
+      ]
+    },
+    {
+      "id": "ldq06",
+      "project": "linden",
+      "method": "hybrid",
+      "hits": [
+        {
+          "id": "ld07",
+          "score": 0.03278688524590164,
+          "fingerprint": "9c3762aae402de68f5db260f9f2b067772573d50eca3ad00d2c92a5ce19e3737"
+        },
+        {
+          "id": "ld06",
+          "score": 0.03225806451612903,
+          "fingerprint": "d8a810b5814b6cdfc693b57ac3c413d0852c77193da10080d7d270f1eeefa587"
+        },
+        {
+          "id": "ld05",
+          "score": 0.031746031746031744,
+          "fingerprint": "1b235c7703bf6c6edf2c0faab53b02c16595b77c5ec74a4ea56cc8d35d2f3737"
+        }
+      ]
+    },
+    {
+      "id": "ldq07",
+      "project": "linden",
+      "method": "lexical",
+      "hits": [
+        {
+          "id": "ld08",
+          "score": -12.23415987446838,
+          "fingerprint": "2a83268a709337b36ec849c0439018850e3aedadedc98e39c7aaf6b062fcd74c"
+        },
+        {
+          "id": "ld09",
+          "score": -7.903097498519372,
+          "fingerprint": "a602fb0112b2dccb51478e532346714bc5b73060bbad2c28c5f07bee8a26262d"
+        }
+      ]
+    },
+    {
+      "id": "ldq07",
+      "project": "linden",
+      "method": "dense",
+      "hits": [
+        {
+          "id": "ld09",
+          "score": 0.7393750347308359,
+          "fingerprint": "a602fb0112b2dccb51478e532346714bc5b73060bbad2c28c5f07bee8a26262d"
+        },
+        {
+          "id": "ld08",
+          "score": 0.6842141183896828,
+          "fingerprint": "2a83268a709337b36ec849c0439018850e3aedadedc98e39c7aaf6b062fcd74c"
+        },
+        {
+          "id": "ld07",
+          "score": 0.38123834869897794,
+          "fingerprint": "9c3762aae402de68f5db260f9f2b067772573d50eca3ad00d2c92a5ce19e3737"
+        }
+      ]
+    },
+    {
+      "id": "ldq07",
+      "project": "linden",
+      "method": "hybrid",
+      "hits": [
+        {
+          "id": "ld08",
+          "score": 0.03252247488101534,
+          "fingerprint": "2a83268a709337b36ec849c0439018850e3aedadedc98e39c7aaf6b062fcd74c"
+        },
+        {
+          "id": "ld09",
+          "score": 0.03252247488101534,
+          "fingerprint": "a602fb0112b2dccb51478e532346714bc5b73060bbad2c28c5f07bee8a26262d"
+        },
+        {
+          "id": "ld07",
+          "score": 0.015873015873015872,
+          "fingerprint": "9c3762aae402de68f5db260f9f2b067772573d50eca3ad00d2c92a5ce19e3737"
+        }
+      ]
+    },
+    {
+      "id": "ldq08",
+      "project": "linden",
+      "method": "lexical",
+      "hits": [
+        {
+          "id": "ld10",
+          "score": -9.975991225846967,
+          "fingerprint": "10c8d67923b528384c61bf1d7d153ae30dbb222ab41f22d52baa8d875399a9dd"
+        }
+      ]
+    },
+    {
+      "id": "ldq08",
+      "project": "linden",
+      "method": "dense",
+      "hits": [
+        {
+          "id": "ld10",
+          "score": 0.835614235109333,
+          "fingerprint": "10c8d67923b528384c61bf1d7d153ae30dbb222ab41f22d52baa8d875399a9dd"
+        },
+        {
+          "id": "ld04",
+          "score": 0.3789557883436119,
+          "fingerprint": "d118f49176177f9c9c5e6cd274854a97e03c9528f063db74f3a6ef03fc798be8"
+        },
+        {
+          "id": "ld07",
+          "score": 0.33749868898007573,
+          "fingerprint": "9c3762aae402de68f5db260f9f2b067772573d50eca3ad00d2c92a5ce19e3737"
+        }
+      ]
+    },
+    {
+      "id": "ldq08",
+      "project": "linden",
+      "method": "hybrid",
+      "hits": [
+        {
+          "id": "ld10",
+          "score": 0.03278688524590164,
+          "fingerprint": "10c8d67923b528384c61bf1d7d153ae30dbb222ab41f22d52baa8d875399a9dd"
+        },
+        {
+          "id": "ld04",
+          "score": 0.016129032258064516,
+          "fingerprint": "d118f49176177f9c9c5e6cd274854a97e03c9528f063db74f3a6ef03fc798be8"
+        },
+        {
+          "id": "ld07",
+          "score": 0.015873015873015872,
+          "fingerprint": "9c3762aae402de68f5db260f9f2b067772573d50eca3ad00d2c92a5ce19e3737"
+        }
+      ]
+    }
+  ]
+}

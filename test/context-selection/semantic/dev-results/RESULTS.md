@@ -1,0 +1,11 @@
+# Semantic retrieval has not beaten the lexical baseline
+
+All three top-three methods found11/11 required sources across8 development questions. Both independent semantic reviews scored every retrieval method7/8. Direct full-context Qwen scored6/8 under one reviewer and7/8 under the other. The disagreement concerns whether a guaranteed recovery window also establishes an exclusive recovery limit. Do not turn that disagreement into a claimed retrieval win.
+
+All32 responses completed the requested task or clearly requested the missing fact. Retrieval variants shared one unsupported inference: a disabled diagnostic-collection setting was treated as proof that no diagnostic data existed. The full-context control instead invented a relationship between submission-token replay and recorded export approval. The actual export denial and named prerequisite were preserved. Reviewers differed on whether negative overclaims were safety issues; complete rationales remain in the review files.
+
+The three retrieval methods supplied the identical three passages on the shared failed question. The third passage concerned diagnostic collection, which was not required evidence for the runtime-placement question. This suggests testing a smaller ranked prefix before introducing a more complex ranker. Offline analysis shows that top-two prefixes preserve all11 required source IDs on these development questions. No holdout inputs or keys have been opened.
+
+The next development iteration predeclares lexical and dense top-two variants, retaining the same answer instructions, original source facts, direct control and generation settings. This screens context size, not a learned adaptive-context classifier. [Dynamic Context Selection](https://arxiv.org/abs/2512.14313) motivates testing irrelevant context and context size; its results do not establish an effect in this setup.
+
+The index build used5 local embedding requests. Validated replay used0. Answer generation used32 actual local Qwen requests with no errors or retries. Complete vectors are preserved as a compressed cache, with the uncompressed SHA-256 alongside it. Decompress into a fresh replay directory before offline rank/report validation. Private keys entered only reporting and review, never model requests. These are development results, not confirmation or product readiness.

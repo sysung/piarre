@@ -1,0 +1,162 @@
+{
+  "5a05ae09f5df": {
+    "id": "ldq01",
+    "arm": "lexical",
+    "repetition": 1
+  },
+  "db89f6c074b3": {
+    "id": "ldq01",
+    "arm": "dense",
+    "repetition": 1
+  },
+  "eb73a29e07a7": {
+    "id": "ldq01",
+    "arm": "hybrid",
+    "repetition": 1
+  },
+  "b63e526f7545": {
+    "id": "ldq01",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "e78a352fb4f7": {
+    "id": "ldq02",
+    "arm": "dense",
+    "repetition": 1
+  },
+  "0718d5a9912a": {
+    "id": "ldq02",
+    "arm": "hybrid",
+    "repetition": 1
+  },
+  "74b494111178": {
+    "id": "ldq02",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "3ef5e7718ab9": {
+    "id": "ldq02",
+    "arm": "lexical",
+    "repetition": 1
+  },
+  "8ba23b9b8f47": {
+    "id": "ldq03",
+    "arm": "hybrid",
+    "repetition": 1
+  },
+  "f4c433fb9511": {
+    "id": "ldq03",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "07fc1007fc76": {
+    "id": "ldq03",
+    "arm": "lexical",
+    "repetition": 1
+  },
+  "5602b2afdde1": {
+    "id": "ldq03",
+    "arm": "dense",
+    "repetition": 1
+  },
+  "ef426f7e33da": {
+    "id": "ldq04",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "dc246ca37013": {
+    "id": "ldq04",
+    "arm": "lexical",
+    "repetition": 1
+  },
+  "bbd488a63bf7": {
+    "id": "ldq04",
+    "arm": "dense",
+    "repetition": 1
+  },
+  "46308dc29298": {
+    "id": "ldq04",
+    "arm": "hybrid",
+    "repetition": 1
+  },
+  "a2c64876c8fb": {
+    "id": "ldq05",
+    "arm": "lexical",
+    "repetition": 1
+  },
+  "dd78b3f24b61": {
+    "id": "ldq05",
+    "arm": "dense",
+    "repetition": 1
+  },
+  "d69e04e7b80b": {
+    "id": "ldq05",
+    "arm": "hybrid",
+    "repetition": 1
+  },
+  "ed425a88dd83": {
+    "id": "ldq05",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "fa287263fa8a": {
+    "id": "ldq06",
+    "arm": "dense",
+    "repetition": 1
+  },
+  "702aba3cbfb8": {
+    "id": "ldq06",
+    "arm": "hybrid",
+    "repetition": 1
+  },
+  "576ae036debb": {
+    "id": "ldq06",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "d0d8aece7d34": {
+    "id": "ldq06",
+    "arm": "lexical",
+    "repetition": 1
+  },
+  "9cac68b806b1": {
+    "id": "ldq07",
+    "arm": "hybrid",
+    "repetition": 1
+  },
+  "e3a216188f01": {
+    "id": "ldq07",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "20d9fe570b1d": {
+    "id": "ldq07",
+    "arm": "lexical",
+    "repetition": 1
+  },
+  "61988c5a96f0": {
+    "id": "ldq07",
+    "arm": "dense",
+    "repetition": 1
+  },
+  "8a3ca9f39c2b": {
+    "id": "ldq08",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "35d4e24bda55": {
+    "id": "ldq08",
+    "arm": "lexical",
+    "repetition": 1
+  },
+  "f0c9a88bf038": {
+    "id": "ldq08",
+    "arm": "dense",
+    "repetition": 1
+  },
+  "6eb060228630": {
+    "id": "ldq08",
+    "arm": "hybrid",
+    "repetition": 1
+  }
+}
