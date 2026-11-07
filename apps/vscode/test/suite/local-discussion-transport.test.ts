@@ -11,7 +11,7 @@ suite("Bounded local discussion transport", () => {
   const observedModel = `/Users/fixture/.docker/models/bundles/sha256/${configured.digest}/model/Qwen3.5-4B-Q6_K.gguf`;
   const output = { summary: "A local inference", sourceIndexes: [0] };
   const envelope = (changes: object = {}) => ({ id: "observed-id", model: observedModel,
-    choices: [{ finish_reason: "stop", message: { role: "assistant", content: JSON.stringify(output) } }], ...changes });
+    choices: [{ finish_reason: "stop", message: { role: "assistant", content: JSON.stringify({ reply: output.summary, sourceIndexes: output.sourceIndexes }) } }], ...changes });
   const request = () => client.respond({ cwd: "/must-not-be-transmitted", model: configured.model, prompt: "Exact reviewed bytes\n한글", beforeSend: () => {} });
   setup(async () => {
     received = [];
@@ -28,7 +28,7 @@ suite("Bounded local discussion transport", () => {
   });
   teardown(async () => { client.dispose(); server.closeAllConnections(); await new Promise<void>(resolve => { server.close(() => { resolve(); }); }); });
 
-  test("sends only the exact reviewed prompt with enforced schema and non-thinking request", async () => {
+  test("sends only the exact reviewed prompt with bounded non-thinking generation", async () => {
     const result = await request();
     assert.equal(result.status, "completed");
     assert.deepEqual(result.origin, { kind: "docker-model-runner", observedModel, responseId: "observed-id" });
@@ -36,8 +36,24 @@ suite("Bounded local discussion transport", () => {
     assert.equal(received.length, 1); assert.equal(received[0]?.authorization, undefined);
     const body: unknown = JSON.parse(received[0]?.body ?? "");
     assert.deepEqual(body, { model: configured.model, messages: [{ role: "user", content: "Exact reviewed bytes\n한글" }], stream: false, temperature: 0, max_tokens: 1024,
-      chat_template_kwargs: { enable_thinking: false }, response_format: { type: "json_schema", json_schema: { name: "sourced_discussion", strict: true,
-        schema: { type: "object", properties: { summary: { type: "string", minLength: 1 }, sourceIndexes: { type: "array", items: { type: "integer", minimum: 0 }, minItems: 1 } }, required: ["summary", "sourceIndexes"], additionalProperties: false } } } });
+      chat_template_kwargs: { enable_thinking: false } });
+  });
+
+  test("accepts a conversational JSON reply without forcing summary decoding", async () => {
+    const question = "Is the order domestic or international?";
+    reply = response => {
+      response.setHeader("Content-Type", "application/json");
+      response.end(JSON.stringify(envelope({
+        choices: [{ finish_reason: "stop", message: { role: "assistant",
+          content: JSON.stringify({ reply: question, sourceIndexes: [0] }) } }],
+      })));
+    };
+    const result = await request();
+    assert.equal(result.status, "completed");
+    assert.deepEqual(result.output, { summary: question, sourceIndexes: [0] });
+    const body: unknown = JSON.parse(received[0]?.body ?? "");
+    assert.ok(typeof body === "object" && body !== null);
+    assert.equal("response_format" in body, false, "A forced summary grammar suppressed actual clarification replies");
   });
 
   test("configured model works when the catalog omits its alias and response id is absent", async () => {
@@ -86,6 +102,22 @@ suite("Bounded local discussion transport", () => {
     await assert.rejects(request(), /Reconnect/);
     reply = response => { response.setHeader("Content-Type", "application/json"); response.end(received.at(-1)?.path.endsWith("/models") ? '{"data":[]}' : JSON.stringify(envelope())); };
     await client.connect(); assert.equal((await request()).status, "completed");
+  });
+
+  for (const [name, content] of [
+    ["non-JSON reply", "A reply without the requested JSON object"],
+    ["extra reply fields", JSON.stringify({ reply: "Unsafe extra field", sourceIndexes: [0], approved: true })],
+    ["non-text reply", JSON.stringify({ reply: 7, sourceIndexes: [0] })],
+    ["non-array indexes", JSON.stringify({ reply: "Malformed indexes", sourceIndexes: "0" })],
+  ] as const) test(`rejects ${name}`, async () => {
+    reply = response => {
+      response.setHeader("Content-Type", "application/json");
+      response.end(JSON.stringify(envelope({
+        choices: [{ finish_reason: "stop", message: { role: "assistant", content } }],
+      })));
+    };
+    await assert.rejects(request());
+    assert.equal(received.length, 1);
   });
 
   for (const [name, body] of [

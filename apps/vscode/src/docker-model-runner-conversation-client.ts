@@ -53,11 +53,7 @@ export class DockerModelRunnerConversationClient implements ConversationTranspor
     this.origin(input.model);
     if (Buffer.byteLength(input.prompt, "utf8") > localPromptByteLimit) throw new Error("Local discussion allows 6,000 UTF-8 bytes for the complete prompt. Choose fewer sources or start a shorter session.");
     const payload = JSON.stringify({ model: input.model, messages: [{ role: "user", content: input.prompt }], stream: false, temperature: 0,
-      max_tokens: 1024, chat_template_kwargs: { enable_thinking: false },
-      response_format: { type: "json_schema", json_schema: { name: "sourced_discussion", strict: true, schema: {
-        type: "object", properties: { summary: { type: "string", minLength: 1 }, sourceIndexes: { type: "array", items: { type: "integer", minimum: 0 }, minItems: 1 } },
-        required: ["summary", "sourceIndexes"], additionalProperties: false,
-      } } } });
+      max_tokens: 1024, chat_template_kwargs: { enable_thinking: false } });
     if (Buffer.byteLength(payload) > 32_768) throw new Error("Local request envelope is too large.");
     const envelope = await this.exchange("/chat/completions", payload, input.beforeSend);
     if (!object(envelope) || typeof envelope.model !== "string" || !Array.isArray(envelope.choices) || envelope.choices.length !== 1) throw new Error("Invalid local response envelope.");
@@ -69,7 +65,10 @@ export class DockerModelRunnerConversationClient implements ConversationTranspor
         typeof choice.message.content !== "string" || choice.message.tool_calls !== undefined || choice.message.function_call !== undefined ||
         (choice.message.reasoning_content !== undefined && choice.message.reasoning_content !== "" && choice.message.reasoning_content !== null)) throw new Error("Local reply was truncated, used tools, or returned unsupported reasoning.");
     if (envelope.id !== undefined && (typeof envelope.id !== "string" || !envelope.id.trim())) throw new Error("Invalid local response identity.");
-    const output: unknown = JSON.parse(choice.message.content);
+    const decoded: unknown = JSON.parse(choice.message.content);
+    if (!object(decoded) || Object.keys(decoded).length !== 2 || typeof decoded.reply !== "string" ||
+        !Array.isArray(decoded.sourceIndexes)) throw new Error("Invalid local reply fields.");
+    const output = { summary: decoded.reply, sourceIndexes: decoded.sourceIndexes };
     return { status: "completed", output, origin: { kind: this.kind, observedModel, responseId: typeof envelope.id === "string" ? envelope.id : null } };
   }
 

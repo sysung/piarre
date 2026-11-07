@@ -23,7 +23,7 @@ suite("Local discussion controller and real HTTP boundary", () => {
     repository = new SqliteProjectRepository(path.join(directory, "project.sqlite"));
     repository.open({ name: "Local", repositoryUri: pathToFileURL(directory).href });
     posts = [];
-    reply = response => { response.end(JSON.stringify({ model, choices: [{ finish_reason: "stop", message: { role: "assistant", content: JSON.stringify({ summary: "Local sourced inference", sourceIndexes: [0] }) } }] })); };
+    reply = response => { response.end(JSON.stringify({ model, choices: [{ finish_reason: "stop", message: { role: "assistant", content: JSON.stringify({ reply: "Local sourced inference", sourceIndexes: [0] }) } }] })); };
     server = createServer((incoming, response) => {
       response.setHeader("Content-Type", "application/json");
       if (incoming.method === "GET") { response.end('{"data":[]}'); return; }
@@ -58,7 +58,7 @@ suite("Local discussion controller and real HTTP boundary", () => {
   });
 
   for (const indexes of [[-1], [1], [0.5], ["0"], []]) test(`independently rejects invalid source indexes ${JSON.stringify(indexes)}`, async () => {
-    reply = response => { response.end(JSON.stringify({ model, choices: [{ finish_reason: "stop", message: { role: "assistant", content: JSON.stringify({ summary: "Invalid", sourceIndexes: indexes }) } }] })); };
+    reply = response => { response.end(JSON.stringify({ model, choices: [{ finish_reason: "stop", message: { role: "assistant", content: JSON.stringify({ reply: "Invalid", sourceIndexes: indexes }) } }] })); };
     await controller.connect("docker-model-runner");
     await controller.send("Ground this", [], repository.read().revision, { model, recordSources: [] });
     assert.equal(posts.length, 1); assert.equal(repository.read().conversation[0]?.kind, "unknown"); assert.equal(state.kind, "disconnected");
