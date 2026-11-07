@@ -22,6 +22,6 @@ for(const [name,change] of [
  ['division by zero',p=>{p.operations=[{id:'zero',op:'subtract',left:'q1',right:'q1'},{id:'bad',op:'divide',left:'q1',right:'zero'}];p.outputs=[{kind:'value',label:'Bad',value:'bad'}];}],
  ['overflow',p=>{p.operations=Array.from({length:10},(_,i)=>({id:'r'+i,op:'multiply',left:i?'r'+(i-1):'q1',right:'q1'}));p.outputs=[{kind:'value',label:'Large',value:'r9'}];}],
 ]) test('rejects '+name,()=>{const p=plan();change(p);const r=assess(p,{...input,sources:[...input.sources,{id:'u',text:'18 trays',status:'unconfirmed'}]});assert.equal(r.kind,'rejected');});
-test('preserves an ordinary clarification as a proposal, not verified meaning',()=>{const r=assess({kind:'dialogue',reply:'Which frame material is recorded?',sourceIds:[]},input);assert.equal(r.kind,'dialogue');assert.equal(r.semanticValidation,'not-established');});
+test('rejects dialogue in place of a calculation plan',()=>{const r=assess({kind:'dialogue',reply:'Which frame material is recorded?',sourceIds:[]},input);assert.equal(r.kind,'rejected');});
 
 test('does not lose the sign outside a trimmed quotation',()=>{const p=plan();p.quantities[0].quote='18 trays';const r=assess(p,{...input,sources:[{...input.sources[0],text:'There are -18 trays; five are reserved.'},input.sources[1]]});assert.equal(r.kind,'rejected');});

@@ -39,11 +39,6 @@ export function assess(raw,input) {
   check(Buffer.byteLength(JSON.stringify(input))<=6000,'Inquiry too large');
   const sources=new Map();
   for(const source of input.sources){text(source.id,200);text(source.text,6000);text(source.status,40);check(!sources.has(source.id),'Duplicate source');sources.set(source.id,source);}
-  if(raw?.kind==='dialogue') {
-   shape(raw,['kind','reply','sourceIds']);text(raw.reply,4000);
-   check(Array.isArray(raw.sourceIds) && raw.sourceIds.every(source=>sources.has(source)),'Invalid dialogue citations');
-   return {kind:'dialogue',text:raw.reply,sourceIds:[...new Set(raw.sourceIds)],semanticValidation:'not-established'};
-  }
   shape(raw,['kind','quantities','operations','outputs','qualifiers']);check(raw.kind==='numeric','Unsupported proposal kind');
   check(Array.isArray(raw.quantities) && raw.quantities.length>0 && raw.quantities.length<=12,'Quantity limit');
   check(Array.isArray(raw.operations) && raw.operations.length<=20,'Operation limit');
