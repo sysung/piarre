@@ -1,0 +1,17 @@
+{
+  "direct": {
+    "requests": 32,
+    "promptTokens": 23442,
+    "completionTokens": 5044
+  },
+  "lexical2": {
+    "requests": 32,
+    "promptTokens": 7452,
+    "completionTokens": 3800
+  },
+  "dense2": {
+    "requests": 32,
+    "promptTokens": 7918,
+    "completionTokens": 3984
+  }
+}

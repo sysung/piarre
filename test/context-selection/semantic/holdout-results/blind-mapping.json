@@ -1,0 +1,482 @@
+{
+  "ec5a26e24886": {
+    "id": "hbq01",
+    "arm": "lexical2",
+    "repetition": 1
+  },
+  "a388aef3126c": {
+    "id": "hbq01",
+    "arm": "dense2",
+    "repetition": 1
+  },
+  "bc4bdbc05729": {
+    "id": "hbq01",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "32bc9ee57e73": {
+    "id": "hbq01",
+    "arm": "dense2",
+    "repetition": 2
+  },
+  "a397f183ad3c": {
+    "id": "hbq01",
+    "arm": "direct",
+    "repetition": 2
+  },
+  "1a46a1f265ff": {
+    "id": "hbq01",
+    "arm": "lexical2",
+    "repetition": 2
+  },
+  "f56880b2c9f6": {
+    "id": "hbq02",
+    "arm": "dense2",
+    "repetition": 1
+  },
+  "e212460afbf1": {
+    "id": "hbq02",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "6517dc5b2067": {
+    "id": "hbq02",
+    "arm": "lexical2",
+    "repetition": 1
+  },
+  "7e33ec86c8a7": {
+    "id": "hbq02",
+    "arm": "direct",
+    "repetition": 2
+  },
+  "9d920ecc36b2": {
+    "id": "hbq02",
+    "arm": "lexical2",
+    "repetition": 2
+  },
+  "38e8e459eb1e": {
+    "id": "hbq02",
+    "arm": "dense2",
+    "repetition": 2
+  },
+  "b89e4bccaed3": {
+    "id": "hbq03",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "83a6f9e6a9da": {
+    "id": "hbq03",
+    "arm": "lexical2",
+    "repetition": 1
+  },
+  "fbc9a8f533b0": {
+    "id": "hbq03",
+    "arm": "dense2",
+    "repetition": 1
+  },
+  "59fcd7bebd03": {
+    "id": "hbq03",
+    "arm": "lexical2",
+    "repetition": 2
+  },
+  "23578d314882": {
+    "id": "hbq03",
+    "arm": "dense2",
+    "repetition": 2
+  },
+  "f58e6a2f1786": {
+    "id": "hbq03",
+    "arm": "direct",
+    "repetition": 2
+  },
+  "f17d3371a9d4": {
+    "id": "hbq04",
+    "arm": "lexical2",
+    "repetition": 1
+  },
+  "a62eeffe3b30": {
+    "id": "hbq04",
+    "arm": "dense2",
+    "repetition": 1
+  },
+  "abe78e0b5372": {
+    "id": "hbq04",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "76914f0fff0c": {
+    "id": "hbq04",
+    "arm": "dense2",
+    "repetition": 2
+  },
+  "049ca8bd9ee7": {
+    "id": "hbq04",
+    "arm": "direct",
+    "repetition": 2
+  },
+  "d07c0bb8cd01": {
+    "id": "hbq04",
+    "arm": "lexical2",
+    "repetition": 2
+  },
+  "e4383758e355": {
+    "id": "hbq05",
+    "arm": "dense2",
+    "repetition": 1
+  },
+  "11ce2adb3c14": {
+    "id": "hbq05",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "dd5cd0a2828a": {
+    "id": "hbq05",
+    "arm": "lexical2",
+    "repetition": 1
+  },
+  "81764813747a": {
+    "id": "hbq05",
+    "arm": "direct",
+    "repetition": 2
+  },
+  "82ee7e810424": {
+    "id": "hbq05",
+    "arm": "lexical2",
+    "repetition": 2
+  },
+  "7c4fadb5821b": {
+    "id": "hbq05",
+    "arm": "dense2",
+    "repetition": 2
+  },
+  "fe43928e5dd9": {
+    "id": "hbq06",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "1b3cee5d37e0": {
+    "id": "hbq06",
+    "arm": "lexical2",
+    "repetition": 1
+  },
+  "b6c63f9ac60f": {
+    "id": "hbq06",
+    "arm": "dense2",
+    "repetition": 1
+  },
+  "a9fade8bd1ed": {
+    "id": "hbq06",
+    "arm": "lexical2",
+    "repetition": 2
+  },
+  "4b15cc6d22a6": {
+    "id": "hbq06",
+    "arm": "dense2",
+    "repetition": 2
+  },
+  "696ecc4570a9": {
+    "id": "hbq06",
+    "arm": "direct",
+    "repetition": 2
+  },
+  "95e8cbf68aef": {
+    "id": "hbq07",
+    "arm": "lexical2",
+    "repetition": 1
+  },
+  "27f5015bb2a1": {
+    "id": "hbq07",
+    "arm": "dense2",
+    "repetition": 1
+  },
+  "dedfd7441900": {
+    "id": "hbq07",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "3a9cc57fb12e": {
+    "id": "hbq07",
+    "arm": "dense2",
+    "repetition": 2
+  },
+  "5a39accbac4a": {
+    "id": "hbq07",
+    "arm": "direct",
+    "repetition": 2
+  },
+  "0d2947c3b3cd": {
+    "id": "hbq07",
+    "arm": "lexical2",
+    "repetition": 2
+  },
+  "1fdcc919c837": {
+    "id": "hbq08",
+    "arm": "dense2",
+    "repetition": 1
+  },
+  "2f8d3782db31": {
+    "id": "hbq08",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "c74997456193": {
+    "id": "hbq08",
+    "arm": "lexical2",
+    "repetition": 1
+  },
+  "5d4906f5aeb8": {
+    "id": "hbq08",
+    "arm": "direct",
+    "repetition": 2
+  },
+  "78f68982ba38": {
+    "id": "hbq08",
+    "arm": "lexical2",
+    "repetition": 2
+  },
+  "5aa9ee150efa": {
+    "id": "hbq08",
+    "arm": "dense2",
+    "repetition": 2
+  },
+  "d6192184648c": {
+    "id": "cnq01",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "50fcd447b70b": {
+    "id": "cnq01",
+    "arm": "lexical2",
+    "repetition": 1
+  },
+  "f48d234a02b1": {
+    "id": "cnq01",
+    "arm": "dense2",
+    "repetition": 1
+  },
+  "06fed834fb20": {
+    "id": "cnq01",
+    "arm": "lexical2",
+    "repetition": 2
+  },
+  "b7b1e32e16fd": {
+    "id": "cnq01",
+    "arm": "dense2",
+    "repetition": 2
+  },
+  "19c249a57efc": {
+    "id": "cnq01",
+    "arm": "direct",
+    "repetition": 2
+  },
+  "8e207b7ab52c": {
+    "id": "cnq02",
+    "arm": "lexical2",
+    "repetition": 1
+  },
+  "f32b1f2afe06": {
+    "id": "cnq02",
+    "arm": "dense2",
+    "repetition": 1
+  },
+  "83555660bd5a": {
+    "id": "cnq02",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "5dd8c4c8b82e": {
+    "id": "cnq02",
+    "arm": "dense2",
+    "repetition": 2
+  },
+  "a85b94db285c": {
+    "id": "cnq02",
+    "arm": "direct",
+    "repetition": 2
+  },
+  "28fb84aae932": {
+    "id": "cnq02",
+    "arm": "lexical2",
+    "repetition": 2
+  },
+  "eb4aff144d8a": {
+    "id": "cnq03",
+    "arm": "dense2",
+    "repetition": 1
+  },
+  "9db81f58c6dd": {
+    "id": "cnq03",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "71ceeef3ce6a": {
+    "id": "cnq03",
+    "arm": "lexical2",
+    "repetition": 1
+  },
+  "5345dddf24c3": {
+    "id": "cnq03",
+    "arm": "direct",
+    "repetition": 2
+  },
+  "46fd3c8a64a7": {
+    "id": "cnq03",
+    "arm": "lexical2",
+    "repetition": 2
+  },
+  "e7259163f538": {
+    "id": "cnq03",
+    "arm": "dense2",
+    "repetition": 2
+  },
+  "9a2c3ad5fd61": {
+    "id": "cnq04",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "4b8e295f8e2a": {
+    "id": "cnq04",
+    "arm": "lexical2",
+    "repetition": 1
+  },
+  "385bc8c6f532": {
+    "id": "cnq04",
+    "arm": "dense2",
+    "repetition": 1
+  },
+  "356ffb64d494": {
+    "id": "cnq04",
+    "arm": "lexical2",
+    "repetition": 2
+  },
+  "7bff9dd3d18b": {
+    "id": "cnq04",
+    "arm": "dense2",
+    "repetition": 2
+  },
+  "8e24691eb43a": {
+    "id": "cnq04",
+    "arm": "direct",
+    "repetition": 2
+  },
+  "68d2d8ea556f": {
+    "id": "cnq05",
+    "arm": "lexical2",
+    "repetition": 1
+  },
+  "328490758ffe": {
+    "id": "cnq05",
+    "arm": "dense2",
+    "repetition": 1
+  },
+  "154f91eb8b01": {
+    "id": "cnq05",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "61f0cbd09dff": {
+    "id": "cnq05",
+    "arm": "dense2",
+    "repetition": 2
+  },
+  "08f9c61f69f1": {
+    "id": "cnq05",
+    "arm": "direct",
+    "repetition": 2
+  },
+  "b361e160d8df": {
+    "id": "cnq05",
+    "arm": "lexical2",
+    "repetition": 2
+  },
+  "4376e05e1229": {
+    "id": "cnq06",
+    "arm": "dense2",
+    "repetition": 1
+  },
+  "5a4e811d3204": {
+    "id": "cnq06",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "f15322bf4231": {
+    "id": "cnq06",
+    "arm": "lexical2",
+    "repetition": 1
+  },
+  "34fcb70f7931": {
+    "id": "cnq06",
+    "arm": "direct",
+    "repetition": 2
+  },
+  "0b4b3e791774": {
+    "id": "cnq06",
+    "arm": "lexical2",
+    "repetition": 2
+  },
+  "f7cdc70dc71d": {
+    "id": "cnq06",
+    "arm": "dense2",
+    "repetition": 2
+  },
+  "5d4609336c91": {
+    "id": "cnq07",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "ba3728dcfbae": {
+    "id": "cnq07",
+    "arm": "lexical2",
+    "repetition": 1
+  },
+  "5f2f4b9b1a57": {
+    "id": "cnq07",
+    "arm": "dense2",
+    "repetition": 1
+  },
+  "9b7e243794ba": {
+    "id": "cnq07",
+    "arm": "lexical2",
+    "repetition": 2
+  },
+  "2de0cee8efbd": {
+    "id": "cnq07",
+    "arm": "dense2",
+    "repetition": 2
+  },
+  "beddbb7c267e": {
+    "id": "cnq07",
+    "arm": "direct",
+    "repetition": 2
+  },
+  "4e888a06350e": {
+    "id": "cnq08",
+    "arm": "lexical2",
+    "repetition": 1
+  },
+  "47e67aee209a": {
+    "id": "cnq08",
+    "arm": "dense2",
+    "repetition": 1
+  },
+  "c8c964b36a41": {
+    "id": "cnq08",
+    "arm": "direct",
+    "repetition": 1
+  },
+  "e383a00a3439": {
+    "id": "cnq08",
+    "arm": "dense2",
+    "repetition": 2
+  },
+  "be3ed2c3d9a6": {
+    "id": "cnq08",
+    "arm": "direct",
+    "repetition": 2
+  },
+  "e16238cbe36d": {
+    "id": "cnq08",
+    "arm": "lexical2",
+    "repetition": 2
+  }
+}

@@ -1,0 +1,194 @@
+[
+  {
+    "id": "hb01",
+    "project": "harbor",
+    "title": "Current recording sample rate",
+    "text": "Harbor currently records microphone audio at 48 kHz. The former 44.1 kHz setting was replaced. Playback speed is independent of this setting.",
+    "standing": "confirmed",
+    "revision": 3
+  },
+  {
+    "id": "hb02",
+    "project": "harbor",
+    "title": "Transcript cache identity",
+    "text": "A transcript cache entry is keyed by session ID and speaker-map revision. Changing the speaker map makes the earlier cached transcript inapplicable to that revision.",
+    "standing": "confirmed",
+    "revision": 1
+  },
+  {
+    "id": "hb03",
+    "project": "harbor",
+    "title": "Withdrawn publication consent",
+    "text": "When a participant withdraws publication consent, publishing any session containing that participant is blocked until renewed consent is recorded. An old consent record is insufficient.",
+    "standing": "confirmed",
+    "revision": 1
+  },
+  {
+    "id": "hb04",
+    "project": "harbor",
+    "title": "Waveform preview storage",
+    "text": "Waveform previews are stored in the session thumbnail directory. Original audio remains in the recording vault. Removing a preview does not remove the original audio.",
+    "standing": "confirmed",
+    "revision": 1
+  },
+  {
+    "id": "hb05",
+    "project": "harbor",
+    "title": "Upload queue declaration",
+    "text": "The Lakeside session is queued for upload to the archive. A queue entry describes intended work. Successful upload requires a receipt from the archive service.",
+    "standing": "confirmed",
+    "revision": 1
+  },
+  {
+    "id": "hb06",
+    "project": "harbor",
+    "title": "Lakeside upload evidence",
+    "text": "The Lakeside evidence bundle contains its upload queue entry. It contains no archive-service upload receipt and no observation of the archived recording.",
+    "standing": "observation",
+    "revision": 2
+  },
+  {
+    "id": "hb07",
+    "project": "harbor",
+    "title": "Public stream approval",
+    "text": "Starting a public stream requires a recorded release from the consent coordinator. A producer request cannot replace the release. A private rehearsal does not authorize a public stream.",
+    "standing": "confirmed",
+    "revision": 1
+  },
+  {
+    "id": "hb08",
+    "project": "harbor",
+    "title": "Evening stream request",
+    "text": "The producer requested a public stream of the evening session. No consent-coordinator release is recorded for that stream.",
+    "standing": "confirmed",
+    "revision": 1
+  },
+  {
+    "id": "hb09",
+    "project": "harbor",
+    "title": "Transcript language routing",
+    "text": "Verified Spanish speech uses transcription profile S. Verified English speech uses profile E. The speech language must be verified before a profile is assigned.",
+    "standing": "confirmed",
+    "revision": 1
+  },
+  {
+    "id": "hb10",
+    "project": "harbor",
+    "title": "Session Sol language record",
+    "text": "The session is titled Sol. Its verified speech-language field is empty. Session titles do not establish the language spoken in a recording.",
+    "standing": "confirmed",
+    "revision": 1
+  },
+  {
+    "id": "hb11",
+    "project": "harbor",
+    "title": "Marker shortcut decision record",
+    "text": "The current shortcut for inserting a marker is Alt+M. The available records contain no decision note explaining the choice of this shortcut.",
+    "standing": "confirmed",
+    "revision": 1
+  },
+  {
+    "id": "hb12",
+    "project": "harbor",
+    "title": "Retired microphone setting",
+    "text": "The earlier microphone recording setting was 44.1 kHz. That historical setting has been superseded. It does not specify the current recording configuration.",
+    "standing": "historical",
+    "revision": 1
+  },
+  {
+    "id": "cn01",
+    "project": "cairn",
+    "title": "Package scan prerequisite",
+    "text": "Before a package scan starts, the operator must record a verified checksum for that package. A checksum from another package does not satisfy the prerequisite. Urgent scans are not exempt.",
+    "standing": "confirmed",
+    "revision": 1
+  },
+  {
+    "id": "cn02",
+    "project": "cairn",
+    "title": "Former artifact retention",
+    "text": "The former artifact retention period was 60 days. This historical policy has been replaced and does not govern newly stored artifacts.",
+    "standing": "historical",
+    "revision": 1
+  },
+  {
+    "id": "cn03",
+    "project": "cairn",
+    "title": "Current artifact retention",
+    "text": "The current confirmed artifact retention period is 21 days. It supersedes the former 60-day policy. An unconfirmed proposal for seven days has no effect.",
+    "standing": "confirmed",
+    "revision": 5
+  },
+  {
+    "id": "cn04",
+    "project": "cairn",
+    "title": "Directory labels and ownership",
+    "text": "A directory display label is descriptive, not an ownership assignment. The maintainer registry is the authority for accountable ownership; a team-like label alone does not establish a maintainer.",
+    "standing": "confirmed",
+    "revision": 1
+  },
+  {
+    "id": "cn05",
+    "project": "cairn",
+    "title": "Dependency graph interpretation",
+    "text": "The dependency graph shows that Indexer calls Parser. It records a code relationship, not why that dependency was chosen. No design decision explaining this relationship is in the supplied records.",
+    "standing": "confirmed",
+    "revision": 1
+  },
+  {
+    "id": "cn06",
+    "project": "cairn",
+    "title": "Incident cache hypothesis",
+    "text": "An engineer suspects the shared cache caused the Mosaic incident. This is an unverified observation, not a confirmed cause.",
+    "standing": "observation",
+    "revision": 1
+  },
+  {
+    "id": "cn07",
+    "project": "cairn",
+    "title": "Mosaic incident conclusion",
+    "text": "The confirmed Mosaic incident review leaves the root cause undetermined. No proposed explanation has been confirmed. The review does not rule out the shared cache.",
+    "standing": "confirmed",
+    "revision": 2
+  },
+  {
+    "id": "cn08",
+    "project": "cairn",
+    "title": "External report review rule A",
+    "text": "A confirmed current instruction says external reports require review by the release lead before delivery. Its scope covers all external reports. No supersession is recorded.",
+    "standing": "confirmed",
+    "revision": 4
+  },
+  {
+    "id": "cn09",
+    "project": "cairn",
+    "title": "External report review rule B",
+    "text": "Another confirmed current instruction says external reports require no review before delivery. Its scope covers all external reports. No supersession or precedence between these instructions is recorded.",
+    "standing": "confirmed",
+    "revision": 4
+  },
+  {
+    "id": "cn10",
+    "project": "cairn",
+    "title": "Vault download prerequisite",
+    "text": "Downloading a restricted vault artifact requires a recorded grant from the security custodian. A request from the artifact author does not provide that grant.",
+    "standing": "confirmed",
+    "revision": 1
+  },
+  {
+    "id": "cn11",
+    "project": "cairn",
+    "title": "Amber artifact request",
+    "text": "The author requested download of the restricted Amber artifact. No security-custodian grant is recorded for that download.",
+    "standing": "confirmed",
+    "revision": 1
+  },
+  {
+    "id": "cn12",
+    "project": "cairn",
+    "title": "Review attachment storage",
+    "text": "Review attachments are retained in the review evidence store. The build cache holds compiled outputs instead. Clearing the build cache does not remove review attachments.",
+    "standing": "confirmed",
+    "revision": 1
+  }
+]

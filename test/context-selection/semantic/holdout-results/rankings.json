@@ -1,0 +1,1533 @@
+{
+  "sourceHash": "cc9e67679e282dab1f08b1873ce5613555f3e08caafd298be681d79aeb13556c",
+  "questionHash": "184a5fd529f809c7b8c128e26f2cc62e4a80d8638518485e7bc30b19dd237d71",
+  "modelDigest": "3e86173a1f6e9ab8e3c4a90f1ec00d80d4f07ecc532c42ff7b7f7d1419a828ab",
+  "rankingConfigHash": "0bca90a9a82b4fa9e9441dfe24cddfcb9d43ede64fc1fa0ac58030dc7ce5cc24",
+  "results": [
+    {
+      "id": "hbq01",
+      "project": "harbor",
+      "method": "lexical",
+      "hits": [
+        {
+          "id": "hb01",
+          "score": -6.895971468838582,
+          "fingerprint": "8e8866d0899b5d8d75cc850cbca3987dc22f1815bb745e10fde9971af6f2b727"
+        },
+        {
+          "id": "hb12",
+          "score": -3.00829436202538,
+          "fingerprint": "1ba468d84aea2766572518b6e2ce06592bcfae0f92f73940771c895cf869f424"
+        },
+        {
+          "id": "hb09",
+          "score": -2.804931296653362,
+          "fingerprint": "6d5a03a792a3e7a8737dd5cb668d12637bca7f547a876227df6c0ffc9f6afa4a"
+        }
+      ]
+    },
+    {
+      "id": "hbq01",
+      "project": "harbor",
+      "method": "dense",
+      "hits": [
+        {
+          "id": "hb01",
+          "score": 0.7364469568179844,
+          "fingerprint": "8e8866d0899b5d8d75cc850cbca3987dc22f1815bb745e10fde9971af6f2b727"
+        },
+        {
+          "id": "hb12",
+          "score": 0.43445354856201446,
+          "fingerprint": "1ba468d84aea2766572518b6e2ce06592bcfae0f92f73940771c895cf869f424"
+        },
+        {
+          "id": "hb04",
+          "score": 0.37448808760579383,
+          "fingerprint": "97519183d7a0d48e8ce65e856694693ee27d19659e16572a785f6c833cc65d56"
+        }
+      ]
+    },
+    {
+      "id": "hbq01",
+      "project": "harbor",
+      "method": "hybrid",
+      "hits": [
+        {
+          "id": "hb01",
+          "score": 0.03278688524590164,
+          "fingerprint": "8e8866d0899b5d8d75cc850cbca3987dc22f1815bb745e10fde9971af6f2b727"
+        },
+        {
+          "id": "hb12",
+          "score": 0.03225806451612903,
+          "fingerprint": "1ba468d84aea2766572518b6e2ce06592bcfae0f92f73940771c895cf869f424"
+        },
+        {
+          "id": "hb09",
+          "score": 0.03149801587301587,
+          "fingerprint": "6d5a03a792a3e7a8737dd5cb668d12637bca7f547a876227df6c0ffc9f6afa4a"
+        }
+      ]
+    },
+    {
+      "id": "hbq01",
+      "project": "harbor",
+      "method": "lexical2",
+      "hits": [
+        {
+          "id": "hb01",
+          "score": -6.895971468838582,
+          "fingerprint": "8e8866d0899b5d8d75cc850cbca3987dc22f1815bb745e10fde9971af6f2b727"
+        },
+        {
+          "id": "hb12",
+          "score": -3.00829436202538,
+          "fingerprint": "1ba468d84aea2766572518b6e2ce06592bcfae0f92f73940771c895cf869f424"
+        }
+      ]
+    },
+    {
+      "id": "hbq01",
+      "project": "harbor",
+      "method": "dense2",
+      "hits": [
+        {
+          "id": "hb01",
+          "score": 0.7364469568179844,
+          "fingerprint": "8e8866d0899b5d8d75cc850cbca3987dc22f1815bb745e10fde9971af6f2b727"
+        },
+        {
+          "id": "hb12",
+          "score": 0.43445354856201446,
+          "fingerprint": "1ba468d84aea2766572518b6e2ce06592bcfae0f92f73940771c895cf869f424"
+        }
+      ]
+    },
+    {
+      "id": "hbq02",
+      "project": "harbor",
+      "method": "lexical",
+      "hits": [
+        {
+          "id": "hb02",
+          "score": -14.288673562771034,
+          "fingerprint": "5a69cb264009a85f6462643bbdf99fe03efd462be9cc72cca2ea892c6d466641"
+        },
+        {
+          "id": "hb09",
+          "score": -1.9762134684653636,
+          "fingerprint": "6d5a03a792a3e7a8737dd5cb668d12637bca7f547a876227df6c0ffc9f6afa4a"
+        },
+        {
+          "id": "hb12",
+          "score": -1.4574025517255673,
+          "fingerprint": "1ba468d84aea2766572518b6e2ce06592bcfae0f92f73940771c895cf869f424"
+        }
+      ]
+    },
+    {
+      "id": "hbq02",
+      "project": "harbor",
+      "method": "dense",
+      "hits": [
+        {
+          "id": "hb02",
+          "score": 0.780354020065913,
+          "fingerprint": "5a69cb264009a85f6462643bbdf99fe03efd462be9cc72cca2ea892c6d466641"
+        },
+        {
+          "id": "hb09",
+          "score": 0.6201992461323897,
+          "fingerprint": "6d5a03a792a3e7a8737dd5cb668d12637bca7f547a876227df6c0ffc9f6afa4a"
+        },
+        {
+          "id": "hb10",
+          "score": 0.4227047354789997,
+          "fingerprint": "1f20b6a26145c4aa23aabcdf01fef9c0589ea5072de82c4fe4c0d12f356181ec"
+        }
+      ]
+    },
+    {
+      "id": "hbq02",
+      "project": "harbor",
+      "method": "hybrid",
+      "hits": [
+        {
+          "id": "hb02",
+          "score": 0.03278688524590164,
+          "fingerprint": "5a69cb264009a85f6462643bbdf99fe03efd462be9cc72cca2ea892c6d466641"
+        },
+        {
+          "id": "hb09",
+          "score": 0.03225806451612903,
+          "fingerprint": "6d5a03a792a3e7a8737dd5cb668d12637bca7f547a876227df6c0ffc9f6afa4a"
+        },
+        {
+          "id": "hb12",
+          "score": 0.03057889822595705,
+          "fingerprint": "1ba468d84aea2766572518b6e2ce06592bcfae0f92f73940771c895cf869f424"
+        }
+      ]
+    },
+    {
+      "id": "hbq02",
+      "project": "harbor",
+      "method": "lexical2",
+      "hits": [
+        {
+          "id": "hb02",
+          "score": -14.288673562771034,
+          "fingerprint": "5a69cb264009a85f6462643bbdf99fe03efd462be9cc72cca2ea892c6d466641"
+        },
+        {
+          "id": "hb09",
+          "score": -1.9762134684653636,
+          "fingerprint": "6d5a03a792a3e7a8737dd5cb668d12637bca7f547a876227df6c0ffc9f6afa4a"
+        }
+      ]
+    },
+    {
+      "id": "hbq02",
+      "project": "harbor",
+      "method": "dense2",
+      "hits": [
+        {
+          "id": "hb02",
+          "score": 0.780354020065913,
+          "fingerprint": "5a69cb264009a85f6462643bbdf99fe03efd462be9cc72cca2ea892c6d466641"
+        },
+        {
+          "id": "hb09",
+          "score": 0.6201992461323897,
+          "fingerprint": "6d5a03a792a3e7a8737dd5cb668d12637bca7f547a876227df6c0ffc9f6afa4a"
+        }
+      ]
+    },
+    {
+      "id": "hbq03",
+      "project": "harbor",
+      "method": "lexical",
+      "hits": [
+        {
+          "id": "hb03",
+          "score": -9.854260171102387,
+          "fingerprint": "ca0e188cc52481047b71b62cec401098f0a3c417938678015736de488caf659a"
+        },
+        {
+          "id": "hb07",
+          "score": -2.4795177587300614,
+          "fingerprint": "3ad9d28cb96a327f7788714970a6e2ddd3da195193607760f4ab31f46a742ca8"
+        },
+        {
+          "id": "hb08",
+          "score": -2.1423477032997016,
+          "fingerprint": "ce43bdc637497f3afee85c162064f5ace9a26108475511e241e36ae39044a5ff"
+        }
+      ]
+    },
+    {
+      "id": "hbq03",
+      "project": "harbor",
+      "method": "dense",
+      "hits": [
+        {
+          "id": "hb03",
+          "score": 0.8591466916065443,
+          "fingerprint": "ca0e188cc52481047b71b62cec401098f0a3c417938678015736de488caf659a"
+        },
+        {
+          "id": "hb08",
+          "score": 0.5082202947567994,
+          "fingerprint": "ce43bdc637497f3afee85c162064f5ace9a26108475511e241e36ae39044a5ff"
+        },
+        {
+          "id": "hb07",
+          "score": 0.47140976012164093,
+          "fingerprint": "3ad9d28cb96a327f7788714970a6e2ddd3da195193607760f4ab31f46a742ca8"
+        }
+      ]
+    },
+    {
+      "id": "hbq03",
+      "project": "harbor",
+      "method": "hybrid",
+      "hits": [
+        {
+          "id": "hb03",
+          "score": 0.03278688524590164,
+          "fingerprint": "ca0e188cc52481047b71b62cec401098f0a3c417938678015736de488caf659a"
+        },
+        {
+          "id": "hb07",
+          "score": 0.03200204813108039,
+          "fingerprint": "3ad9d28cb96a327f7788714970a6e2ddd3da195193607760f4ab31f46a742ca8"
+        },
+        {
+          "id": "hb08",
+          "score": 0.03200204813108039,
+          "fingerprint": "ce43bdc637497f3afee85c162064f5ace9a26108475511e241e36ae39044a5ff"
+        }
+      ]
+    },
+    {
+      "id": "hbq03",
+      "project": "harbor",
+      "method": "lexical2",
+      "hits": [
+        {
+          "id": "hb03",
+          "score": -9.854260171102387,
+          "fingerprint": "ca0e188cc52481047b71b62cec401098f0a3c417938678015736de488caf659a"
+        },
+        {
+          "id": "hb07",
+          "score": -2.4795177587300614,
+          "fingerprint": "3ad9d28cb96a327f7788714970a6e2ddd3da195193607760f4ab31f46a742ca8"
+        }
+      ]
+    },
+    {
+      "id": "hbq03",
+      "project": "harbor",
+      "method": "dense2",
+      "hits": [
+        {
+          "id": "hb03",
+          "score": 0.8591466916065443,
+          "fingerprint": "ca0e188cc52481047b71b62cec401098f0a3c417938678015736de488caf659a"
+        },
+        {
+          "id": "hb08",
+          "score": 0.5082202947567994,
+          "fingerprint": "ce43bdc637497f3afee85c162064f5ace9a26108475511e241e36ae39044a5ff"
+        }
+      ]
+    },
+    {
+      "id": "hbq04",
+      "project": "harbor",
+      "method": "lexical",
+      "hits": [
+        {
+          "id": "hb04",
+          "score": -8.742196346698044,
+          "fingerprint": "97519183d7a0d48e8ce65e856694693ee27d19659e16572a785f6c833cc65d56"
+        }
+      ]
+    },
+    {
+      "id": "hbq04",
+      "project": "harbor",
+      "method": "dense",
+      "hits": [
+        {
+          "id": "hb04",
+          "score": 0.7934432644248269,
+          "fingerprint": "97519183d7a0d48e8ce65e856694693ee27d19659e16572a785f6c833cc65d56"
+        },
+        {
+          "id": "hb01",
+          "score": 0.4663671128430539,
+          "fingerprint": "8e8866d0899b5d8d75cc850cbca3987dc22f1815bb745e10fde9971af6f2b727"
+        },
+        {
+          "id": "hb09",
+          "score": 0.4087220170158427,
+          "fingerprint": "6d5a03a792a3e7a8737dd5cb668d12637bca7f547a876227df6c0ffc9f6afa4a"
+        }
+      ]
+    },
+    {
+      "id": "hbq04",
+      "project": "harbor",
+      "method": "hybrid",
+      "hits": [
+        {
+          "id": "hb04",
+          "score": 0.03278688524590164,
+          "fingerprint": "97519183d7a0d48e8ce65e856694693ee27d19659e16572a785f6c833cc65d56"
+        },
+        {
+          "id": "hb01",
+          "score": 0.016129032258064516,
+          "fingerprint": "8e8866d0899b5d8d75cc850cbca3987dc22f1815bb745e10fde9971af6f2b727"
+        },
+        {
+          "id": "hb09",
+          "score": 0.015873015873015872,
+          "fingerprint": "6d5a03a792a3e7a8737dd5cb668d12637bca7f547a876227df6c0ffc9f6afa4a"
+        }
+      ]
+    },
+    {
+      "id": "hbq04",
+      "project": "harbor",
+      "method": "lexical2",
+      "hits": [
+        {
+          "id": "hb04",
+          "score": -8.742196346698044,
+          "fingerprint": "97519183d7a0d48e8ce65e856694693ee27d19659e16572a785f6c833cc65d56"
+        }
+      ]
+    },
+    {
+      "id": "hbq04",
+      "project": "harbor",
+      "method": "dense2",
+      "hits": [
+        {
+          "id": "hb04",
+          "score": 0.7934432644248269,
+          "fingerprint": "97519183d7a0d48e8ce65e856694693ee27d19659e16572a785f6c833cc65d56"
+        },
+        {
+          "id": "hb01",
+          "score": 0.4663671128430539,
+          "fingerprint": "8e8866d0899b5d8d75cc850cbca3987dc22f1815bb745e10fde9971af6f2b727"
+        }
+      ]
+    },
+    {
+      "id": "hbq05",
+      "project": "harbor",
+      "method": "lexical",
+      "hits": [
+        {
+          "id": "hb06",
+          "score": -3.988475422111892,
+          "fingerprint": "e4356cb04ff04c1f328fbcee6ac223537a50b4bb2f59f4d039d63af2cadfbd41"
+        },
+        {
+          "id": "hb05",
+          "score": -3.3780701408814204,
+          "fingerprint": "0708ce275aaec66710a66d07cac7917393349b5f1337b710bd9d692cb4846290"
+        },
+        {
+          "id": "hb10",
+          "score": -2.0413504395873066,
+          "fingerprint": "1f20b6a26145c4aa23aabcdf01fef9c0589ea5072de82c4fe4c0d12f356181ec"
+        }
+      ]
+    },
+    {
+      "id": "hbq05",
+      "project": "harbor",
+      "method": "dense",
+      "hits": [
+        {
+          "id": "hb06",
+          "score": 0.6216761227197891,
+          "fingerprint": "e4356cb04ff04c1f328fbcee6ac223537a50b4bb2f59f4d039d63af2cadfbd41"
+        },
+        {
+          "id": "hb05",
+          "score": 0.5314231972370375,
+          "fingerprint": "0708ce275aaec66710a66d07cac7917393349b5f1337b710bd9d692cb4846290"
+        },
+        {
+          "id": "hb01",
+          "score": 0.42508989774834743,
+          "fingerprint": "8e8866d0899b5d8d75cc850cbca3987dc22f1815bb745e10fde9971af6f2b727"
+        }
+      ]
+    },
+    {
+      "id": "hbq05",
+      "project": "harbor",
+      "method": "hybrid",
+      "hits": [
+        {
+          "id": "hb06",
+          "score": 0.03278688524590164,
+          "fingerprint": "e4356cb04ff04c1f328fbcee6ac223537a50b4bb2f59f4d039d63af2cadfbd41"
+        },
+        {
+          "id": "hb05",
+          "score": 0.03225806451612903,
+          "fingerprint": "0708ce275aaec66710a66d07cac7917393349b5f1337b710bd9d692cb4846290"
+        },
+        {
+          "id": "hb01",
+          "score": 0.03125763125763126,
+          "fingerprint": "8e8866d0899b5d8d75cc850cbca3987dc22f1815bb745e10fde9971af6f2b727"
+        }
+      ]
+    },
+    {
+      "id": "hbq05",
+      "project": "harbor",
+      "method": "lexical2",
+      "hits": [
+        {
+          "id": "hb06",
+          "score": -3.988475422111892,
+          "fingerprint": "e4356cb04ff04c1f328fbcee6ac223537a50b4bb2f59f4d039d63af2cadfbd41"
+        },
+        {
+          "id": "hb05",
+          "score": -3.3780701408814204,
+          "fingerprint": "0708ce275aaec66710a66d07cac7917393349b5f1337b710bd9d692cb4846290"
+        }
+      ]
+    },
+    {
+      "id": "hbq05",
+      "project": "harbor",
+      "method": "dense2",
+      "hits": [
+        {
+          "id": "hb06",
+          "score": 0.6216761227197891,
+          "fingerprint": "e4356cb04ff04c1f328fbcee6ac223537a50b4bb2f59f4d039d63af2cadfbd41"
+        },
+        {
+          "id": "hb05",
+          "score": 0.5314231972370375,
+          "fingerprint": "0708ce275aaec66710a66d07cac7917393349b5f1337b710bd9d692cb4846290"
+        }
+      ]
+    },
+    {
+      "id": "hbq06",
+      "project": "harbor",
+      "method": "lexical",
+      "hits": [
+        {
+          "id": "hb07",
+          "score": -10.33732569379312,
+          "fingerprint": "3ad9d28cb96a327f7788714970a6e2ddd3da195193607760f4ab31f46a742ca8"
+        },
+        {
+          "id": "hb08",
+          "score": -9.956275824918407,
+          "fingerprint": "ce43bdc637497f3afee85c162064f5ace9a26108475511e241e36ae39044a5ff"
+        },
+        {
+          "id": "hb03",
+          "score": -1.3627293438637178,
+          "fingerprint": "ca0e188cc52481047b71b62cec401098f0a3c417938678015736de488caf659a"
+        }
+      ]
+    },
+    {
+      "id": "hbq06",
+      "project": "harbor",
+      "method": "dense",
+      "hits": [
+        {
+          "id": "hb08",
+          "score": 0.8151357340838731,
+          "fingerprint": "ce43bdc637497f3afee85c162064f5ace9a26108475511e241e36ae39044a5ff"
+        },
+        {
+          "id": "hb07",
+          "score": 0.7049455471398222,
+          "fingerprint": "3ad9d28cb96a327f7788714970a6e2ddd3da195193607760f4ab31f46a742ca8"
+        },
+        {
+          "id": "hb05",
+          "score": 0.3797179565219794,
+          "fingerprint": "0708ce275aaec66710a66d07cac7917393349b5f1337b710bd9d692cb4846290"
+        }
+      ]
+    },
+    {
+      "id": "hbq06",
+      "project": "harbor",
+      "method": "hybrid",
+      "hits": [
+        {
+          "id": "hb07",
+          "score": 0.03252247488101534,
+          "fingerprint": "3ad9d28cb96a327f7788714970a6e2ddd3da195193607760f4ab31f46a742ca8"
+        },
+        {
+          "id": "hb08",
+          "score": 0.03252247488101534,
+          "fingerprint": "ce43bdc637497f3afee85c162064f5ace9a26108475511e241e36ae39044a5ff"
+        },
+        {
+          "id": "hb03",
+          "score": 0.03125763125763126,
+          "fingerprint": "ca0e188cc52481047b71b62cec401098f0a3c417938678015736de488caf659a"
+        }
+      ]
+    },
+    {
+      "id": "hbq06",
+      "project": "harbor",
+      "method": "lexical2",
+      "hits": [
+        {
+          "id": "hb07",
+          "score": -10.33732569379312,
+          "fingerprint": "3ad9d28cb96a327f7788714970a6e2ddd3da195193607760f4ab31f46a742ca8"
+        },
+        {
+          "id": "hb08",
+          "score": -9.956275824918407,
+          "fingerprint": "ce43bdc637497f3afee85c162064f5ace9a26108475511e241e36ae39044a5ff"
+        }
+      ]
+    },
+    {
+      "id": "hbq06",
+      "project": "harbor",
+      "method": "dense2",
+      "hits": [
+        {
+          "id": "hb08",
+          "score": 0.8151357340838731,
+          "fingerprint": "ce43bdc637497f3afee85c162064f5ace9a26108475511e241e36ae39044a5ff"
+        },
+        {
+          "id": "hb07",
+          "score": 0.7049455471398222,
+          "fingerprint": "3ad9d28cb96a327f7788714970a6e2ddd3da195193607760f4ab31f46a742ca8"
+        }
+      ]
+    },
+    {
+      "id": "hbq07",
+      "project": "harbor",
+      "method": "lexical",
+      "hits": [
+        {
+          "id": "hb09",
+          "score": -7.222047673509615,
+          "fingerprint": "6d5a03a792a3e7a8737dd5cb668d12637bca7f547a876227df6c0ffc9f6afa4a"
+        },
+        {
+          "id": "hb10",
+          "score": -5.609864166538082,
+          "fingerprint": "1f20b6a26145c4aa23aabcdf01fef9c0589ea5072de82c4fe4c0d12f356181ec"
+        },
+        {
+          "id": "hb02",
+          "score": -2.2270616091079725,
+          "fingerprint": "5a69cb264009a85f6462643bbdf99fe03efd462be9cc72cca2ea892c6d466641"
+        }
+      ]
+    },
+    {
+      "id": "hbq07",
+      "project": "harbor",
+      "method": "dense",
+      "hits": [
+        {
+          "id": "hb10",
+          "score": 0.6724723074021867,
+          "fingerprint": "1f20b6a26145c4aa23aabcdf01fef9c0589ea5072de82c4fe4c0d12f356181ec"
+        },
+        {
+          "id": "hb09",
+          "score": 0.6066603176203674,
+          "fingerprint": "6d5a03a792a3e7a8737dd5cb668d12637bca7f547a876227df6c0ffc9f6afa4a"
+        },
+        {
+          "id": "hb02",
+          "score": 0.5313587642793932,
+          "fingerprint": "5a69cb264009a85f6462643bbdf99fe03efd462be9cc72cca2ea892c6d466641"
+        }
+      ]
+    },
+    {
+      "id": "hbq07",
+      "project": "harbor",
+      "method": "hybrid",
+      "hits": [
+        {
+          "id": "hb09",
+          "score": 0.03252247488101534,
+          "fingerprint": "6d5a03a792a3e7a8737dd5cb668d12637bca7f547a876227df6c0ffc9f6afa4a"
+        },
+        {
+          "id": "hb10",
+          "score": 0.03252247488101534,
+          "fingerprint": "1f20b6a26145c4aa23aabcdf01fef9c0589ea5072de82c4fe4c0d12f356181ec"
+        },
+        {
+          "id": "hb02",
+          "score": 0.031746031746031744,
+          "fingerprint": "5a69cb264009a85f6462643bbdf99fe03efd462be9cc72cca2ea892c6d466641"
+        }
+      ]
+    },
+    {
+      "id": "hbq07",
+      "project": "harbor",
+      "method": "lexical2",
+      "hits": [
+        {
+          "id": "hb09",
+          "score": -7.222047673509615,
+          "fingerprint": "6d5a03a792a3e7a8737dd5cb668d12637bca7f547a876227df6c0ffc9f6afa4a"
+        },
+        {
+          "id": "hb10",
+          "score": -5.609864166538082,
+          "fingerprint": "1f20b6a26145c4aa23aabcdf01fef9c0589ea5072de82c4fe4c0d12f356181ec"
+        }
+      ]
+    },
+    {
+      "id": "hbq07",
+      "project": "harbor",
+      "method": "dense2",
+      "hits": [
+        {
+          "id": "hb10",
+          "score": 0.6724723074021867,
+          "fingerprint": "1f20b6a26145c4aa23aabcdf01fef9c0589ea5072de82c4fe4c0d12f356181ec"
+        },
+        {
+          "id": "hb09",
+          "score": 0.6066603176203674,
+          "fingerprint": "6d5a03a792a3e7a8737dd5cb668d12637bca7f547a876227df6c0ffc9f6afa4a"
+        }
+      ]
+    },
+    {
+      "id": "hbq08",
+      "project": "harbor",
+      "method": "lexical",
+      "hits": [
+        {
+          "id": "hb11",
+          "score": -8.928974352988504,
+          "fingerprint": "4594897dad6e668ffdecc342220b5d6b0cd12190878b300c87f7e2cc04d362f5"
+        }
+      ]
+    },
+    {
+      "id": "hbq08",
+      "project": "harbor",
+      "method": "dense",
+      "hits": [
+        {
+          "id": "hb11",
+          "score": 0.8362436555064698,
+          "fingerprint": "4594897dad6e668ffdecc342220b5d6b0cd12190878b300c87f7e2cc04d362f5"
+        },
+        {
+          "id": "hb05",
+          "score": 0.29163247935500636,
+          "fingerprint": "0708ce275aaec66710a66d07cac7917393349b5f1337b710bd9d692cb4846290"
+        },
+        {
+          "id": "hb09",
+          "score": 0.2782567869507672,
+          "fingerprint": "6d5a03a792a3e7a8737dd5cb668d12637bca7f547a876227df6c0ffc9f6afa4a"
+        }
+      ]
+    },
+    {
+      "id": "hbq08",
+      "project": "harbor",
+      "method": "hybrid",
+      "hits": [
+        {
+          "id": "hb11",
+          "score": 0.03278688524590164,
+          "fingerprint": "4594897dad6e668ffdecc342220b5d6b0cd12190878b300c87f7e2cc04d362f5"
+        },
+        {
+          "id": "hb05",
+          "score": 0.016129032258064516,
+          "fingerprint": "0708ce275aaec66710a66d07cac7917393349b5f1337b710bd9d692cb4846290"
+        },
+        {
+          "id": "hb09",
+          "score": 0.015873015873015872,
+          "fingerprint": "6d5a03a792a3e7a8737dd5cb668d12637bca7f547a876227df6c0ffc9f6afa4a"
+        }
+      ]
+    },
+    {
+      "id": "hbq08",
+      "project": "harbor",
+      "method": "lexical2",
+      "hits": [
+        {
+          "id": "hb11",
+          "score": -8.928974352988504,
+          "fingerprint": "4594897dad6e668ffdecc342220b5d6b0cd12190878b300c87f7e2cc04d362f5"
+        }
+      ]
+    },
+    {
+      "id": "hbq08",
+      "project": "harbor",
+      "method": "dense2",
+      "hits": [
+        {
+          "id": "hb11",
+          "score": 0.8362436555064698,
+          "fingerprint": "4594897dad6e668ffdecc342220b5d6b0cd12190878b300c87f7e2cc04d362f5"
+        },
+        {
+          "id": "hb05",
+          "score": 0.29163247935500636,
+          "fingerprint": "0708ce275aaec66710a66d07cac7917393349b5f1337b710bd9d692cb4846290"
+        }
+      ]
+    },
+    {
+      "id": "cnq01",
+      "project": "cairn",
+      "method": "lexical",
+      "hits": [
+        {
+          "id": "cn01",
+          "score": -14.916917015356518,
+          "fingerprint": "877c68d1a900c5f80042eefbb446840281b6eab63607f377812cd26c329db578"
+        }
+      ]
+    },
+    {
+      "id": "cnq01",
+      "project": "cairn",
+      "method": "dense",
+      "hits": [
+        {
+          "id": "cn01",
+          "score": 0.7846691322124438,
+          "fingerprint": "877c68d1a900c5f80042eefbb446840281b6eab63607f377812cd26c329db578"
+        },
+        {
+          "id": "cn10",
+          "score": 0.39454526622510255,
+          "fingerprint": "ff0afbdb26b1b7908e76a86e1de091ba5e67ff057406906f2f52ff484f7e7b94"
+        },
+        {
+          "id": "cn12",
+          "score": 0.3907717541794231,
+          "fingerprint": "316c4b295d27ab3edb441e8a22f8666d975fc3729cd36e888ace77d19c584dd2"
+        }
+      ]
+    },
+    {
+      "id": "cnq01",
+      "project": "cairn",
+      "method": "hybrid",
+      "hits": [
+        {
+          "id": "cn01",
+          "score": 0.03278688524590164,
+          "fingerprint": "877c68d1a900c5f80042eefbb446840281b6eab63607f377812cd26c329db578"
+        },
+        {
+          "id": "cn10",
+          "score": 0.016129032258064516,
+          "fingerprint": "ff0afbdb26b1b7908e76a86e1de091ba5e67ff057406906f2f52ff484f7e7b94"
+        },
+        {
+          "id": "cn12",
+          "score": 0.015873015873015872,
+          "fingerprint": "316c4b295d27ab3edb441e8a22f8666d975fc3729cd36e888ace77d19c584dd2"
+        }
+      ]
+    },
+    {
+      "id": "cnq01",
+      "project": "cairn",
+      "method": "lexical2",
+      "hits": [
+        {
+          "id": "cn01",
+          "score": -14.916917015356518,
+          "fingerprint": "877c68d1a900c5f80042eefbb446840281b6eab63607f377812cd26c329db578"
+        }
+      ]
+    },
+    {
+      "id": "cnq01",
+      "project": "cairn",
+      "method": "dense2",
+      "hits": [
+        {
+          "id": "cn01",
+          "score": 0.7846691322124438,
+          "fingerprint": "877c68d1a900c5f80042eefbb446840281b6eab63607f377812cd26c329db578"
+        },
+        {
+          "id": "cn10",
+          "score": 0.39454526622510255,
+          "fingerprint": "ff0afbdb26b1b7908e76a86e1de091ba5e67ff057406906f2f52ff484f7e7b94"
+        }
+      ]
+    },
+    {
+      "id": "cnq02",
+      "project": "cairn",
+      "method": "lexical",
+      "hits": [
+        {
+          "id": "cn02",
+          "score": -10.417266725376697,
+          "fingerprint": "69a0cddfee72628a8474cbb92b489e8668c0e15a5a5de1c5aabb6a9963117df6"
+        },
+        {
+          "id": "cn03",
+          "score": -5.6695751500048805,
+          "fingerprint": "7783d26ac55fbe34af455b3c5bd196f9f2cbb642b4c663518e8a4303dd296c8a"
+        },
+        {
+          "id": "cn12",
+          "score": -1.4396500115839868,
+          "fingerprint": "316c4b295d27ab3edb441e8a22f8666d975fc3729cd36e888ace77d19c584dd2"
+        }
+      ]
+    },
+    {
+      "id": "cnq02",
+      "project": "cairn",
+      "method": "dense",
+      "hits": [
+        {
+          "id": "cn03",
+          "score": 0.7993970685113929,
+          "fingerprint": "7783d26ac55fbe34af455b3c5bd196f9f2cbb642b4c663518e8a4303dd296c8a"
+        },
+        {
+          "id": "cn02",
+          "score": 0.7937458541294384,
+          "fingerprint": "69a0cddfee72628a8474cbb92b489e8668c0e15a5a5de1c5aabb6a9963117df6"
+        },
+        {
+          "id": "cn12",
+          "score": 0.45872298105893333,
+          "fingerprint": "316c4b295d27ab3edb441e8a22f8666d975fc3729cd36e888ace77d19c584dd2"
+        }
+      ]
+    },
+    {
+      "id": "cnq02",
+      "project": "cairn",
+      "method": "hybrid",
+      "hits": [
+        {
+          "id": "cn02",
+          "score": 0.03252247488101534,
+          "fingerprint": "69a0cddfee72628a8474cbb92b489e8668c0e15a5a5de1c5aabb6a9963117df6"
+        },
+        {
+          "id": "cn03",
+          "score": 0.03252247488101534,
+          "fingerprint": "7783d26ac55fbe34af455b3c5bd196f9f2cbb642b4c663518e8a4303dd296c8a"
+        },
+        {
+          "id": "cn12",
+          "score": 0.031746031746031744,
+          "fingerprint": "316c4b295d27ab3edb441e8a22f8666d975fc3729cd36e888ace77d19c584dd2"
+        }
+      ]
+    },
+    {
+      "id": "cnq02",
+      "project": "cairn",
+      "method": "lexical2",
+      "hits": [
+        {
+          "id": "cn02",
+          "score": -10.417266725376697,
+          "fingerprint": "69a0cddfee72628a8474cbb92b489e8668c0e15a5a5de1c5aabb6a9963117df6"
+        },
+        {
+          "id": "cn03",
+          "score": -5.6695751500048805,
+          "fingerprint": "7783d26ac55fbe34af455b3c5bd196f9f2cbb642b4c663518e8a4303dd296c8a"
+        }
+      ]
+    },
+    {
+      "id": "cnq02",
+      "project": "cairn",
+      "method": "dense2",
+      "hits": [
+        {
+          "id": "cn03",
+          "score": 0.7993970685113929,
+          "fingerprint": "7783d26ac55fbe34af455b3c5bd196f9f2cbb642b4c663518e8a4303dd296c8a"
+        },
+        {
+          "id": "cn02",
+          "score": 0.7937458541294384,
+          "fingerprint": "69a0cddfee72628a8474cbb92b489e8668c0e15a5a5de1c5aabb6a9963117df6"
+        }
+      ]
+    },
+    {
+      "id": "cnq03",
+      "project": "cairn",
+      "method": "lexical",
+      "hits": [
+        {
+          "id": "cn04",
+          "score": -14.244882832784258,
+          "fingerprint": "06430fb45409fb4639517380b59658e870c9418f50ed008d3ab79bc6d425d21d"
+        }
+      ]
+    },
+    {
+      "id": "cnq03",
+      "project": "cairn",
+      "method": "dense",
+      "hits": [
+        {
+          "id": "cn04",
+          "score": 0.7476246711503726,
+          "fingerprint": "06430fb45409fb4639517380b59658e870c9418f50ed008d3ab79bc6d425d21d"
+        },
+        {
+          "id": "cn12",
+          "score": 0.40409752709344854,
+          "fingerprint": "316c4b295d27ab3edb441e8a22f8666d975fc3729cd36e888ace77d19c584dd2"
+        },
+        {
+          "id": "cn01",
+          "score": 0.37760440302884096,
+          "fingerprint": "877c68d1a900c5f80042eefbb446840281b6eab63607f377812cd26c329db578"
+        }
+      ]
+    },
+    {
+      "id": "cnq03",
+      "project": "cairn",
+      "method": "hybrid",
+      "hits": [
+        {
+          "id": "cn04",
+          "score": 0.03278688524590164,
+          "fingerprint": "06430fb45409fb4639517380b59658e870c9418f50ed008d3ab79bc6d425d21d"
+        },
+        {
+          "id": "cn12",
+          "score": 0.016129032258064516,
+          "fingerprint": "316c4b295d27ab3edb441e8a22f8666d975fc3729cd36e888ace77d19c584dd2"
+        },
+        {
+          "id": "cn01",
+          "score": 0.015873015873015872,
+          "fingerprint": "877c68d1a900c5f80042eefbb446840281b6eab63607f377812cd26c329db578"
+        }
+      ]
+    },
+    {
+      "id": "cnq03",
+      "project": "cairn",
+      "method": "lexical2",
+      "hits": [
+        {
+          "id": "cn04",
+          "score": -14.244882832784258,
+          "fingerprint": "06430fb45409fb4639517380b59658e870c9418f50ed008d3ab79bc6d425d21d"
+        }
+      ]
+    },
+    {
+      "id": "cnq03",
+      "project": "cairn",
+      "method": "dense2",
+      "hits": [
+        {
+          "id": "cn04",
+          "score": 0.7476246711503726,
+          "fingerprint": "06430fb45409fb4639517380b59658e870c9418f50ed008d3ab79bc6d425d21d"
+        },
+        {
+          "id": "cn12",
+          "score": 0.40409752709344854,
+          "fingerprint": "316c4b295d27ab3edb441e8a22f8666d975fc3729cd36e888ace77d19c584dd2"
+        }
+      ]
+    },
+    {
+      "id": "cnq04",
+      "project": "cairn",
+      "method": "lexical",
+      "hits": [
+        {
+          "id": "cn12",
+          "score": -4.2838749304042905,
+          "fingerprint": "316c4b295d27ab3edb441e8a22f8666d975fc3729cd36e888ace77d19c584dd2"
+        },
+        {
+          "id": "cn07",
+          "score": -0.876395299806434,
+          "fingerprint": "7434326918522d5b67b7a15a3d0c2eb58b08d4ebf2f3c8e8db78ed3822c44718"
+        },
+        {
+          "id": "cn08",
+          "score": -0.861339117132594,
+          "fingerprint": "73ec55b66467a8f47ec8908afd7b88b81338b29d47b7a6ebd8252a3974ffe15a"
+        }
+      ]
+    },
+    {
+      "id": "cnq04",
+      "project": "cairn",
+      "method": "dense",
+      "hits": [
+        {
+          "id": "cn12",
+          "score": 0.6747197483654923,
+          "fingerprint": "316c4b295d27ab3edb441e8a22f8666d975fc3729cd36e888ace77d19c584dd2"
+        },
+        {
+          "id": "cn08",
+          "score": 0.46202586188153666,
+          "fingerprint": "73ec55b66467a8f47ec8908afd7b88b81338b29d47b7a6ebd8252a3974ffe15a"
+        },
+        {
+          "id": "cn09",
+          "score": 0.4493138211969184,
+          "fingerprint": "880b6bddc371fa568db18c70af4b6be138ddf66adb9e4b737bcbb031774e17ef"
+        }
+      ]
+    },
+    {
+      "id": "cnq04",
+      "project": "cairn",
+      "method": "hybrid",
+      "hits": [
+        {
+          "id": "cn12",
+          "score": 0.03278688524590164,
+          "fingerprint": "316c4b295d27ab3edb441e8a22f8666d975fc3729cd36e888ace77d19c584dd2"
+        },
+        {
+          "id": "cn08",
+          "score": 0.03200204813108039,
+          "fingerprint": "73ec55b66467a8f47ec8908afd7b88b81338b29d47b7a6ebd8252a3974ffe15a"
+        },
+        {
+          "id": "cn09",
+          "score": 0.03149801587301587,
+          "fingerprint": "880b6bddc371fa568db18c70af4b6be138ddf66adb9e4b737bcbb031774e17ef"
+        }
+      ]
+    },
+    {
+      "id": "cnq04",
+      "project": "cairn",
+      "method": "lexical2",
+      "hits": [
+        {
+          "id": "cn12",
+          "score": -4.2838749304042905,
+          "fingerprint": "316c4b295d27ab3edb441e8a22f8666d975fc3729cd36e888ace77d19c584dd2"
+        },
+        {
+          "id": "cn07",
+          "score": -0.876395299806434,
+          "fingerprint": "7434326918522d5b67b7a15a3d0c2eb58b08d4ebf2f3c8e8db78ed3822c44718"
+        }
+      ]
+    },
+    {
+      "id": "cnq04",
+      "project": "cairn",
+      "method": "dense2",
+      "hits": [
+        {
+          "id": "cn12",
+          "score": 0.6747197483654923,
+          "fingerprint": "316c4b295d27ab3edb441e8a22f8666d975fc3729cd36e888ace77d19c584dd2"
+        },
+        {
+          "id": "cn08",
+          "score": 0.46202586188153666,
+          "fingerprint": "73ec55b66467a8f47ec8908afd7b88b81338b29d47b7a6ebd8252a3974ffe15a"
+        }
+      ]
+    },
+    {
+      "id": "cnq05",
+      "project": "cairn",
+      "method": "lexical",
+      "hits": [
+        {
+          "id": "cn06",
+          "score": -8.743428939007728,
+          "fingerprint": "441ea7044579440459306b95ae6254521034699445fbe1e92ef6478462224427"
+        },
+        {
+          "id": "cn07",
+          "score": -7.836111003469544,
+          "fingerprint": "7434326918522d5b67b7a15a3d0c2eb58b08d4ebf2f3c8e8db78ed3822c44718"
+        },
+        {
+          "id": "cn04",
+          "score": -1.9211269224216792,
+          "fingerprint": "06430fb45409fb4639517380b59658e870c9418f50ed008d3ab79bc6d425d21d"
+        }
+      ]
+    },
+    {
+      "id": "cnq05",
+      "project": "cairn",
+      "method": "dense",
+      "hits": [
+        {
+          "id": "cn07",
+          "score": 0.8038152238169359,
+          "fingerprint": "7434326918522d5b67b7a15a3d0c2eb58b08d4ebf2f3c8e8db78ed3822c44718"
+        },
+        {
+          "id": "cn06",
+          "score": 0.7825631440452441,
+          "fingerprint": "441ea7044579440459306b95ae6254521034699445fbe1e92ef6478462224427"
+        },
+        {
+          "id": "cn12",
+          "score": 0.4050197421462793,
+          "fingerprint": "316c4b295d27ab3edb441e8a22f8666d975fc3729cd36e888ace77d19c584dd2"
+        }
+      ]
+    },
+    {
+      "id": "cnq05",
+      "project": "cairn",
+      "method": "hybrid",
+      "hits": [
+        {
+          "id": "cn06",
+          "score": 0.03252247488101534,
+          "fingerprint": "441ea7044579440459306b95ae6254521034699445fbe1e92ef6478462224427"
+        },
+        {
+          "id": "cn07",
+          "score": 0.03252247488101534,
+          "fingerprint": "7434326918522d5b67b7a15a3d0c2eb58b08d4ebf2f3c8e8db78ed3822c44718"
+        },
+        {
+          "id": "cn12",
+          "score": 0.03149801587301587,
+          "fingerprint": "316c4b295d27ab3edb441e8a22f8666d975fc3729cd36e888ace77d19c584dd2"
+        }
+      ]
+    },
+    {
+      "id": "cnq05",
+      "project": "cairn",
+      "method": "lexical2",
+      "hits": [
+        {
+          "id": "cn06",
+          "score": -8.743428939007728,
+          "fingerprint": "441ea7044579440459306b95ae6254521034699445fbe1e92ef6478462224427"
+        },
+        {
+          "id": "cn07",
+          "score": -7.836111003469544,
+          "fingerprint": "7434326918522d5b67b7a15a3d0c2eb58b08d4ebf2f3c8e8db78ed3822c44718"
+        }
+      ]
+    },
+    {
+      "id": "cnq05",
+      "project": "cairn",
+      "method": "dense2",
+      "hits": [
+        {
+          "id": "cn07",
+          "score": 0.8038152238169359,
+          "fingerprint": "7434326918522d5b67b7a15a3d0c2eb58b08d4ebf2f3c8e8db78ed3822c44718"
+        },
+        {
+          "id": "cn06",
+          "score": 0.7825631440452441,
+          "fingerprint": "441ea7044579440459306b95ae6254521034699445fbe1e92ef6478462224427"
+        }
+      ]
+    },
+    {
+      "id": "cnq06",
+      "project": "cairn",
+      "method": "lexical",
+      "hits": [
+        {
+          "id": "cn11",
+          "score": -11.915850142497906,
+          "fingerprint": "f276b1a6856519b694f36500ed5b900a82ed25a305d9e3d8d7a8a01f67fecd19"
+        },
+        {
+          "id": "cn10",
+          "score": -7.82475748456332,
+          "fingerprint": "ff0afbdb26b1b7908e76a86e1de091ba5e67ff057406906f2f52ff484f7e7b94"
+        },
+        {
+          "id": "cn04",
+          "score": -1.8835658490231835,
+          "fingerprint": "06430fb45409fb4639517380b59658e870c9418f50ed008d3ab79bc6d425d21d"
+        }
+      ]
+    },
+    {
+      "id": "cnq06",
+      "project": "cairn",
+      "method": "dense",
+      "hits": [
+        {
+          "id": "cn11",
+          "score": 0.8691316882271406,
+          "fingerprint": "f276b1a6856519b694f36500ed5b900a82ed25a305d9e3d8d7a8a01f67fecd19"
+        },
+        {
+          "id": "cn10",
+          "score": 0.5967363663457536,
+          "fingerprint": "ff0afbdb26b1b7908e76a86e1de091ba5e67ff057406906f2f52ff484f7e7b94"
+        },
+        {
+          "id": "cn03",
+          "score": 0.4222713666179745,
+          "fingerprint": "7783d26ac55fbe34af455b3c5bd196f9f2cbb642b4c663518e8a4303dd296c8a"
+        }
+      ]
+    },
+    {
+      "id": "cnq06",
+      "project": "cairn",
+      "method": "hybrid",
+      "hits": [
+        {
+          "id": "cn11",
+          "score": 0.03278688524590164,
+          "fingerprint": "f276b1a6856519b694f36500ed5b900a82ed25a305d9e3d8d7a8a01f67fecd19"
+        },
+        {
+          "id": "cn10",
+          "score": 0.03225806451612903,
+          "fingerprint": "ff0afbdb26b1b7908e76a86e1de091ba5e67ff057406906f2f52ff484f7e7b94"
+        },
+        {
+          "id": "cn03",
+          "score": 0.03125763125763126,
+          "fingerprint": "7783d26ac55fbe34af455b3c5bd196f9f2cbb642b4c663518e8a4303dd296c8a"
+        }
+      ]
+    },
+    {
+      "id": "cnq06",
+      "project": "cairn",
+      "method": "lexical2",
+      "hits": [
+        {
+          "id": "cn11",
+          "score": -11.915850142497906,
+          "fingerprint": "f276b1a6856519b694f36500ed5b900a82ed25a305d9e3d8d7a8a01f67fecd19"
+        },
+        {
+          "id": "cn10",
+          "score": -7.82475748456332,
+          "fingerprint": "ff0afbdb26b1b7908e76a86e1de091ba5e67ff057406906f2f52ff484f7e7b94"
+        }
+      ]
+    },
+    {
+      "id": "cnq06",
+      "project": "cairn",
+      "method": "dense2",
+      "hits": [
+        {
+          "id": "cn11",
+          "score": 0.8691316882271406,
+          "fingerprint": "f276b1a6856519b694f36500ed5b900a82ed25a305d9e3d8d7a8a01f67fecd19"
+        },
+        {
+          "id": "cn10",
+          "score": 0.5967363663457536,
+          "fingerprint": "ff0afbdb26b1b7908e76a86e1de091ba5e67ff057406906f2f52ff484f7e7b94"
+        }
+      ]
+    },
+    {
+      "id": "cnq07",
+      "project": "cairn",
+      "method": "lexical",
+      "hits": [
+        {
+          "id": "cn09",
+          "score": -9.06453412195799,
+          "fingerprint": "880b6bddc371fa568db18c70af4b6be138ddf66adb9e4b737bcbb031774e17ef"
+        },
+        {
+          "id": "cn08",
+          "score": -8.67737019099408,
+          "fingerprint": "73ec55b66467a8f47ec8908afd7b88b81338b29d47b7a6ebd8252a3974ffe15a"
+        },
+        {
+          "id": "cn04",
+          "score": -1.9211269224216792,
+          "fingerprint": "06430fb45409fb4639517380b59658e870c9418f50ed008d3ab79bc6d425d21d"
+        }
+      ]
+    },
+    {
+      "id": "cnq07",
+      "project": "cairn",
+      "method": "dense",
+      "hits": [
+        {
+          "id": "cn09",
+          "score": 0.8258320675358566,
+          "fingerprint": "880b6bddc371fa568db18c70af4b6be138ddf66adb9e4b737bcbb031774e17ef"
+        },
+        {
+          "id": "cn08",
+          "score": 0.8185313044230589,
+          "fingerprint": "73ec55b66467a8f47ec8908afd7b88b81338b29d47b7a6ebd8252a3974ffe15a"
+        },
+        {
+          "id": "cn12",
+          "score": 0.4757646358423534,
+          "fingerprint": "316c4b295d27ab3edb441e8a22f8666d975fc3729cd36e888ace77d19c584dd2"
+        }
+      ]
+    },
+    {
+      "id": "cnq07",
+      "project": "cairn",
+      "method": "hybrid",
+      "hits": [
+        {
+          "id": "cn09",
+          "score": 0.03278688524590164,
+          "fingerprint": "880b6bddc371fa568db18c70af4b6be138ddf66adb9e4b737bcbb031774e17ef"
+        },
+        {
+          "id": "cn08",
+          "score": 0.03225806451612903,
+          "fingerprint": "73ec55b66467a8f47ec8908afd7b88b81338b29d47b7a6ebd8252a3974ffe15a"
+        },
+        {
+          "id": "cn12",
+          "score": 0.03125763125763126,
+          "fingerprint": "316c4b295d27ab3edb441e8a22f8666d975fc3729cd36e888ace77d19c584dd2"
+        }
+      ]
+    },
+    {
+      "id": "cnq07",
+      "project": "cairn",
+      "method": "lexical2",
+      "hits": [
+        {
+          "id": "cn09",
+          "score": -9.06453412195799,
+          "fingerprint": "880b6bddc371fa568db18c70af4b6be138ddf66adb9e4b737bcbb031774e17ef"
+        },
+        {
+          "id": "cn08",
+          "score": -8.67737019099408,
+          "fingerprint": "73ec55b66467a8f47ec8908afd7b88b81338b29d47b7a6ebd8252a3974ffe15a"
+        }
+      ]
+    },
+    {
+      "id": "cnq07",
+      "project": "cairn",
+      "method": "dense2",
+      "hits": [
+        {
+          "id": "cn09",
+          "score": 0.8258320675358566,
+          "fingerprint": "880b6bddc371fa568db18c70af4b6be138ddf66adb9e4b737bcbb031774e17ef"
+        },
+        {
+          "id": "cn08",
+          "score": 0.8185313044230589,
+          "fingerprint": "73ec55b66467a8f47ec8908afd7b88b81338b29d47b7a6ebd8252a3974ffe15a"
+        }
+      ]
+    },
+    {
+      "id": "cnq08",
+      "project": "cairn",
+      "method": "lexical",
+      "hits": [
+        {
+          "id": "cn05",
+          "score": -8.866263703157056,
+          "fingerprint": "7a7d99d8c7dff1b0b564ba3b701f671ea4102c3b56841a31b3382f431f46ac24"
+        }
+      ]
+    },
+    {
+      "id": "cnq08",
+      "project": "cairn",
+      "method": "dense",
+      "hits": [
+        {
+          "id": "cn05",
+          "score": 0.6636712291376224,
+          "fingerprint": "7a7d99d8c7dff1b0b564ba3b701f671ea4102c3b56841a31b3382f431f46ac24"
+        },
+        {
+          "id": "cn12",
+          "score": 0.3106332534685155,
+          "fingerprint": "316c4b295d27ab3edb441e8a22f8666d975fc3729cd36e888ace77d19c584dd2"
+        },
+        {
+          "id": "cn06",
+          "score": 0.30933328572428076,
+          "fingerprint": "441ea7044579440459306b95ae6254521034699445fbe1e92ef6478462224427"
+        }
+      ]
+    },
+    {
+      "id": "cnq08",
+      "project": "cairn",
+      "method": "hybrid",
+      "hits": [
+        {
+          "id": "cn05",
+          "score": 0.03278688524590164,
+          "fingerprint": "7a7d99d8c7dff1b0b564ba3b701f671ea4102c3b56841a31b3382f431f46ac24"
+        },
+        {
+          "id": "cn12",
+          "score": 0.016129032258064516,
+          "fingerprint": "316c4b295d27ab3edb441e8a22f8666d975fc3729cd36e888ace77d19c584dd2"
+        },
+        {
+          "id": "cn06",
+          "score": 0.015873015873015872,
+          "fingerprint": "441ea7044579440459306b95ae6254521034699445fbe1e92ef6478462224427"
+        }
+      ]
+    },
+    {
+      "id": "cnq08",
+      "project": "cairn",
+      "method": "lexical2",
+      "hits": [
+        {
+          "id": "cn05",
+          "score": -8.866263703157056,
+          "fingerprint": "7a7d99d8c7dff1b0b564ba3b701f671ea4102c3b56841a31b3382f431f46ac24"
+        }
+      ]
+    },
+    {
+      "id": "cnq08",
+      "project": "cairn",
+      "method": "dense2",
+      "hits": [
+        {
+          "id": "cn05",
+          "score": 0.6636712291376224,
+          "fingerprint": "7a7d99d8c7dff1b0b564ba3b701f671ea4102c3b56841a31b3382f431f46ac24"
+        },
+        {
+          "id": "cn12",
+          "score": 0.3106332534685155,
+          "fingerprint": "316c4b295d27ab3edb441e8a22f8666d975fc3729cd36e888ace77d19c584dd2"
+        }
+      ]
+    }
+  ]
+}

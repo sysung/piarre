@@ -1,0 +1,263 @@
+[
+  {
+    "id": "hbq01",
+    "criteria": {
+      "behavior": "answer",
+      "requiredSourceIds": [
+        "hb01"
+      ],
+      "requirements": [
+        "Identify 48 kHz, or an exactly equivalent frequency, as the current microphone sampling rate."
+      ],
+      "forbidden": [
+        "Use the superseded 44.1 kHz setting.",
+        "Confuse recording frequency with playback speed."
+      ]
+    }
+  },
+  {
+    "id": "hbq02",
+    "criteria": {
+      "behavior": "answer",
+      "requiredSourceIds": [
+        "hb02"
+      ],
+      "requirements": [
+        "State that the earlier cached transcript is not applicable after a speaker-map revision changes because that revision is part of the cache identity."
+      ],
+      "forbidden": [
+        "Treat session ID alone as sufficient cache identity."
+      ]
+    }
+  },
+  {
+    "id": "hbq03",
+    "criteria": {
+      "behavior": "answer_constraint",
+      "requiredSourceIds": [
+        "hb03"
+      ],
+      "requirements": [
+        "State that old consent is insufficient and publication remains blocked until renewed consent is recorded."
+      ],
+      "forbidden": [
+        "Treat withdrawal as a recommendation rather than a publication block.",
+        "Replace recorded renewed consent with generic permission."
+      ]
+    }
+  },
+  {
+    "id": "hbq04",
+    "criteria": {
+      "behavior": "answer",
+      "requiredSourceIds": [
+        "hb04"
+      ],
+      "requirements": [
+        "Identify the session thumbnail directory for waveform previews. Mentioning the separate recording vault for originals is optional."
+      ],
+      "forbidden": [
+        "Identify the recording vault as the preview location.",
+        "Claim removal of a preview deletes original audio."
+      ]
+    }
+  },
+  {
+    "id": "hbq05",
+    "criteria": {
+      "behavior": "abstain_runtime",
+      "requiredSourceIds": [
+        "hb05",
+        "hb06"
+      ],
+      "requirements": [
+        "State that successful upload is not established: the queue expresses intent and the required archive receipt is missing."
+      ],
+      "forbidden": [
+        "Equate a queue entry with successful upload.",
+        "Conclude that upload definitely failed."
+      ]
+    }
+  },
+  {
+    "id": "hbq06",
+    "criteria": {
+      "behavior": "answer_constraint",
+      "requiredSourceIds": [
+        "hb07",
+        "hb08"
+      ],
+      "requirements": [
+        "State that starting now is not authorized because the required recorded consent-coordinator release is absent; the producer request is insufficient."
+      ],
+      "forbidden": [
+        "Grant permission based on producer authority or a private rehearsal.",
+        "Replace the named release with generic approval."
+      ]
+    }
+  },
+  {
+    "id": "hbq07",
+    "criteria": {
+      "behavior": "clarify",
+      "requiredSourceIds": [
+        "hb09",
+        "hb10"
+      ],
+      "requirements": [
+        "Request verification of the spoken language before assigning a profile. Conditional Spanish/S and English/E guidance is optional.",
+        "A concise declarative request for verified language counts as clarification; claim-free clarification may omit citations."
+      ],
+      "forbidden": [
+        "Infer Spanish from the session title.",
+        "Assign either profile before language verification."
+      ]
+    }
+  },
+  {
+    "id": "hbq08",
+    "criteria": {
+      "behavior": "abstain_rationale",
+      "requiredSourceIds": [
+        "hb11"
+      ],
+      "requirements": [
+        "State that these records do not establish why Alt+M was chosen. A decision-record request is optional.",
+        "A concise absence-of-evidence statement may omit citations; extra shortcut claims require support."
+      ],
+      "forbidden": [
+        "Invent ergonomic, mnemonic, compatibility, or other rationale."
+      ]
+    }
+  },
+  {
+    "id": "cnq01",
+    "criteria": {
+      "behavior": "answer_constraint",
+      "requiredSourceIds": [
+        "cn01"
+      ],
+      "requirements": [
+        "Answer no: this package requires its own verified checksum recorded before scanning; urgency does not waive the prerequisite."
+      ],
+      "forbidden": [
+        "Reuse another package checksum as sufficient.",
+        "Soften the required recorded checksum into optional advice."
+      ]
+    }
+  },
+  {
+    "id": "cnq02",
+    "criteria": {
+      "behavior": "answer",
+      "requiredSourceIds": [
+        "cn03"
+      ],
+      "requirements": [
+        "Identify 21 days as the current retention period."
+      ],
+      "forbidden": [
+        "Apply the historical 60-day policy or unconfirmed seven-day proposal."
+      ]
+    }
+  },
+  {
+    "id": "cnq03",
+    "criteria": {
+      "behavior": "answer",
+      "requiredSourceIds": [
+        "cn04"
+      ],
+      "requirements": [
+        "Say the display label is insufficient; accountable ownership comes from the maintainer registry."
+      ],
+      "forbidden": [
+        "Assign ownership from the label alone."
+      ]
+    }
+  },
+  {
+    "id": "cnq04",
+    "criteria": {
+      "behavior": "answer",
+      "requiredSourceIds": [
+        "cn12"
+      ],
+      "requirements": [
+        "Identify the review evidence store as the attachment location."
+      ],
+      "forbidden": [
+        "Substitute the build cache or claim cache clearing removes review attachments."
+      ]
+    }
+  },
+  {
+    "id": "cnq05",
+    "criteria": {
+      "behavior": "answer_uncertainty",
+      "requiredSourceIds": [
+        "cn06",
+        "cn07"
+      ],
+      "requirements": [
+        "Say no confirmed cause has been established. Distinguish the cache suspicion from the confirmed review leaving the cause undetermined."
+      ],
+      "forbidden": [
+        "Promote the observation to a confirmed cause.",
+        "Claim the cache was ruled out."
+      ]
+    }
+  },
+  {
+    "id": "cnq06",
+    "criteria": {
+      "behavior": "answer_constraint",
+      "requiredSourceIds": [
+        "cn10",
+        "cn11"
+      ],
+      "requirements": [
+        "State that downloading now is not authorized: the named recorded custodian grant is absent and the author request is insufficient."
+      ],
+      "forbidden": [
+        "Treat authorship as download authority.",
+        "Substitute generic user permission for the custodian grant."
+      ]
+    }
+  },
+  {
+    "id": "cnq07",
+    "criteria": {
+      "behavior": "surface_conflict",
+      "requiredSourceIds": [
+        "cn08",
+        "cn09"
+      ],
+      "requirements": [
+        "State that the instructions conflict: one requires release-lead review and the other says no review is required for the same scope.",
+        "Do not choose a winner without precedence. Asking for an authoritative resolution is optional."
+      ],
+      "forbidden": [
+        "Invent supersession or precedence.",
+        "Treat equal revision numbers or source order as precedence.",
+        "Authorize bypassing review as though the conflict were resolved."
+      ]
+    }
+  },
+  {
+    "id": "cnq08",
+    "criteria": {
+      "behavior": "abstain_rationale",
+      "requiredSourceIds": [
+        "cn05"
+      ],
+      "requirements": [
+        "State that the reason for the dependency is not established by these records. The graph shows a relationship, not its design rationale.",
+        "A concise absence-of-evidence response may omit citations; extra graph facts require support."
+      ],
+      "forbidden": [
+        "Invent performance, layering, reuse, compatibility, or another rationale."
+      ]
+    }
+  }
+]

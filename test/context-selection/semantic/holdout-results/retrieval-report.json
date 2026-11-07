@@ -1,0 +1,1234 @@
+{
+  "summary": [
+    {
+      "method": "lexical",
+      "requiredSources": 22,
+      "recalled": 22,
+      "questionsWithRequiredEvidence": 16,
+      "completeCoverage": 16,
+      "noRequiredEvidence": 0,
+      "noRequiredEvidenceWithCandidates": 0
+    },
+    {
+      "method": "dense",
+      "requiredSources": 22,
+      "recalled": 22,
+      "questionsWithRequiredEvidence": 16,
+      "completeCoverage": 16,
+      "noRequiredEvidence": 0,
+      "noRequiredEvidenceWithCandidates": 0
+    },
+    {
+      "method": "hybrid",
+      "requiredSources": 22,
+      "recalled": 22,
+      "questionsWithRequiredEvidence": 16,
+      "completeCoverage": 16,
+      "noRequiredEvidence": 0,
+      "noRequiredEvidenceWithCandidates": 0
+    },
+    {
+      "method": "lexical2",
+      "requiredSources": 22,
+      "recalled": 22,
+      "questionsWithRequiredEvidence": 16,
+      "completeCoverage": 16,
+      "noRequiredEvidence": 0,
+      "noRequiredEvidenceWithCandidates": 0
+    },
+    {
+      "method": "dense2",
+      "requiredSources": 22,
+      "recalled": 22,
+      "questionsWithRequiredEvidence": 16,
+      "completeCoverage": 16,
+      "noRequiredEvidence": 0,
+      "noRequiredEvidenceWithCandidates": 0
+    }
+  ],
+  "rows": [
+    {
+      "id": "hbq01",
+      "project": "harbor",
+      "method": "lexical",
+      "expected": [
+        "hb01"
+      ],
+      "selected": [
+        "hb01",
+        "hb12",
+        "hb09"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "hbq01",
+      "project": "harbor",
+      "method": "dense",
+      "expected": [
+        "hb01"
+      ],
+      "selected": [
+        "hb01",
+        "hb12",
+        "hb04"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "hbq01",
+      "project": "harbor",
+      "method": "hybrid",
+      "expected": [
+        "hb01"
+      ],
+      "selected": [
+        "hb01",
+        "hb12",
+        "hb09"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "hbq01",
+      "project": "harbor",
+      "method": "lexical2",
+      "expected": [
+        "hb01"
+      ],
+      "selected": [
+        "hb01",
+        "hb12"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "hbq01",
+      "project": "harbor",
+      "method": "dense2",
+      "expected": [
+        "hb01"
+      ],
+      "selected": [
+        "hb01",
+        "hb12"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "hbq02",
+      "project": "harbor",
+      "method": "lexical",
+      "expected": [
+        "hb02"
+      ],
+      "selected": [
+        "hb02",
+        "hb09",
+        "hb12"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "hbq02",
+      "project": "harbor",
+      "method": "dense",
+      "expected": [
+        "hb02"
+      ],
+      "selected": [
+        "hb02",
+        "hb09",
+        "hb10"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "hbq02",
+      "project": "harbor",
+      "method": "hybrid",
+      "expected": [
+        "hb02"
+      ],
+      "selected": [
+        "hb02",
+        "hb09",
+        "hb12"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "hbq02",
+      "project": "harbor",
+      "method": "lexical2",
+      "expected": [
+        "hb02"
+      ],
+      "selected": [
+        "hb02",
+        "hb09"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "hbq02",
+      "project": "harbor",
+      "method": "dense2",
+      "expected": [
+        "hb02"
+      ],
+      "selected": [
+        "hb02",
+        "hb09"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "hbq03",
+      "project": "harbor",
+      "method": "lexical",
+      "expected": [
+        "hb03"
+      ],
+      "selected": [
+        "hb03",
+        "hb07",
+        "hb08"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "hbq03",
+      "project": "harbor",
+      "method": "dense",
+      "expected": [
+        "hb03"
+      ],
+      "selected": [
+        "hb03",
+        "hb08",
+        "hb07"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "hbq03",
+      "project": "harbor",
+      "method": "hybrid",
+      "expected": [
+        "hb03"
+      ],
+      "selected": [
+        "hb03",
+        "hb07",
+        "hb08"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "hbq03",
+      "project": "harbor",
+      "method": "lexical2",
+      "expected": [
+        "hb03"
+      ],
+      "selected": [
+        "hb03",
+        "hb07"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "hbq03",
+      "project": "harbor",
+      "method": "dense2",
+      "expected": [
+        "hb03"
+      ],
+      "selected": [
+        "hb03",
+        "hb08"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "hbq04",
+      "project": "harbor",
+      "method": "lexical",
+      "expected": [
+        "hb04"
+      ],
+      "selected": [
+        "hb04"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "hbq04",
+      "project": "harbor",
+      "method": "dense",
+      "expected": [
+        "hb04"
+      ],
+      "selected": [
+        "hb04",
+        "hb01",
+        "hb09"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "hbq04",
+      "project": "harbor",
+      "method": "hybrid",
+      "expected": [
+        "hb04"
+      ],
+      "selected": [
+        "hb04",
+        "hb01",
+        "hb09"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "hbq04",
+      "project": "harbor",
+      "method": "lexical2",
+      "expected": [
+        "hb04"
+      ],
+      "selected": [
+        "hb04"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "hbq04",
+      "project": "harbor",
+      "method": "dense2",
+      "expected": [
+        "hb04"
+      ],
+      "selected": [
+        "hb04",
+        "hb01"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "hbq05",
+      "project": "harbor",
+      "method": "lexical",
+      "expected": [
+        "hb05",
+        "hb06"
+      ],
+      "selected": [
+        "hb06",
+        "hb05",
+        "hb10"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "hbq05",
+      "project": "harbor",
+      "method": "dense",
+      "expected": [
+        "hb05",
+        "hb06"
+      ],
+      "selected": [
+        "hb06",
+        "hb05",
+        "hb01"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "hbq05",
+      "project": "harbor",
+      "method": "hybrid",
+      "expected": [
+        "hb05",
+        "hb06"
+      ],
+      "selected": [
+        "hb06",
+        "hb05",
+        "hb01"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "hbq05",
+      "project": "harbor",
+      "method": "lexical2",
+      "expected": [
+        "hb05",
+        "hb06"
+      ],
+      "selected": [
+        "hb06",
+        "hb05"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "hbq05",
+      "project": "harbor",
+      "method": "dense2",
+      "expected": [
+        "hb05",
+        "hb06"
+      ],
+      "selected": [
+        "hb06",
+        "hb05"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "hbq06",
+      "project": "harbor",
+      "method": "lexical",
+      "expected": [
+        "hb07",
+        "hb08"
+      ],
+      "selected": [
+        "hb07",
+        "hb08",
+        "hb03"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "hbq06",
+      "project": "harbor",
+      "method": "dense",
+      "expected": [
+        "hb07",
+        "hb08"
+      ],
+      "selected": [
+        "hb08",
+        "hb07",
+        "hb05"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "hbq06",
+      "project": "harbor",
+      "method": "hybrid",
+      "expected": [
+        "hb07",
+        "hb08"
+      ],
+      "selected": [
+        "hb07",
+        "hb08",
+        "hb03"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "hbq06",
+      "project": "harbor",
+      "method": "lexical2",
+      "expected": [
+        "hb07",
+        "hb08"
+      ],
+      "selected": [
+        "hb07",
+        "hb08"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "hbq06",
+      "project": "harbor",
+      "method": "dense2",
+      "expected": [
+        "hb07",
+        "hb08"
+      ],
+      "selected": [
+        "hb08",
+        "hb07"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "hbq07",
+      "project": "harbor",
+      "method": "lexical",
+      "expected": [
+        "hb09",
+        "hb10"
+      ],
+      "selected": [
+        "hb09",
+        "hb10",
+        "hb02"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "hbq07",
+      "project": "harbor",
+      "method": "dense",
+      "expected": [
+        "hb09",
+        "hb10"
+      ],
+      "selected": [
+        "hb10",
+        "hb09",
+        "hb02"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "hbq07",
+      "project": "harbor",
+      "method": "hybrid",
+      "expected": [
+        "hb09",
+        "hb10"
+      ],
+      "selected": [
+        "hb09",
+        "hb10",
+        "hb02"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "hbq07",
+      "project": "harbor",
+      "method": "lexical2",
+      "expected": [
+        "hb09",
+        "hb10"
+      ],
+      "selected": [
+        "hb09",
+        "hb10"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "hbq07",
+      "project": "harbor",
+      "method": "dense2",
+      "expected": [
+        "hb09",
+        "hb10"
+      ],
+      "selected": [
+        "hb10",
+        "hb09"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "hbq08",
+      "project": "harbor",
+      "method": "lexical",
+      "expected": [
+        "hb11"
+      ],
+      "selected": [
+        "hb11"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "hbq08",
+      "project": "harbor",
+      "method": "dense",
+      "expected": [
+        "hb11"
+      ],
+      "selected": [
+        "hb11",
+        "hb05",
+        "hb09"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "hbq08",
+      "project": "harbor",
+      "method": "hybrid",
+      "expected": [
+        "hb11"
+      ],
+      "selected": [
+        "hb11",
+        "hb05",
+        "hb09"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "hbq08",
+      "project": "harbor",
+      "method": "lexical2",
+      "expected": [
+        "hb11"
+      ],
+      "selected": [
+        "hb11"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "hbq08",
+      "project": "harbor",
+      "method": "dense2",
+      "expected": [
+        "hb11"
+      ],
+      "selected": [
+        "hb11",
+        "hb05"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "cnq01",
+      "project": "cairn",
+      "method": "lexical",
+      "expected": [
+        "cn01"
+      ],
+      "selected": [
+        "cn01"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "cnq01",
+      "project": "cairn",
+      "method": "dense",
+      "expected": [
+        "cn01"
+      ],
+      "selected": [
+        "cn01",
+        "cn10",
+        "cn12"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "cnq01",
+      "project": "cairn",
+      "method": "hybrid",
+      "expected": [
+        "cn01"
+      ],
+      "selected": [
+        "cn01",
+        "cn10",
+        "cn12"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "cnq01",
+      "project": "cairn",
+      "method": "lexical2",
+      "expected": [
+        "cn01"
+      ],
+      "selected": [
+        "cn01"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "cnq01",
+      "project": "cairn",
+      "method": "dense2",
+      "expected": [
+        "cn01"
+      ],
+      "selected": [
+        "cn01",
+        "cn10"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "cnq02",
+      "project": "cairn",
+      "method": "lexical",
+      "expected": [
+        "cn03"
+      ],
+      "selected": [
+        "cn02",
+        "cn03",
+        "cn12"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "cnq02",
+      "project": "cairn",
+      "method": "dense",
+      "expected": [
+        "cn03"
+      ],
+      "selected": [
+        "cn03",
+        "cn02",
+        "cn12"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "cnq02",
+      "project": "cairn",
+      "method": "hybrid",
+      "expected": [
+        "cn03"
+      ],
+      "selected": [
+        "cn02",
+        "cn03",
+        "cn12"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "cnq02",
+      "project": "cairn",
+      "method": "lexical2",
+      "expected": [
+        "cn03"
+      ],
+      "selected": [
+        "cn02",
+        "cn03"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "cnq02",
+      "project": "cairn",
+      "method": "dense2",
+      "expected": [
+        "cn03"
+      ],
+      "selected": [
+        "cn03",
+        "cn02"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "cnq03",
+      "project": "cairn",
+      "method": "lexical",
+      "expected": [
+        "cn04"
+      ],
+      "selected": [
+        "cn04"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "cnq03",
+      "project": "cairn",
+      "method": "dense",
+      "expected": [
+        "cn04"
+      ],
+      "selected": [
+        "cn04",
+        "cn12",
+        "cn01"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "cnq03",
+      "project": "cairn",
+      "method": "hybrid",
+      "expected": [
+        "cn04"
+      ],
+      "selected": [
+        "cn04",
+        "cn12",
+        "cn01"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "cnq03",
+      "project": "cairn",
+      "method": "lexical2",
+      "expected": [
+        "cn04"
+      ],
+      "selected": [
+        "cn04"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "cnq03",
+      "project": "cairn",
+      "method": "dense2",
+      "expected": [
+        "cn04"
+      ],
+      "selected": [
+        "cn04",
+        "cn12"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "cnq04",
+      "project": "cairn",
+      "method": "lexical",
+      "expected": [
+        "cn12"
+      ],
+      "selected": [
+        "cn12",
+        "cn07",
+        "cn08"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "cnq04",
+      "project": "cairn",
+      "method": "dense",
+      "expected": [
+        "cn12"
+      ],
+      "selected": [
+        "cn12",
+        "cn08",
+        "cn09"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "cnq04",
+      "project": "cairn",
+      "method": "hybrid",
+      "expected": [
+        "cn12"
+      ],
+      "selected": [
+        "cn12",
+        "cn08",
+        "cn09"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "cnq04",
+      "project": "cairn",
+      "method": "lexical2",
+      "expected": [
+        "cn12"
+      ],
+      "selected": [
+        "cn12",
+        "cn07"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "cnq04",
+      "project": "cairn",
+      "method": "dense2",
+      "expected": [
+        "cn12"
+      ],
+      "selected": [
+        "cn12",
+        "cn08"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "cnq05",
+      "project": "cairn",
+      "method": "lexical",
+      "expected": [
+        "cn06",
+        "cn07"
+      ],
+      "selected": [
+        "cn06",
+        "cn07",
+        "cn04"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "cnq05",
+      "project": "cairn",
+      "method": "dense",
+      "expected": [
+        "cn06",
+        "cn07"
+      ],
+      "selected": [
+        "cn07",
+        "cn06",
+        "cn12"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "cnq05",
+      "project": "cairn",
+      "method": "hybrid",
+      "expected": [
+        "cn06",
+        "cn07"
+      ],
+      "selected": [
+        "cn06",
+        "cn07",
+        "cn12"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "cnq05",
+      "project": "cairn",
+      "method": "lexical2",
+      "expected": [
+        "cn06",
+        "cn07"
+      ],
+      "selected": [
+        "cn06",
+        "cn07"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "cnq05",
+      "project": "cairn",
+      "method": "dense2",
+      "expected": [
+        "cn06",
+        "cn07"
+      ],
+      "selected": [
+        "cn07",
+        "cn06"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "cnq06",
+      "project": "cairn",
+      "method": "lexical",
+      "expected": [
+        "cn10",
+        "cn11"
+      ],
+      "selected": [
+        "cn11",
+        "cn10",
+        "cn04"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "cnq06",
+      "project": "cairn",
+      "method": "dense",
+      "expected": [
+        "cn10",
+        "cn11"
+      ],
+      "selected": [
+        "cn11",
+        "cn10",
+        "cn03"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "cnq06",
+      "project": "cairn",
+      "method": "hybrid",
+      "expected": [
+        "cn10",
+        "cn11"
+      ],
+      "selected": [
+        "cn11",
+        "cn10",
+        "cn03"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "cnq06",
+      "project": "cairn",
+      "method": "lexical2",
+      "expected": [
+        "cn10",
+        "cn11"
+      ],
+      "selected": [
+        "cn11",
+        "cn10"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "cnq06",
+      "project": "cairn",
+      "method": "dense2",
+      "expected": [
+        "cn10",
+        "cn11"
+      ],
+      "selected": [
+        "cn11",
+        "cn10"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "cnq07",
+      "project": "cairn",
+      "method": "lexical",
+      "expected": [
+        "cn08",
+        "cn09"
+      ],
+      "selected": [
+        "cn09",
+        "cn08",
+        "cn04"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "cnq07",
+      "project": "cairn",
+      "method": "dense",
+      "expected": [
+        "cn08",
+        "cn09"
+      ],
+      "selected": [
+        "cn09",
+        "cn08",
+        "cn12"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "cnq07",
+      "project": "cairn",
+      "method": "hybrid",
+      "expected": [
+        "cn08",
+        "cn09"
+      ],
+      "selected": [
+        "cn09",
+        "cn08",
+        "cn12"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "cnq07",
+      "project": "cairn",
+      "method": "lexical2",
+      "expected": [
+        "cn08",
+        "cn09"
+      ],
+      "selected": [
+        "cn09",
+        "cn08"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "cnq07",
+      "project": "cairn",
+      "method": "dense2",
+      "expected": [
+        "cn08",
+        "cn09"
+      ],
+      "selected": [
+        "cn09",
+        "cn08"
+      ],
+      "recalled": 2,
+      "complete": true
+    },
+    {
+      "id": "cnq08",
+      "project": "cairn",
+      "method": "lexical",
+      "expected": [
+        "cn05"
+      ],
+      "selected": [
+        "cn05"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "cnq08",
+      "project": "cairn",
+      "method": "dense",
+      "expected": [
+        "cn05"
+      ],
+      "selected": [
+        "cn05",
+        "cn12",
+        "cn06"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "cnq08",
+      "project": "cairn",
+      "method": "hybrid",
+      "expected": [
+        "cn05"
+      ],
+      "selected": [
+        "cn05",
+        "cn12",
+        "cn06"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "cnq08",
+      "project": "cairn",
+      "method": "lexical2",
+      "expected": [
+        "cn05"
+      ],
+      "selected": [
+        "cn05"
+      ],
+      "recalled": 1,
+      "complete": true
+    },
+    {
+      "id": "cnq08",
+      "project": "cairn",
+      "method": "dense2",
+      "expected": [
+        "cn05"
+      ],
+      "selected": [
+        "cn05",
+        "cn12"
+      ],
+      "recalled": 1,
+      "complete": true
+    }
+  ]
+}

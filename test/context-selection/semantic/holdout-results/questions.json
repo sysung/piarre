@@ -1,0 +1,82 @@
+[
+  {
+    "id": "hbq01",
+    "project": "harbor",
+    "question": "What sampling frequency does Harbor currently use for microphone capture?"
+  },
+  {
+    "id": "hbq02",
+    "project": "harbor",
+    "question": "Can the earlier cached transcript be reused after the speaker mapping changes?"
+  },
+  {
+    "id": "hbq03",
+    "project": "harbor",
+    "question": "A participant withdrew publication consent. Is the old consent record enough to publish their session?"
+  },
+  {
+    "id": "hbq04",
+    "project": "harbor",
+    "question": "Where are the visual waveform previews kept, as distinct from the original sound files?"
+  },
+  {
+    "id": "hbq05",
+    "project": "harbor",
+    "question": "Do the Lakeside records establish that its recording successfully reached the archive?"
+  },
+  {
+    "id": "hbq06",
+    "project": "harbor",
+    "question": "Does the producer request authorize starting the evening public stream now?"
+  },
+  {
+    "id": "hbq07",
+    "project": "harbor",
+    "question": "Which transcription profile should I assign to the session titled Sol?"
+  },
+  {
+    "id": "hbq08",
+    "project": "harbor",
+    "question": "Why was Alt+M chosen for inserting markers?"
+  },
+  {
+    "id": "cnq01",
+    "project": "cairn",
+    "question": "Can an urgent package scan start using the verified checksum of a different package?"
+  },
+  {
+    "id": "cnq02",
+    "project": "cairn",
+    "question": "Which retention period currently governs newly stored artifacts?"
+  },
+  {
+    "id": "cnq03",
+    "project": "cairn",
+    "question": "Is a team-like directory label enough to identify the accountable maintainer?"
+  },
+  {
+    "id": "cnq04",
+    "project": "cairn",
+    "question": "Where should I look for supporting files attached to a review?"
+  },
+  {
+    "id": "cnq05",
+    "project": "cairn",
+    "question": "Has the shared cache been established as the cause of the Mosaic incident?"
+  },
+  {
+    "id": "cnq06",
+    "project": "cairn",
+    "question": "Does the author request authorize downloading the restricted Amber artifact now?"
+  },
+  {
+    "id": "cnq07",
+    "project": "cairn",
+    "question": "Do the current instructions establish a consistent review requirement for delivering an external report?"
+  },
+  {
+    "id": "cnq08",
+    "project": "cairn",
+    "question": "Why did the designers make Indexer depend on Parser?"
+  }
+]

@@ -1,0 +1,9 @@
+# Frozen retrieval holdout
+
+The candidate was frozen at `66a3e31526fb49bc745ca2952a9b653d8571134f` before opening these independently authored inputs. `freeze.json` records the original input hashes. The private answer criteria entered only post-run review, never model requests.
+
+Sixteen questions across two synthetic projects were evaluated under full-pool direct Qwen, lexical top-two and dense top-two. Two actual repetitions produced 96 accepted responses; all 48 method/question pairs had identical answer text across repetitions. Repetition establishes local reproducibility, not additional independent questions. All methods covered all 22 required original records. Both reviewers score lexical top-two 15/16 and direct 13/16 in each repetition, with no new lexical prerequisite/authority/runtime-proof safety issue. The frozen improvement gate passes. See `RESULTS.md` for failures and limits.
+
+`answer-plan.json` freezes exact requests; `answers.jsonl` preserves dispatches, raw envelopes, accepted answers and the96-call end marker. `runtime-audit.json` records resolved answer artifact and post-run installed embedding digest. The embedding API itself echoes the configured tag; the independent installation check is not per-response cryptographic binding. `embedding-cache.json.gz` decompresses to the checksum in `embedding-cache.sha256`. Ten local embedding requests completed without retries.
+
+The anonymized review packet is only partially blinded: supplied-source counts may identify the full-pool control. The mapping is published for audit after requests completed. The common free-prose answer policy and generation settings match all arms; selected context differs by treatment. This research run does not exercise Piarre's production reply controller or establish arithmetic reliability, human usability, or deployment readiness.

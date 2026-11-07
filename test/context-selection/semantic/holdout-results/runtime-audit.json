@@ -1,0 +1,13 @@
+{
+  "events": {
+    "dispatch": 96,
+    "envelope": 96,
+    "answer": 96,
+    "end": 1
+  },
+  "answerModels": [
+    "/Users/sysung98/.docker/models/bundles/sha256/ea484046efba5fc126b1b331c2d590a20cb7d3abdfc65366a7f8b547350cd629/model/Qwen3.5-4B-Q6_K.gguf"
+  ],
+  "installedEmbeddingDigestAfterRun": "sha256:3e86173a1f6e9ab8e3c4a90f1ec00d80d4f07ecc532c42ff7b7f7d1419a828ab",
+  "answerQuality": "Both independent reviewers: lexical2 30/32, direct 26/32. Sixteen independent questions; two identical actual repetitions. Lexical2 passes the preregistered gate; dense2 fails."
+}
