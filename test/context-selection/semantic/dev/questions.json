@@ -1,0 +1,42 @@
+[
+  {
+    "id": "ldq01",
+    "project": "linden",
+    "question": "How does Linden avoid creating another task when a caller resends the same submission?"
+  },
+  {
+    "id": "ldq02",
+    "project": "linden",
+    "question": "How long are checkpoints retained under the current confirmed policy?"
+  },
+  {
+    "id": "ldq03",
+    "project": "linden",
+    "question": "Can an earlier approval still authorize execution after a cited file has been edited?"
+  },
+  {
+    "id": "ldq04",
+    "project": "linden",
+    "question": "Which key combination opens the menu for invoking commands?"
+  },
+  {
+    "id": "ldq05",
+    "project": "linden",
+    "question": "Do these records establish that the service is running in the west cluster?"
+  },
+  {
+    "id": "ldq06",
+    "project": "linden",
+    "question": "Is the Meadow customer export authorized now by the project manager request?"
+  },
+  {
+    "id": "ldq07",
+    "project": "linden",
+    "question": "Should I share the green Orchid workspace through an invite link or the directory listing?"
+  },
+  {
+    "id": "ldq08",
+    "project": "linden",
+    "question": "Why was diagnostic collection disabled by default?"
+  }
+]

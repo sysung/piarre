@@ -1,0 +1,4 @@
+{"type":"dispatch","model":"docker.io/ai/qwen3-embedding:0.6B-F16","input":["A canine is resting on a rug.","A dog is sleeping on a mat.","The engine needs a battery replacement."]}
+{"type":"response","observedModel":"docker.io/ai/qwen3-embedding:0.6B-F16","count":3,"usage":{"prompt_tokens":26,"total_tokens":26}}
+{"type":"dispatch","model":"docker.io/ai/qwen3-embedding:0.6B-F16","input":"Instruct: Given a question about a project, retrieve relevant passages that answer it.\nQuery: A pet naps on the carpet."}
+{"type":"response","observedModel":"docker.io/ai/qwen3-embedding:0.6B-F16","count":1,"usage":{"prompt_tokens":28,"total_tokens":28}}

@@ -1,0 +1,27 @@
+{
+  "dimensions": 1024,
+  "documents": 3,
+  "queries": 1,
+  "embeddingRequests": 2,
+  "observedModels": [
+    "docker.io/ai/qwen3-embedding:0.6B-F16",
+    "docker.io/ai/qwen3-embedding:0.6B-F16"
+  ],
+  "scores": [
+    {
+      "index": 0,
+      "score": 0.5737750128797009,
+      "norm": 1.0000000157855218
+    },
+    {
+      "index": 1,
+      "score": 0.5163815997523575,
+      "norm": 0.999999982256996
+    },
+    {
+      "index": 2,
+      "score": 0.1969953790981249,
+      "norm": 0.9999999818966782
+    }
+  ]
+}

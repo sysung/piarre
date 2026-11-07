@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {test} from 'node:test';
+import {retrieve,fingerprint,modelDigest} from './retrieval.mjs';
+const vec=(i)=>Array.from({length:1024},(_,j)=>Number(i===j));
+const sources=[{id:'same',project:'A',title:'Launch banner',text:'The launch banner is blue.',standing:'confirmed',revision:1},{id:'same',project:'B',title:'Launch banner',text:'The launch banner is orange.',standing:'confirmed',revision:1},{id:'other',project:'A',title:'Storage',text:'The storage tier is cedar.',standing:'observation',revision:2}];
+const records=()=>sources.map((s,i)=>({project:s.project,id:s.id,fingerprint:fingerprint(s),modelDigest,vector:vec(i===2?1:0)}));
+const request=method=>({sources,records:records(),project:'A',question:'launch banner',queryVector:vec(0),method});
+for(const method of ['lexical','dense','hybrid'])test(method+' keeps project scope and original source identity',()=>{const r=retrieve(request(method));assert(r.length>0);assert.equal(r[0].source,sources[0]);assert(r.every(hit=>hit.source.project==='A'));assert(!r.some(hit=>hit.source.text.includes('orange')));});
+test('rejects a vector after the original record or standing changes',()=>{for(const change of [{text:'The banner is green.'},{standing:'confirmed'},{revision:3}]){const input=request('dense');input.sources=sources.map(s=>s.id==='other'?{...s,...change}:s);assert.throws(()=>retrieve(input),/stale/i);}});
+test('rejects embedding model drift and malformed query vectors',()=>{const input=request('dense');input.records[0].modelDigest='wrong';assert.throws(()=>retrieve(input),/model/i);for(const vector of [[],Array(1024).fill(0),[...vec(0).slice(0,1023),NaN]])assert.throws(()=>retrieve({...request('dense'),queryVector:vector}),/vector/i);});
+test('requires embeddings for newly added records, ignoring deleted cached records',()=>{const input=request('dense');input.sources=[...sources,{...sources[2],id:'new'}];assert.throws(()=>retrieve(input),/missing/i);const removed=retrieve({...request('dense'),sources:[sources[0]]});assert.equal(removed.length,1);assert.equal(removed[0].source,sources[0]);});
+test('does not require semantic vectors for the explicit lexical baseline',()=>{const r=retrieve({...request('lexical'),records:[],queryVector:null});assert.equal(r[0].source,sources[0]);});

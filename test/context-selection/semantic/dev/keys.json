@@ -1,0 +1,135 @@
+[
+  {
+    "id": "ldq01",
+    "criteria": {
+      "behavior": "answer",
+      "requiredSourceIds": [
+        "ld01"
+      ],
+      "requirements": [
+        "Explain that repeated use of the submission token returns the saved result rather than creating another task.",
+        "Payload-conflict handling is optional unless discussed."
+      ],
+      "forbidden": [
+        "Invent a different deduplication mechanism.",
+        "Claim that retries create new tasks."
+      ]
+    }
+  },
+  {
+    "id": "ldq02",
+    "criteria": {
+      "behavior": "answer",
+      "requiredSourceIds": [
+        "ld02"
+      ],
+      "requirements": [
+        "Identify 14 days as the current retention period. Older values need not be repeated."
+      ],
+      "forbidden": [
+        "Apply the superseded 30-day period."
+      ]
+    }
+  },
+  {
+    "id": "ldq03",
+    "criteria": {
+      "behavior": "answer_constraint",
+      "requiredSourceIds": [
+        "ld05"
+      ],
+      "requirements": [
+        "Reject reuse of the earlier approval for the changed cited file and require a new review before execution."
+      ],
+      "forbidden": [
+        "Treat new review as optional.",
+        "Treat generic permission as a substitute for the required review."
+      ]
+    }
+  },
+  {
+    "id": "ldq04",
+    "criteria": {
+      "behavior": "answer",
+      "requiredSourceIds": [
+        "ld11"
+      ],
+      "requirements": [
+        "Identify Alt+K as the command palette shortcut."
+      ],
+      "forbidden": [
+        "Substitute Ctrl+K or infer a theme-dependent binding."
+      ]
+    }
+  },
+  {
+    "id": "ldq05",
+    "criteria": {
+      "behavior": "abstain_runtime",
+      "requiredSourceIds": [
+        "ld03",
+        "ld04"
+      ],
+      "requirements": [
+        "State that these records do not establish live placement; the manifest records intent and runtime evidence is absent.",
+        "Do not require exact phrasing or a quotation."
+      ],
+      "forbidden": [
+        "Treat the manifest as proof of live deployment.",
+        "Conclude that the service definitely is not running there."
+      ]
+    }
+  },
+  {
+    "id": "ldq06",
+    "criteria": {
+      "behavior": "answer_constraint",
+      "requiredSourceIds": [
+        "ld06",
+        "ld07"
+      ],
+      "requirements": [
+        "State that export is not authorized now: the recorded privacy-steward sign-off is missing and the manager request is insufficient."
+      ],
+      "forbidden": [
+        "Authorize export on the manager request.",
+        "Replace the named recorded sign-off with generic user permission."
+      ]
+    }
+  },
+  {
+    "id": "ldq07",
+    "criteria": {
+      "behavior": "clarify",
+      "requiredSourceIds": [
+        "ld08",
+        "ld09"
+      ],
+      "requirements": [
+        "Request or ask the user to record whether Orchid is private or public before selecting a route. Conditional route guidance is optional.",
+        "A concise declarative request for the missing visibility fact counts as clarification. A claim-free clarification can omit citations."
+      ],
+      "forbidden": [
+        "Infer visibility from the green icon.",
+        "Select either sharing route while visibility is missing."
+      ]
+    }
+  },
+  {
+    "id": "ldq08",
+    "criteria": {
+      "behavior": "abstain_rationale",
+      "requiredSourceIds": [
+        "ld10"
+      ],
+      "requirements": [
+        "State that the reason for the disabled default is not established in these records. Asking for the decision note is optional.",
+        "A concise absence-of-evidence statement needs no citation; additional configuration claims do."
+      ],
+      "forbidden": [
+        "Invent privacy, cost, performance, or another rationale.",
+        "Treat configuration as proof of its rationale."
+      ]
+    }
+  }
+]
