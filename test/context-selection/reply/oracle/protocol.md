@@ -1,0 +1,3 @@
+# Relevant-only oracle diagnostic
+
+Eight local calls after the frozen comparison, four exposed arithmetic cases x two captured production contexts. Use independently preauthored required-source IDs offline to remove distractors. Never send criteria, expected answers or generated facts to the model. Reindex remaining original passages and keep only their knowledge-standing metadata; all other prompt fields unchanged. Same pinned model, greedy sampling, thinking disabled, cap1024,60-second timeout. No response_format, retries or overlap. Compare raw outputs with original logged full-context replies; do not claim a deployable or fresh retrieval gain from this oracle intervention. Stop on network uncertainty.

@@ -1,0 +1,16 @@
+{
+  "calls": 8,
+  "normalTermination": 8,
+  "validWireObjects": 7,
+  "manualStrictCompletions": 2,
+  "adjudication": "Parent inspection of exposed cases, not independent fresh confirmation",
+  "failures": {
+    "inference01-1": "Invalid JSON and omitted requested final remaining-position result",
+    "inference02-1": "Claims38 minutes although3+28+6=37",
+    "inference03-1": "Claims35 exceeds40, wrong feasibility/remainder",
+    "inference03-2": "Claims35 exceeds40, wrong feasibility/remainder",
+    "inference04-1": "Claims19 points although5*3+2-4=13, wrong qualification and margin",
+    "inference04-2": "Misstates penalty, claims19 points and invents threshold ambiguity"
+  },
+  "verdict": "Removing distractors is insufficient to resolve arithmetic/decision failures. No automatic retrieval or superiority claim."
+}
