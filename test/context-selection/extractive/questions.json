@@ -1,0 +1,14 @@
+[
+ {"id":"n1","project":"meridian","question":"How long must we wait after the last required archive-purge confirmation?"},
+ {"id":"n2","project":"meridian","question":"Which invoice retention period applies now?"},
+ {"id":"n3","project":"atlas","question":"Can I report that the shipment has left just because the driver is at the dock?"},
+ {"id":"n4","project":"atlas","question":"Will the three-night room booking including its mandatory fee fit the approved budget, and how much remains?"},
+ {"id":"n5","project":"atlas","question":"Is this customer's replacement still covered because it arrived only ten days ago?"},
+ {"id":"n6","project":"meridian","question":"The owner asked for the purge yesterday, but neither reviewer has confirmed. Can we purge today?"},
+ {"id":"n7","project":"atlas","question":"This parcel has water marks on the outside. Which intake route should I choose?"},
+ {"id":"n8","project":"meridian","question":"All checks passed, but an approved criterion has just changed. Can I treat the old result as accepted?"},
+ {"id":"n9","project":"meridian","question":"Did Wednesday's synchronization finish successfully?"},
+ {"id":"n10","project":"atlas","question":"What insurance company covers damage to the shipped goods?"},
+ {"id":"n11","project":"meridian","question":"Do the archive owner's request and one reviewer count as the two confirmations?"},
+ {"id":"n12","project":"atlas","question":"The security seal is broken. May I use ordinary intake if the carton is otherwise dry?"}
+]

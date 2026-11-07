@@ -1,0 +1,62 @@
+[
+  {
+    "id": "h-01",
+    "expectation": {
+      "kind": "clarify",
+      "must": [
+        "\\b(domestic|international|destination|country)\\b"
+      ],
+      "forbid": [
+        "\\b(send|route|put|use) (the order |it )?(to |in )?(Cedar|Maple)\\s*[.!]$"
+      ],
+      "cite": [
+        "Regional label policy"
+      ]
+    }
+  },
+  {
+    "id": "h-02",
+    "expectation": {
+      "kind": "clarify",
+      "must": [
+        "\\b(suspended|deleted|workspace status|workspace state)\\b"
+      ],
+      "forbid": [
+        "\\b(the workspace is|it is|it was) (suspended|deleted)\\s*[.!]$"
+      ],
+      "cite": [
+        "Workspace restoration"
+      ]
+    }
+  },
+  {
+    "id": "h-03",
+    "expectation": {
+      "kind": "clarify",
+      "must": [
+        "\\b(locked|lockout|sign in|log in|login)\\b"
+      ],
+      "forbid": [
+        "^\\s*(yes|no)[,.!]"
+      ],
+      "cite": [
+        "Escalation trigger"
+      ]
+    }
+  },
+  {
+    "id": "h-04",
+    "expectation": {
+      "kind": "clarify",
+      "must": [
+        "\\b(seal|scuff)\\b"
+      ],
+      "forbid": [
+        "\\b(use|choose|proceed with) (the )?(quarantine inspection|standard intake)\\s*[.!]$"
+      ],
+      "cite": [
+        "Warehouse inspection protocol"
+      ]
+    }
+  }
+]

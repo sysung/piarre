@@ -1,0 +1,42 @@
+[
+  {
+    "id": "h-01",
+    "question": "A new outbound order is waiting. Which label queue should I put it in?",
+    "sources": [
+      {
+        "index": 1,
+        "text": "The outbound label queue sends domestic orders to Cedar and international orders to Maple. Orders cannot enter both queues."
+      }
+    ]
+  },
+  {
+    "id": "h-02",
+    "question": "The owner wants their workspace back. What should I do next?",
+    "sources": [
+      {
+        "index": 1,
+        "text": "A suspended workspace can be restored by reopening its record. A deleted workspace requires recovery review before restoration can be considered."
+      }
+    ]
+  },
+  {
+    "id": "h-03",
+    "question": "A customer reports an access problem. Should I escalate this now?",
+    "sources": [
+      {
+        "index": 1,
+        "text": "Escalate an access case immediately when the account is locked. If the customer can still sign in, collect a fresh diagnostic first."
+      }
+    ]
+  },
+  {
+    "id": "h-04",
+    "question": "The receiving note only says the carton looks damaged. Which intake procedure should I use?",
+    "sources": [
+      {
+        "index": 1,
+        "text": "A broken outer seal requires a quarantine inspection. A superficial carton scuff with the seal intact can go through standard intake."
+      }
+    ]
+  }
+]
