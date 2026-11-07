@@ -10,7 +10,12 @@ const sources=read('sources.json'),questions=read('questions.json');
 assert(Array.isArray(sources)&&sources.length>0&&sources.length<=128);
 assert(Array.isArray(questions)&&questions.length>0&&questions.length<=32);
 for(const source of sources){assert.equal(Object.keys(source).length,6);documentInput(source);}
-for(const item of questions)assert.deepEqual(Object.keys(item).toSorted(),['id','project','question']);
+for(const item of questions){
+ assert.deepEqual(Object.keys(item).toSorted(),['id','project','question']);
+ assert(['id','project','question'].every(key=>typeof item[key]==='string'&&item[key].trim()),'Invalid public question');
+ assert(sources.some(source=>source.project===item.project),'Question has no project sources');
+}
+assert.equal(new Set(sources.map(source=>JSON.stringify([source.project,source.id]))).size,sources.length);
 assert.equal(new Set(questions.map(q=>q.id)).size,questions.length);
 const sourceHash=sha(readFileSync('sources.json')),questionHash=sha(readFileSync('questions.json'));
 const queryFingerprint=q=>sha(JSON.stringify([q.project,q.id,queryInput(q.question)]));
