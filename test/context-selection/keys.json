@@ -1,0 +1,18 @@
+[
+ {"id":"r1","project":"beacon","question":"How do we keep a retry from refunding somebody twice?","sources":["s1"],"must":["key|stored|transaction","repeat|same|duplicate|retry"]},
+ {"id":"r2","project":"beacon","question":"Does an assistant's proposed qualification rule immediately govern new customer requests?","sources":["s2"],"must":["confirm|owner","no|not|until"]},
+ {"id":"r3","project":"beacon","question":"What happens to permission to run if the supporting code has been edited since review?","sources":["s3"],"must":["review","new|again|before|stale"]},
+ {"id":"r4","project":"harbor","question":"How should a refrigerated package be packed for a journey lasting twelve hours?","sources":["s4"],"must":["insulated","two|2"]},
+ {"id":"r5","project":"harbor","question":"Is the shift rota enough to prove somebody took responsibility for a consignment?","sources":["s5"],"must":["no|not|cannot","receipt|accept"]},
+ {"id":"r6","project":"harbor","question":"Can an unopened product returned eighteen days after arrival get a replacement?","sources":["s6"],"must":["yes|qualif|eligible","21|twenty.one"]},
+ {"id":"r7","project":"beacon","question":"Did the report job successfully finish on Monday morning?","sources":["s7"],"must":["unknown|cannot|not|no","receipt|schedule"]},
+ {"id":"r8","project":"beacon","question":"May another app instance update the project when the current writer might still be alive?","sources":["s8"],"must":["lease|reconcil","unknown|cannot|no|before"]},
+ {"id":"r9","project":"beacon","question":"Where is the repeated-request result recorded and what happens if its body changes?","sources":["s1"],"must":["transaction","reject"]},
+ {"id":"r10","project":"harbor","question":"Who receives a parcel with no assigned owner at the evening boundary, and what proves custody?","sources":["s5"],"must":["shift lead","receipt"]},
+ {"id":"r11","project":"harbor","question":"Does opening the product change the replacement process for a product delivered eighteen days ago?","sources":["s6"],"must":["inspection","opened"]},
+ {"id":"r12","project":"beacon","question":"What keeps an older proposed business rule from silently replacing today's approved rule?","sources":["s2"],"must":["confirm","latest|current"]},
+ {"id":"r13","project":"beacon","question":"Which cloud region hosts the live production database?","sources":[],"must":["unknown|not|cannot|no"]},
+ {"id":"r14","project":"harbor","question":"What was the average delivery delay last month?","sources":[],"must":["unknown|not|cannot|no"]},
+ {"id":"r15","project":"beacon","question":"Which encryption cipher protects the request keys on disk?","sources":[],"must":["unknown|not|cannot|no"]},
+ {"id":"r16","project":"harbor","question":"What is the dispatcher's personal phone number?","sources":[],"must":["unknown|not|cannot|no"]}
+]
