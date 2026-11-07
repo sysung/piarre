@@ -20,3 +20,18 @@ The maximum is 56 local calls. Eight generate index descriptions from source tex
 `answers.jsonl` preserves outputs and the frozen regex result. Manually adjudicate questionable wording without rewriting the original scores. A correct yes/no answer may not need to restate every numeric threshold. A keyword match can also accept an answer that incorrectly says the evidence is insufficient. Report content correctness and citation coverage separately.
 
 The fixture has eight short synthetic passages and sixteen questions. It covers semantic paraphrases, multiple facts, historical policy text, and unavailable evidence. It does not exercise runtime source edits, production state, the Extension Host, or larger corpus scaling.
+
+## Evidence preparation versus direct refinement
+
+A separate experiment uses the same full original sources in both arms with a two-call ceiling per arm. In the direct control, Qwen drafts an answer and reviews it against the sources. In the candidate, Qwen copies source quotations, code validates every quote as an exact substring of its named source, and Qwen then answers using the checked quotations plus the complete original sources. An invalid quotation fails that case. It is never replaced with a guessed source.
+
+Run this comparison in a fresh isolated copy of the fixture directory.
+
+```sh
+node compare-preparation.mjs
+node report-preparation.mjs
+```
+
+The sixteen current cases allow at most 64 generation attempts. The report verifies that each arm saw the same original passages and question, includes both stages in measured time and usage, and retains failed or missing cases in the denominator. It also checks the 6,000 UTF-8-byte production prompt ceiling. This experiment is inspired by source verification and decomposition research; it is not a reproduction of the full Chain-of-Verification method.
+
+The automatic pass count checks required regex fragments and source IDs. It cannot prove that every added claim is supported or that mandatory conditions retain their force. Use reviewers whose criteria are recorded before they see anonymized outputs. Preserve the original automatic scores alongside reviewer decisions and disagreements. A small score gain with a weakened authorization or reconciliation requirement does not justify promotion.
