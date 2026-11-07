@@ -1,0 +1,1026 @@
+{
+  "method": "Criteria were authored before candidate implementation. Labels conceal arm. Direct free-text citations and attached validated citations are both acceptable. Presentation may reveal arm, so blinding is partial. Score the missing-fact request by meaning, not question marks. Judge every material claim and prerequisite, not only quoted phrases. Empty citations are allowed by the fixed criteria for claim-free clarification and unavailability.",
+  "cases": [
+    {
+      "id": "clarify01",
+      "question": "Tray G17 is green. Which daily light cycle should I program for it?",
+      "sources": [
+        {
+          "index": 1,
+          "id": "gl1",
+          "text": "The propagation room uses a 14-hour daily light cycle for basil and a 10-hour cycle for chrysanthemums. A tray must have a verified crop identification before either cycle is programmed.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 2,
+          "id": "gl2",
+          "text": "Tray G17 was moved into propagation this morning. Its crop identification is missing from the tray record. The green tray color is used for both crops.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 3,
+          "id": "gl3",
+          "text": "The room fan runs for five minutes every hour. Tray G17 has already been watered today.",
+          "standing": "confirmed"
+        }
+      ],
+      "criteria": {
+        "behavior": "clarify",
+        "requiredSourceIds": [
+          "gl1",
+          "gl2"
+        ],
+        "requirements": [
+          "Ask what crop is in G17, or request verification of its crop identification, before selecting a cycle.",
+          "Conditional guidance is acceptable: basil uses 14 hours and chrysanthemums use 10 hours, with neither selected prematurely.",
+          "A direct useful clarification question alone may pass without citations if it asserts no policy or record facts."
+        ],
+        "forbidden": [
+          "Infer the crop from tray color.",
+          "Program either cycle before crop identification is verified."
+        ]
+      },
+      "answers": [
+        {
+          "label": "68afa7836d4e",
+          "text": "Tray G17 is green, which color is used for both basil and chrysanthemums. To determine the correct daily light cycle, I need to know which crop is on the tray. Which crop is on Tray G17?",
+          "attachedCitationIds": [
+            "gl1",
+            "gl2"
+          ]
+        },
+        {
+          "label": "e481734c01a0",
+          "text": "Based on the available evidence, the daily light cycle for Tray G17 cannot be established.\n\nWhile the evidence confirms that Tray G17 is green and has been moved into the propagation room, it explicitly states that its crop identification is missing [2]. The propagation room protocols require a verified crop identification before programming either the 14-hour cycle (for basil) or the 10-hour cycle (for chrysanthemums) [1]. Since the green color applies to both crops and the specific crop for Tray G17 is unknown, the necessary condition to determine the correct cycle is not met.\n\n**Missing Fact:** What is the verified crop identification for Tray G17?"
+        },
+        {
+          "label": "2b535f5206ba",
+          "text": "Based on the available evidence, the daily light cycle for Tray G17 cannot be established.\n\nWhile the evidence confirms that Tray G17 is green and has been moved into the propagation room, it explicitly states that its crop identification is missing [2]. The propagation room protocols require a verified crop identification before programming either the 14-hour cycle (for basil) or the 10-hour cycle (for chrysanthemums) [1]. Since the green color applies to both crops and the specific crop for Tray G17 is unknown, the necessary condition to determine the correct cycle is not met.\n\n**Missing Fact:** What is the verified crop identification for Tray G17?"
+        },
+        {
+          "label": "d997205e7c9a",
+          "text": "Tray G17 is green, which color is used for both basil and chrysanthemums. To determine the correct daily light cycle, I need to know which crop is in the tray. Which crop is in Tray G17?",
+          "attachedCitationIds": [
+            "gl1",
+            "gl2"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "clarify02",
+      "question": "Where should I book the Cedar Quartet this evening?",
+      "sources": [
+        {
+          "index": 1,
+          "id": "er1",
+          "text": "Amplified rehearsals must use Studio F. An entirely acoustic rehearsal may use Room C. The booking form must establish whether amplification will be used before a room is assigned.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 2,
+          "id": "er2",
+          "text": "The Cedar Quartet requested an evening rehearsal. Its booking form leaves the amplification field blank. The group name does not determine whether the players use microphones.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 3,
+          "id": "er3",
+          "text": "Studio F and Room C are both available this evening. Each accommodates eight players. The quartet has four players.",
+          "standing": "confirmed"
+        }
+      ],
+      "criteria": {
+        "behavior": "clarify",
+        "requiredSourceIds": [
+          "er1",
+          "er2"
+        ],
+        "requirements": [
+          "Request the missing amplification information before assigning a room.",
+          "May describe the two conditional room choices without committing to one.",
+          "A clarification-only question about amplification needs no citation if it makes no factual policy assertion."
+        ],
+        "forbidden": [
+          "Assume a quartet is acoustic.",
+          "Select Room C or Studio F as the actual assignment while amplification status remains unknown."
+        ]
+      },
+      "answers": [
+        {
+          "label": "2143e75405f6",
+          "text": "Based on the available evidence, you cannot definitively determine where to book the Cedar Quartet without knowing whether they will use amplification.\n\nThe booking form for the Cedar Quartet leaves the amplification field blank, and the group name does not determine whether players use microphones [2]. Consequently, the specific room assignment depends on a condition that has not been established:\n*   If amplification is used, **Studio F** must be booked [1].\n*   If an entirely acoustic rehearsal is used, **Room C** may be booked [1].\n\nBoth rooms are available this evening and can accommodate the quartet's four players [3].\n\n**Missing Fact:** Will the Cedar Quartet use amplification?"
+        },
+        {
+          "label": "77298b2b5f86",
+          "text": "Based on the available evidence, you cannot definitively determine where to book the Cedar Quartet without knowing whether they will use amplification.\n\nThe booking form for the Cedar Quartet leaves the amplification field blank, and the group name does not determine whether players use microphones [2]. Consequently, the specific room assignment depends on a condition that has not been established:\n*   If amplification is used, **Studio F** must be booked [1].\n*   If an entirely acoustic rehearsal is used, **Room C** may be booked [1].\n\nBoth rooms are available this evening and can accommodate the quartet's four players [3].\n\n**Missing Fact:** Will the Cedar Quartet use amplification?"
+        },
+        {
+          "label": "64f4158ebd8c",
+          "text": "The booking form for the Cedar Quartet leaves the amplification field blank. Do you know if they will use amplification?",
+          "attachedCitationIds": [
+            "er2"
+          ]
+        },
+        {
+          "label": "dff8ff12a5c7",
+          "text": "To assign a room, I need to know if the Cedar Quartet will use amplification. Their booking form currently leaves the amplification field blank. Will they use amplification or an entirely acoustic setup?",
+          "attachedCitationIds": [
+            "er1",
+            "er2"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "clarify03",
+      "question": "Should glossy_sunset use profile G2?",
+      "sources": [
+        {
+          "index": 1,
+          "id": "pp1",
+          "text": "For the museum photo printer, verified matte stock uses profile M7 and verified glossy stock uses profile G2. The operator must verify physical stock before assigning either profile; image appearance and filename are not stock evidence.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 2,
+          "id": "pp2",
+          "text": "The proof job is called glossy_sunset. Its physical stock field is empty. The image has bright reflections.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 3,
+          "id": "pp3",
+          "text": "The printer is online and has enough ink. The proof job requests two copies at A4 size.",
+          "standing": "confirmed"
+        }
+      ],
+      "criteria": {
+        "behavior": "clarify",
+        "requiredSourceIds": [
+          "pp1",
+          "pp2"
+        ],
+        "requirements": [
+          "Ask which physical stock is loaded or request its verification; do not answer yes based on the filename.",
+          "May explain the conditional matte/M7 and glossy/G2 choices while keeping assignment pending.",
+          "A stock-verification clarification alone needs no citation if it asserts no policy facts."
+        ],
+        "forbidden": [
+          "Treat a filename or reflective image as proof of glossy stock.",
+          "Assign a profile before verifying stock."
+        ]
+      },
+      "answers": [
+        {
+          "label": "b5e9d37e6c19",
+          "text": "The proof job glossy_sunset has an empty physical stock field, so it is unknown whether the stock is matte or glossy. Should glossy_sunset use profile G2?",
+          "attachedCitationIds": [
+            "pp2"
+          ]
+        },
+        {
+          "label": "16e4f5b62779",
+          "text": "The proof job glossy_sunset has bright reflections, but its physical stock field is empty. To determine if it should use profile G2, do you confirm the physical stock is glossy?",
+          "attachedCitationIds": [
+            "pp2"
+          ]
+        },
+        {
+          "label": "894e5086b4b9",
+          "text": "Based on the available evidence, it cannot be established whether the proof job **glossy_sunset** should use profile **G2**.\n\nWhile evidence [1] states that verified glossy stock uses profile G2, evidence [2] indicates that the physical stock field for the **glossy_sunset** proof job is **empty**. Because the stock has not been verified, the condition required to assign profile G2 (verified glossy stock) is not met. Additionally, evidence [2] notes the image has bright reflections, which might suggest a glossy finish, but without verified stock, the profile assignment remains uncertain.\n\n**Missing Fact:** What is the status of the physical stock verification for the **glossy_sunset** proof job?\n\n**Answer:** The answer cannot be established."
+        },
+        {
+          "label": "e7940560b77e",
+          "text": "Based on the available evidence, it cannot be established whether the proof job **glossy_sunset** should use profile **G2**.\n\nWhile evidence [1] states that verified glossy stock uses profile G2, evidence [2] indicates that the physical stock field for the **glossy_sunset** proof job is **empty**. Because the stock has not been verified, the condition required to assign profile G2 (verified glossy stock) is not met. Additionally, evidence [2] notes the image has bright reflections, which might suggest a glossy finish, but without verified stock, the profile assignment remains uncertain.\n\n**Missing Fact:** What is the status of the physical stock verification for the **glossy_sunset** proof job?\n\n**Answer:** The answer cannot be established."
+        }
+      ]
+    },
+    {
+      "id": "clarify04",
+      "question": "Should Community Update start on the public stream or the private bridge?",
+      "sources": [
+        {
+          "index": 1,
+          "id": "fs1",
+          "text": "A session classified public may use the public stream. A session classified restricted must use the private bridge. Streaming must not begin until the session classification is recorded.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 2,
+          "id": "fs2",
+          "text": "The session title is Community Update. Its classification field has not been filled in. Titles are not classification decisions.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 3,
+          "id": "fs3",
+          "text": "The public stream supports captions. The private bridge supports screen sharing. Both services are operating normally.",
+          "standing": "confirmed"
+        }
+      ],
+      "criteria": {
+        "behavior": "clarify",
+        "requiredSourceIds": [
+          "fs1",
+          "fs2"
+        ],
+        "requirements": [
+          "Request the public/restricted classification or its recording before choosing and starting a stream.",
+          "Conditional channel guidance is acceptable without prematurely selecting a channel.",
+          "A direct classification question can pass without citation if it asserts no policy fact."
+        ],
+        "forbidden": [
+          "Infer public status from Community Update.",
+          "Choose the private bridge as an authorized default despite the explicit prohibition on starting before classification."
+        ]
+      },
+      "answers": [
+        {
+          "label": "5181a1a4d15c",
+          "text": "Based on the available evidence, the answer cannot be established because the session classification is missing.\n\nThe evidence states that a session classified as \"public\" may use the public stream, while a session classified as \"restricted\" must use the private bridge, and streaming must not begin until the classification is recorded [1]. However, for the session titled \"Community Update,\" the classification field has not been filled in, and titles are not classification decisions [2]. Without knowing whether the session is classified as public or restricted, it is impossible to determine which stream should be used.\n\n**Missing Fact:** What is the classification of the \"Community Update\" session?"
+        },
+        {
+          "label": "a65cca48e99d",
+          "text": "The session classification field for 'Community Update' is currently empty. Should it be classified as public or restricted?",
+          "attachedCitationIds": [
+            "fs2"
+          ]
+        },
+        {
+          "label": "adce93087380",
+          "text": "The session classification field for 'Community Update' has not been filled in. Should it be classified as public or restricted?",
+          "attachedCitationIds": [
+            "fs2"
+          ]
+        },
+        {
+          "label": "97b2ed141015",
+          "text": "Based on the available evidence, the answer cannot be established because the session classification is missing.\n\nThe evidence states that a session classified as \"public\" may use the public stream, while a session classified as \"restricted\" must use the private bridge, and streaming must not begin until the classification is recorded [1]. However, for the session titled \"Community Update,\" the classification field has not been filled in, and titles are not classification decisions [2]. Without knowing whether the session is classified as public or restricted, it is impossible to determine which stream should be used.\n\n**Missing Fact:** What is the classification of the \"Community Update\" session?"
+        }
+      ]
+    },
+    {
+      "id": "lookup01",
+      "question": "What is the approved title of the winter planetarium program?",
+      "sources": [
+        {
+          "index": 1,
+          "id": "pl1",
+          "text": "The approved title of the winter planetarium program is Rivers of Starlight. This replaces the working title The Long Night. The title Deep Sky Winter is an unapproved suggestion.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 2,
+          "id": "pl2",
+          "text": "The program opens at 18:30 on Fridays. The lobby closes at 20:00.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 3,
+          "id": "pl3",
+          "text": "The school worksheet is titled A Map of the Night. Its title does not name the planetarium program.",
+          "standing": "confirmed"
+        }
+      ],
+      "criteria": {
+        "behavior": "answer_lookup",
+        "requiredSourceIds": [
+          "pl1"
+        ],
+        "requirements": [
+          "Identify Rivers of Starlight as the approved program title. Minor punctuation or capitalization variation is immaterial.",
+          "An unambiguous source quotation containing the approved title completes this lookup."
+        ],
+        "forbidden": [
+          "Present a working title, worksheet title, or unapproved suggestion as the approved title."
+        ]
+      },
+      "answers": [
+        {
+          "label": "e2e166a900e8",
+          "text": "Based on the provided evidence, the approved title of the winter planetarium program is **Rivers of Starlight**.\n\nThis conclusion is supported by Source [1], which explicitly states: \"The approved title of the winter planetarium program is Rivers of Starlight.\" The evidence further clarifies that this title replaces the working title \"The Long Night\" and distinguishes it from the unapproved suggestion \"Deep Sky Winter.\"\n\nSource [3] notes that the school worksheet titled \"A Map of the Night\" does not name the planetarium program, confirming that the program's official title is distinct from worksheet titles.\n\n**Answer:** Rivers of Starlight\n**Supporting Source Index:** [1]"
+        },
+        {
+          "label": "fb23a02a1133",
+          "text": "The approved title of the winter planetarium program is Rivers of Starlight.",
+          "attachedCitationIds": [
+            "pl1"
+          ]
+        },
+        {
+          "label": "f70a23b1e29a",
+          "text": "The approved title of the winter planetarium program is Rivers of Starlight.",
+          "attachedCitationIds": [
+            "pl1"
+          ]
+        },
+        {
+          "label": "2e6667416499",
+          "text": "Based on the provided evidence, the approved title of the winter planetarium program is **Rivers of Starlight**.\n\nThis conclusion is supported by Source [1], which explicitly states: \"The approved title of the winter planetarium program is Rivers of Starlight.\" The evidence further clarifies that this title replaces the working title \"The Long Night\" and distinguishes it from the unapproved suggestion \"Deep Sky Winter.\"\n\nSource [3] notes that the school worksheet titled \"A Map of the Night\" does not name the planetarium program, confirming that the program's official title is distinct from worksheet titles.\n\n**Answer:** Rivers of Starlight\n**Supporting Source Index:** [1]"
+        }
+      ]
+    },
+    {
+      "id": "lookup02",
+      "question": "How much cancellation notice applies to a study-room reservation now?",
+      "sources": [
+        {
+          "index": 1,
+          "id": "lr1",
+          "text": "The current confirmed cancellation notice for a study-room reservation is 18 hours. This replaces the former 24-hour notice. A four-hour notice proposal has not been approved and has no effect.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 2,
+          "id": "lr2",
+          "text": "Study rooms may be reserved for up to three hours per session. Reservations open seven days ahead.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 3,
+          "id": "lr3",
+          "text": "The staff desk opens at 09:00. After-hours cancellations are recorded by the reservation portal.",
+          "standing": "confirmed"
+        }
+      ],
+      "criteria": {
+        "behavior": "answer_lookup",
+        "requiredSourceIds": [
+          "lr1"
+        ],
+        "requirements": [
+          "Identify the current notice as 18 hours; no need to repeat the older or proposed values.",
+          "An exact, directly responsive quotation is sufficient."
+        ],
+        "forbidden": [
+          "Apply 24 hours or four hours as the current notice.",
+          "Confuse cancellation notice with maximum session duration."
+        ]
+      },
+      "answers": [
+        {
+          "label": "fce5351c24b8",
+          "text": "Based on the provided evidence, the current confirmed cancellation notice for a study-room reservation is **18 hours**. This policy replaces the former 24-hour notice. A four-hour notice proposal has not been approved and therefore has no effect.\n\nSupporting source index: [1]"
+        },
+        {
+          "label": "8e2f54db8af2",
+          "text": "Based on the provided evidence, the current confirmed cancellation notice for a study-room reservation is **18 hours**. This policy replaces the former 24-hour notice. A four-hour notice proposal has not been approved and therefore has no effect.\n\nSupporting source index: [1]"
+        },
+        {
+          "label": "d2a277fd065b",
+          "text": "The current confirmed cancellation notice for a study-room reservation is 18 hours. This replaces the former 24-hour notice. A four-hour notice proposal has not been approved and has no effect.",
+          "attachedCitationIds": [
+            "lr1"
+          ]
+        },
+        {
+          "label": "2f0b8b23917b",
+          "text": "The current confirmed cancellation notice for a study-room reservation is 18 hours.",
+          "attachedCitationIds": [
+            "lr1"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lookup03",
+      "question": "What is the per-session lane reservation limit for coached training?",
+      "sources": [
+        {
+          "index": 1,
+          "id": "rp1",
+          "text": "A coached training session may reserve at most six practice lanes. A casual session may reserve at most four. These limits are per session, not per athlete.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 2,
+          "id": "rp2",
+          "text": "The facility has eight lanes in total. Two are set aside for maintenance on Saturday.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 3,
+          "id": "rp3",
+          "text": "A coached session has twelve registered athletes. Registration closes at 17:00 the preceding day.",
+          "standing": "confirmed"
+        }
+      ],
+      "criteria": {
+        "behavior": "answer_lookup",
+        "requiredSourceIds": [
+          "rp1"
+        ],
+        "requirements": [
+          "State six practice lanes as the maximum per coached session.",
+          "No calculation about athletes or Saturday availability is requested."
+        ],
+        "forbidden": [
+          "Substitute the casual-session limit, total facility lanes, or athlete count for the policy maximum."
+        ]
+      },
+      "answers": [
+        {
+          "label": "159088f3f509",
+          "text": "A coached training session may reserve at most six practice lanes.",
+          "attachedCitationIds": [
+            "rp1"
+          ]
+        },
+        {
+          "label": "f73e61b012cf",
+          "text": "Based on the provided evidence, the per-session lane reservation limit for coached training is **six**.\n\nThis limit is explicitly stated in Evidence [1], which notes that \"A coached training session may reserve at most six practice lanes.\" The evidence further clarifies that these limits apply per session rather than per athlete. While Evidence [2] mentions the facility has eight total lanes with two set aside for maintenance (leaving six available), and Evidence [3] notes that a specific coached session has twelve registered athletes, the reservation limit remains capped at six regardless of the number of registered athletes or the total available capacity.\n\n**Answer:** 6 lanes per session.\n\n**Supporting Source Index:** [1]"
+        },
+        {
+          "label": "9fe90098d882",
+          "text": "A coached training session may reserve at most six practice lanes.",
+          "attachedCitationIds": [
+            "rp1"
+          ]
+        },
+        {
+          "label": "7ec06f47b05a",
+          "text": "Based on the provided evidence, the per-session lane reservation limit for coached training is **six**.\n\nThis limit is explicitly stated in Evidence [1], which notes that \"A coached training session may reserve at most six practice lanes.\" The evidence further clarifies that these limits apply per session rather than per athlete. While Evidence [2] mentions the facility has eight total lanes with two set aside for maintenance (leaving six available), and Evidence [3] notes that a specific coached session has twelve registered athletes, the reservation limit remains capped at six regardless of the number of registered athletes or the total available capacity.\n\n**Answer:** 6 lanes per session.\n\n**Supporting Source Index:** [1]"
+        }
+      ]
+    },
+    {
+      "id": "lookup04",
+      "question": "What reference frequency does Bench Z currently use?",
+      "sources": [
+        {
+          "index": 1,
+          "id": "ob1",
+          "text": "Bench Z uses a 10 MHz reference oscillator in its current configuration. The previous 8 MHz reference was removed. A proposed 12 MHz replacement has not been installed.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 2,
+          "id": "ob2",
+          "text": "The console emits a 1 kHz audible notification when a calibration run ends.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 3,
+          "id": "ob3",
+          "text": "The latest maintenance record confirms the current configuration but contains no new oscillator replacement.",
+          "standing": "confirmed"
+        }
+      ],
+      "criteria": {
+        "behavior": "answer_lookup",
+        "requiredSourceIds": [
+          "ob1"
+        ],
+        "requirements": [
+          "Identify 10 MHz, or an exactly equivalent frequency with correct units, as the current reference.",
+          "A directly responsive quoted sentence is sufficient."
+        ],
+        "forbidden": [
+          "Use the removed or proposed oscillator frequency.",
+          "Confuse the audible notification with the reference oscillator."
+        ]
+      },
+      "answers": [
+        {
+          "label": "76a8c59047b2",
+          "text": "Based on the provided evidence, Bench Z currently uses a **10 MHz** reference oscillator.\n\nThis conclusion is supported by the following points:\n*   Evidence [1] explicitly states that Bench Z uses a 10 MHz reference oscillator in its current configuration and notes that the previous 8 MHz reference has been removed.\n*   Evidence [1] further clarifies that a proposed 12 MHz replacement has not been installed.\n*   Evidence [3] confirms the current configuration but contains no new oscillator replacement, reinforcing that the 10 MHz unit remains in place.\n\n**Answer:** 10 MHz"
+        },
+        {
+          "label": "62728d45f02c",
+          "text": "Based on the provided evidence, Bench Z currently uses a **10 MHz** reference oscillator.\n\nThis conclusion is supported by the following points:\n*   Evidence [1] explicitly states that Bench Z uses a 10 MHz reference oscillator in its current configuration and notes that the previous 8 MHz reference has been removed.\n*   Evidence [1] further clarifies that a proposed 12 MHz replacement has not been installed.\n*   Evidence [3] confirms the current configuration but contains no new oscillator replacement, reinforcing that the 10 MHz unit remains in place.\n\n**Answer:** 10 MHz"
+        },
+        {
+          "label": "8cd59ba5252b",
+          "text": "Bench Z currently uses a 10 MHz reference oscillator. A proposed 12 MHz replacement has not been installed.",
+          "attachedCitationIds": [
+            "ob1"
+          ]
+        },
+        {
+          "label": "88b6beac38f6",
+          "text": "Bench Z currently uses a 10 MHz reference oscillator. A proposed 12 MHz replacement has not been installed.",
+          "attachedCitationIds": [
+            "ob1"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "inference01",
+      "question": "Will all 31 production mugs fit in one firing while keeping the test positions reserved, and how many production positions remain?",
+      "sources": [
+        {
+          "index": 1,
+          "id": "cw1",
+          "text": "The small kiln has seven shelves with five single-mug positions on each shelf. Mugs cannot share a position. Three positions must remain reserved for test pieces during every firing.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 2,
+          "id": "cw2",
+          "text": "The next firing batch contains 31 production mugs. Each mug occupies one position. The batch must fit in one firing.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 3,
+          "id": "cw3",
+          "text": "The drying rack has 36 mug positions. Drying-rack capacity does not increase kiln capacity.",
+          "standing": "confirmed"
+        }
+      ],
+      "criteria": {
+        "behavior": "answer_inference",
+        "requiredSourceIds": [
+          "cw1",
+          "cw2"
+        ],
+        "requirements": [
+          "Compute 35 total kiln positions minus three reserved positions, giving 32 usable production positions.",
+          "Conclude that the 31-mug batch fits and one production position remains. Showing the intermediate 32 is optional if the correct conclusion and remainder are supplied."
+        ],
+        "forbidden": [
+          "Count reserved test positions as available to production.",
+          "Substitute drying-rack capacity.",
+          "Only quote inputs without completing the fit decision and remaining-position calculation."
+        ]
+      },
+      "answers": [
+        {
+          "label": "bbada723793e",
+          "text": "The small kiln has 35 total positions (7 shelves \u00d7 5 positions), but 3 must be reserved for tests, leaving 32 available. Since the batch contains 31 production mugs, they will fit with 1 production position remaining.",
+          "attachedCitationIds": [
+            "cw1",
+            "cw2"
+          ]
+        },
+        {
+          "label": "1356a07b007b",
+          "text": "Based on the provided evidence, here is the analysis:\n\n1.  **Total Available Positions**: The small kiln has seven shelves with five single-mug positions each.\n    *   Calculation: $7 \\text{ shelves} \\times 5 \\text{ positions/shelf} = 35 \\text{ total positions}$. (Source [1])\n2.  **Reserved Positions**: Three positions must remain reserved for test pieces during every firing.\n    *   Calculation: $35 \\text{ total} - 3 \\text{ reserved} = 32 \\text{ available production positions}$. (Source [1])\n3.  **Batch Size**: The next firing batch contains 31 production mugs. (Source [2])\n4.  **Fit Verification**: Since the batch size (31) is less than the available production positions (32), all mugs will fit.\n    *   Remaining positions: $32 \\text{ available} - 31 \\text{ mugs} = 1 \\text{ position}$.\n\n**Answer**: Yes, all 31 production mugs will fit in one firing while keeping the test positions reserved. There will be **1** production position remaining.\n\n**Supporting Source Indexes**: [1], [2]"
+        },
+        {
+          "label": "e030da0abc50",
+          "text": "[No accepted answer: AssertionError [ERR_ASSERTION]: The reply could not be accepted. Review the saved turn and reconnect before trying again.\n+ actual - expected\n\n+ 'unknown'\n- 'answered'\n]"
+        },
+        {
+          "label": "0c96fa226c0d",
+          "text": "Based on the provided evidence, here is the analysis:\n\n1.  **Total Available Positions**: The small kiln has seven shelves with five single-mug positions each.\n    *   Calculation: $7 \\text{ shelves} \\times 5 \\text{ positions/shelf} = 35 \\text{ total positions}$. (Source [1])\n2.  **Reserved Positions**: Three positions must remain reserved for test pieces during every firing.\n    *   Calculation: $35 \\text{ total} - 3 \\text{ reserved} = 32 \\text{ available production positions}$. (Source [1])\n3.  **Batch Size**: The next firing batch contains 31 production mugs. (Source [2])\n4.  **Fit Verification**: Since the batch size (31) is less than the available production positions (32), all mugs will fit.\n    *   Remaining positions: $32 \\text{ available} - 31 \\text{ mugs} = 1 \\text{ position}$.\n\n**Answer**: Yes, all 31 production mugs will fit in one firing while keeping the test positions reserved. There will be **1** production position remaining.\n\n**Supporting Source Indexes**: [1], [2]"
+        }
+      ]
+    },
+    {
+      "id": "inference02",
+      "question": "Does the planned recital fit its slot, and how many minutes of the slot will be left?",
+      "sources": [
+        {
+          "index": 1,
+          "id": "cr1",
+          "text": "The recital slot lasts 40 minutes. The program has four pieces lasting seven minutes each and an opening introduction lasting three minutes.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 2,
+          "id": "cr2",
+          "text": "There are exactly three interludes in this program, each lasting two minutes. Interludes and the introduction count against the recital slot. No encore is planned.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 3,
+          "id": "cr3",
+          "text": "Doors open 15 minutes before the recital. That lobby period is outside the recital slot.",
+          "standing": "confirmed"
+        }
+      ],
+      "criteria": {
+        "behavior": "answer_inference",
+        "requiredSourceIds": [
+          "cr1",
+          "cr2"
+        ],
+        "requirements": [
+          "Compute 4 times seven plus three plus 3 times two = 37 minutes.",
+          "Conclude that it fits with three minutes left. The total need not be separately repeated if the fit decision and remaining time are correct."
+        ],
+        "forbidden": [
+          "Exclude the mandatory introduction or interludes from slot usage.",
+          "Add lobby-opening time to the recital.",
+          "Supply only quoted durations without the requested conclusion and remainder."
+        ]
+      },
+      "answers": [
+        {
+          "label": "ee70fc3effd9",
+          "text": "The planned recital fits within its 40-minute slot. The total time used is 34 minutes (3 minutes introduction + 28 minutes for four pieces + 6 minutes for three interludes), leaving 6 minutes remaining.",
+          "attachedCitationIds": [
+            "cr1",
+            "cr2"
+          ]
+        },
+        {
+          "label": "7c7a1b2aafc5",
+          "text": "Based on the provided evidence, the planned recital **does not fit** its slot.\n\nThe total duration of the program is calculated as follows:\n*   **Opening introduction:** 3 minutes [1]\n*   **Four pieces:** 4 pieces \u00d7 7 minutes each = 28 minutes [1]\n*   **Three interludes:** 3 interludes \u00d7 2 minutes each = 6 minutes [2]\n*   **Total program time:** 3 + 28 + 6 = **37 minutes**.\n\nThe recital slot lasts **40 minutes** [1]. Since the program (37 minutes) is less than the slot (40 minutes), there will be time remaining.\n\n**Minutes left in the slot:** 40 minutes (slot) - 37 minutes (program) = **3 minutes**.\n\n*Note: The evidence confirms that interludes and the introduction count against the slot [2], and the lobby period (15 minutes) is outside the slot [3], so these do not affect the calculation of the remaining time within the 40-minute window.*"
+        },
+        {
+          "label": "ffd543c4575d",
+          "text": "Based on the provided evidence, the planned recital **does not fit** its slot.\n\nThe total duration of the program is calculated as follows:\n*   **Opening introduction:** 3 minutes [1]\n*   **Four pieces:** 4 pieces \u00d7 7 minutes each = 28 minutes [1]\n*   **Three interludes:** 3 interludes \u00d7 2 minutes each = 6 minutes [2]\n*   **Total program time:** 3 + 28 + 6 = **37 minutes**.\n\nThe recital slot lasts **40 minutes** [1]. Since the program (37 minutes) is less than the slot (40 minutes), there will be time remaining.\n\n**Minutes left in the slot:** 40 minutes (slot) - 37 minutes (program) = **3 minutes**.\n\n*Note: The evidence confirms that interludes and the introduction count against the slot [2], and the lobby period (15 minutes) is outside the slot [3], so these do not affect the calculation of the remaining time within the 40-minute window.*"
+        },
+        {
+          "label": "c8b249f9daee",
+          "text": "The planned recital fits within its 40-minute slot. The total duration of the program is 37 minutes (3 minutes introduction + 28 minutes for four pieces + 6 minutes for three interludes), leaving 3 minutes of the slot unused.",
+          "attachedCitationIds": [
+            "cr1",
+            "cr2"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "inference03",
+      "question": "Can all five render jobs run together under the memory policy, and how much unreserved memory remains?",
+      "sources": [
+        {
+          "index": 1,
+          "id": "rl1",
+          "text": "The rendering workstation has 48 GiB of memory. Eight GiB must remain reserved for the operating system. No swap or memory overcommit is permitted for the workshop.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 2,
+          "id": "rl2",
+          "text": "Five proposed simultaneous render jobs each require seven GiB. Their memory requirements add together. CPU capacity is sufficient for all five jobs.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 3,
+          "id": "rl3",
+          "text": "The workstation has 120 GiB of free disk space. Disk space cannot substitute for the required memory.",
+          "standing": "confirmed"
+        }
+      ],
+      "criteria": {
+        "behavior": "answer_inference",
+        "requiredSourceIds": [
+          "rl1",
+          "rl2"
+        ],
+        "requirements": [
+          "Calculate 40 GiB available after the OS reservation and 35 GiB required by the five jobs.",
+          "Conclude that all five fit with five GiB of unreserved memory remaining. Intermediate totals are optional if the conclusion and remaining amount are correct."
+        ],
+        "forbidden": [
+          "Spend the OS reservation, use swap or overcommit, or substitute disk capacity.",
+          "Return rule quotations without performing the requested calculation."
+        ]
+      },
+      "answers": [
+        {
+          "label": "2b8cc2378e1a",
+          "text": "Five render jobs cannot run together under the memory policy because their combined requirement of 35 GiB exceeds the available unreserved memory of 40 GiB (48 GiB total minus 8 GiB reserved).",
+          "attachedCitationIds": [
+            "rl1",
+            "rl2"
+          ]
+        },
+        {
+          "label": "c936c90f6110",
+          "text": "Yes, all five render jobs can run together under the memory policy. The total memory required is 35 GiB (5 jobs \u00d7 7 GiB each), which fits within the 40 GiB available for applications (48 GiB total minus 8 GiB reserved for the operating system). This leaves 5 GiB of unreserved memory remaining. Source code or prior replies do not confirm this calculation; the conclusion is based solely on the confirmed records in sources 1 and 2.",
+          "attachedCitationIds": [
+            "rl1",
+            "rl2"
+          ]
+        },
+        {
+          "label": "1fa83bf757ba",
+          "text": "Based on the provided evidence, it is **not possible** to determine if all five render jobs can run together under the memory policy, because a critical fact is missing: the specific memory requirement for each individual job.\n\nWhile Source [2] states that \"Five proposed simultaneous render jobs each require seven GiB,\" this phrasing is ambiguous regarding whether the *total* requirement is 35 GiB (5 jobs \u00d7 7 GiB) or if the *per-job* requirement is 7 GiB. However, the sentence \"Their memory requirements add together\" strongly implies the total is 35 GiB. Assuming this interpretation:\n*   Total Memory Required: 35 GiB (5 jobs \u00d7 7 GiB).\n*   Total Available Memory: 48 GiB (Source [1]).\n*   Reserved Memory: 8 GiB (Source [1]).\n*   Unreserved Memory Available: 40 GiB (48 GiB - 8 GiB).\n\nIf the per-job requirement is indeed 7 GiB, then 35 GiB is less than the 40 GiB unreserved memory, so the jobs could run. However, the text in Source [2] says \"each require seven GiB\" but then immediately says \"Their memory requirements add together.\" If the intent was that the *total* requirement is 7 GiB, the phrase \"each require\" would be misleading. If the intent is that each requires 7 GiB, the total is 35 GiB.\n\nThe ambiguity lies in whether \"each require seven GiB\" means the total pool needed is 7 GiB (shared) or 35 GiB (summed). Given the phrase \"add together,\" the summation (35 GiB) is the most logical reading, but without explicit confirmation that the total requirement is 35 GiB and not 7 GiB, the answer cannot be definitively established.\n\n**Missing Fact:** Does the total memory requirement for the five jobs equal 35 GiB (5 \u00d7 7 GiB) or 7 GiB?\n\n**Question:** Does the total memory requirement for the five simultaneous jobs equal 35 GiB, or is the combined requirement only 7 GiB?"
+        },
+        {
+          "label": "904d4696b715",
+          "text": "Based on the provided evidence, it is **not possible** to determine if all five render jobs can run together under the memory policy, because a critical fact is missing: the specific memory requirement for each individual job.\n\nWhile Source [2] states that \"Five proposed simultaneous render jobs each require seven GiB,\" this phrasing is ambiguous regarding whether the *total* requirement is 35 GiB (5 jobs \u00d7 7 GiB) or if the *per-job* requirement is 7 GiB. However, the sentence \"Their memory requirements add together\" strongly implies the total is 35 GiB. Assuming this interpretation:\n*   Total Memory Required: 35 GiB (5 jobs \u00d7 7 GiB).\n*   Total Available Memory: 48 GiB (Source [1]).\n*   Reserved Memory: 8 GiB (Source [1]).\n*   Unreserved Memory Available: 40 GiB (48 GiB - 8 GiB).\n\nIf the per-job requirement is indeed 7 GiB, then 35 GiB is less than the 40 GiB unreserved memory, so the jobs could run. However, the text in Source [2] says \"each require seven GiB\" but then immediately says \"Their memory requirements add together.\" If the intent was that the *total* requirement is 7 GiB, the phrase \"each require\" would be misleading. If the intent is that each requires 7 GiB, the total is 35 GiB.\n\nThe ambiguity lies in whether \"each require seven GiB\" means the total pool needed is 7 GiB (shared) or 35 GiB (summed). Given the phrase \"add together,\" the summation (35 GiB) is the most logical reading, but without explicit confirmation that the total requirement is 35 GiB and not 7 GiB, the answer cannot be definitively established.\n\n**Missing Fact:** Does the total memory requirement for the five jobs equal 35 GiB (5 \u00d7 7 GiB) or 7 GiB?\n\n**Question:** Does the total memory requirement for the five simultaneous jobs equal 35 GiB, or is the combined requirement only 7 GiB?"
+        }
+      ]
+    },
+    {
+      "id": "inference04",
+      "question": "Do the Larks qualify on their final standings, and by how many points are they above or below the threshold?",
+      "sources": [
+        {
+          "index": 1,
+          "id": "pg1",
+          "text": "League standings award three points per win and one point per draw. A recorded penalty is subtracted once from the resulting points. Qualification requires at least 14 points.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 2,
+          "id": "pg2",
+          "text": "The Larks finished with five wins, two draws, and a recorded four-point penalty. All their results are final; no appeal is pending.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 3,
+          "id": "pg3",
+          "text": "The Larks scored 28 individual puzzle solutions. Individual solution counts do not contribute additional standings points.",
+          "standing": "confirmed"
+        }
+      ],
+      "criteria": {
+        "behavior": "answer_inference",
+        "requiredSourceIds": [
+          "pg1",
+          "pg2"
+        ],
+        "requirements": [
+          "Calculate 5 times three plus two minus four = 13 points.",
+          "Conclude that the Larks do not qualify and are one point below the threshold. The total is optional if the conclusion and deficit are correct."
+        ],
+        "forbidden": [
+          "Ignore or repeatedly subtract the penalty.",
+          "Count puzzle solutions as standings points.",
+          "Treat an at-least threshold as a strictly-greater threshold.",
+          "Only quote the scoring rules and results without completing the decision and margin."
+        ]
+      },
+      "answers": [
+        {
+          "label": "bbd15c04d119",
+          "text": "The Larks qualify. They have 11 points (5 wins \u00d7 3 + 2 draws \u00d7 1 - 4 penalty), which is 3 points below the 14-point threshold.",
+          "attachedCitationIds": [
+            "pg1",
+            "pg2"
+          ]
+        },
+        {
+          "label": "a79ad8997cfe",
+          "text": "The Larks have 11 points (5 wins \u00d7 3 + 2 draws \u00d7 1 - 4 penalty), which is 3 points below the 14-point qualification threshold.",
+          "attachedCitationIds": [
+            "pg1",
+            "pg2"
+          ]
+        },
+        {
+          "label": "1f18b921f3bd",
+          "text": "Based on the provided evidence, the Larks **do not qualify** on their final standings. They are **2 points below** the qualification threshold.\n\nThe calculation is as follows:\n*   **Points from wins:** 5 wins \u00d7 3 points/win = 15 points.\n*   **Points from draws:** 2 draws \u00d7 1 point/draw = 2 points.\n*   **Subtotal:** 15 + 2 = 17 points.\n*   **Penalty adjustment:** 17 points - 4 point penalty = 13 points.\n*   **Qualification threshold:** 14 points.\n*   **Difference:** 13 points (actual) - 14 points (threshold) = -1 points.\n\nTherefore, the Larks fall short by 1 point.\n\n*Note: Evidence [3] regarding the 28 individual puzzle solutions is irrelevant to the standings calculation as individual solution counts do not contribute additional points.*\n\n**Supporting Source Index:** [1], [2]"
+        },
+        {
+          "label": "f232848c989d",
+          "text": "Based on the provided evidence, the Larks **do not qualify** on their final standings. They are **2 points below** the qualification threshold.\n\nThe calculation is as follows:\n*   **Points from wins:** 5 wins \u00d7 3 points/win = 15 points.\n*   **Points from draws:** 2 draws \u00d7 1 point/draw = 2 points.\n*   **Subtotal:** 15 + 2 = 17 points.\n*   **Penalty adjustment:** 17 points - 4 point penalty = 13 points.\n*   **Qualification threshold:** 14 points.\n*   **Difference:** 13 points (actual) - 14 points (threshold) = -1 points.\n\nTherefore, the Larks fall short by 1 point.\n\n*Note: Evidence [3] regarding the 28 individual puzzle solutions is irrelevant to the standings calculation as individual solution counts do not contribute additional points.*\n\n**Supporting Source Index:** [1], [2]"
+        }
+      ]
+    },
+    {
+      "id": "unavailable01",
+      "question": "What are the latitude and longitude of trench E2?",
+      "sources": [
+        {
+          "index": 1,
+          "id": "hd1",
+          "text": "The East Terrace survey describes three pottery fragments in trench E2. Its published field note does not provide geographic coordinates.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 2,
+          "id": "hd2",
+          "text": "The site map is being revised. These records contain neither the revised map nor a coordinate register.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 3,
+          "id": "hd3",
+          "text": "Trench E2 is six metres wide. The survey team uses a local grid for marking finds.",
+          "standing": "confirmed"
+        }
+      ],
+      "criteria": {
+        "behavior": "abstain_unavailable",
+        "requiredSourceIds": [],
+        "requirements": [
+          "State that the supplied evidence does not establish the coordinates; may request the missing map or coordinate register.",
+          "No citation is required for a concise absence-of-evidence response. Any additional source-specific factual claims must be supported."
+        ],
+        "forbidden": [
+          "Invent or estimate geographic coordinates from trench width or a local grid.",
+          "Claim the trench has no geographic location."
+        ]
+      },
+      "answers": [
+        {
+          "label": "7da36e8789ae",
+          "text": "Based on the available evidence, the latitude and longitude of trench E2 cannot be established.\n\nThe provided sources explicitly state that the published field notes for the East Terrace survey, which describes finds in trench E2, do not provide geographic coordinates [1]. Furthermore, the site map is currently being revised, and the existing records contain neither the revised map nor a coordinate register [2]. While the width of the trench and the use of a local grid are noted, no absolute geographic coordinates are present in the data [3].\n\nTo determine the coordinates, I need to know: **Has the revised site map or a coordinate register been released since the records were compiled?**"
+        },
+        {
+          "label": "c9a87c1668a3",
+          "text": "The supplied sources state that the published field note for trench E2 does not provide geographic coordinates and that the site map is being revised without a coordinate register. Do you have access to the revised map or a coordinate register that contains the latitude and longitude?",
+          "attachedCitationIds": [
+            "hd1",
+            "hd2"
+          ]
+        },
+        {
+          "label": "75cccbb0d5c7",
+          "text": "The supplied sources state that the published field note for trench E2 does not provide geographic coordinates and that the site map is being revised without a coordinate register. Do you have access to a different source containing the latitude and longitude for trench E2?",
+          "attachedCitationIds": [
+            "hd1",
+            "hd2"
+          ]
+        },
+        {
+          "label": "73bf73776387",
+          "text": "Based on the available evidence, the latitude and longitude of trench E2 cannot be established.\n\nThe provided sources explicitly state that the published field notes for the East Terrace survey, which describes finds in trench E2, do not provide geographic coordinates [1]. Furthermore, the site map is currently being revised, and the existing records contain neither the revised map nor a coordinate register [2]. While the width of the trench and the use of a local grid are noted, no absolute geographic coordinates are present in the data [3].\n\nTo determine the coordinates, I need to know: **Has the revised site map or a coordinate register been released since the records were compiled?**"
+        }
+      ]
+    },
+    {
+      "id": "unavailable02",
+      "question": "How many people actually attended the gallery opening?",
+      "sources": [
+        {
+          "index": 1,
+          "id": "go1",
+          "text": "The gallery opening had a room capacity of 160 people and a planning target of 120 attendees. Neither number is an attendance count.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 2,
+          "id": "go2",
+          "text": "The event was scheduled for Friday evening. These records contain no entry-counter reading, check-in total, or completed attendance report.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 3,
+          "id": "go3",
+          "text": "Forty chairs were arranged in the talk area. Visitors could also stand in the exhibition rooms.",
+          "standing": "confirmed"
+        }
+      ],
+      "criteria": {
+        "behavior": "abstain_unavailable",
+        "requiredSourceIds": [],
+        "requirements": [
+          "State that actual attendance is unavailable from the supplied evidence; may ask for a completed attendance record.",
+          "No citation is required for a concise absence-of-evidence response. Additional factual claims must remain supported."
+        ],
+        "forbidden": [
+          "Report capacity, target, chair count, or zero as actual attendance.",
+          "Infer attendance from the existence of a schedule."
+        ]
+      },
+      "answers": [
+        {
+          "label": "cc4650a155fa",
+          "text": "The provided records state the room capacity was 160, the planning target was 120, and 40 chairs were arranged, but they do not contain an actual attendance count. Do you have access to a check-in total or completed attendance report?",
+          "attachedCitationIds": [
+            "go1",
+            "go2",
+            "go3"
+          ]
+        },
+        {
+          "label": "b1b0fc0b91c6",
+          "text": "The available records state the room capacity was 160, the planning target was 120, and 40 chairs were arranged, but none provide an actual attendance count. Do you have access to a check-in total or completed attendance report?",
+          "attachedCitationIds": [
+            "go1",
+            "go2",
+            "go3"
+          ]
+        },
+        {
+          "label": "00f447a74284",
+          "text": "Based on the available evidence, the actual number of people who attended the gallery opening cannot be established.\n\nThe provided sources only offer capacity limits and planning targets, not actual attendance figures:\n*   Source [1] states the room capacity was 160 people and the planning target was 120 attendees, explicitly noting that \"Neither number is an attendance count.\"\n*   Source [2] confirms the event was scheduled for Friday evening but states there are \"no entry-counter reading, check-in total, or completed attendance report.\"\n*   Source [3] describes seating arrangements (40 chairs in the talk area) and standing room in exhibition rooms but provides no data on how many people utilized this space.\n\nTo determine the actual attendance, I need to know: **Was there a final attendance report or check-in log generated for the Friday evening event?**"
+        },
+        {
+          "label": "2bc917d37718",
+          "text": "Based on the available evidence, the actual number of people who attended the gallery opening cannot be established.\n\nThe provided sources only offer capacity limits and planning targets, not actual attendance figures:\n*   Source [1] states the room capacity was 160 people and the planning target was 120 attendees, explicitly noting that \"Neither number is an attendance count.\"\n*   Source [2] confirms the event was scheduled for Friday evening but states there are \"no entry-counter reading, check-in total, or completed attendance report.\"\n*   Source [3] describes seating arrangements (40 chairs in the talk area) and standing room in exhibition rooms but provides no data on how many people utilized this space.\n\nTo determine the actual attendance, I need to know: **Was there a final attendance report or check-in log generated for the Friday evening event?**"
+        }
+      ]
+    },
+    {
+      "id": "constraint01",
+      "question": "The curator asked for captions off today. May I disable them now?",
+      "sources": [
+        {
+          "index": 1,
+          "id": "ae1",
+          "text": "Captions must remain enabled on exhibition videos. Only a recorded exemption from the accessibility steward permits disabling them. The curator may choose video order but cannot authorize a caption exemption.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 2,
+          "id": "ae2",
+          "text": "The curator requested that captions be disabled today to make the display cleaner. No accessibility-steward exemption is recorded.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 3,
+          "id": "ae3",
+          "text": "The display has two audio speakers. Video order can be changed from the curator console.",
+          "standing": "confirmed"
+        }
+      ],
+      "criteria": {
+        "behavior": "answer_constraint",
+        "requiredSourceIds": [
+          "ae1",
+          "ae2"
+        ],
+        "requirements": [
+          "Conclude that disabling captions now is not authorized and captions must remain enabled.",
+          "Preserve the accessibility steward as the sole exemption authority and the requirement for a recorded exemption. The curator request is insufficient."
+        ],
+        "forbidden": [
+          "Treat curator preference or console access as an exemption.",
+          "Make captions optional while awaiting an exemption.",
+          "Invent an exemption or an emergency exception."
+        ]
+      },
+      "answers": [
+        {
+          "label": "45cbd4a3e623",
+          "text": "The curator requested captions be disabled today, but no accessibility-steward exemption is recorded. May I proceed with disabling them?",
+          "attachedCitationIds": [
+            "ae2"
+          ]
+        },
+        {
+          "label": "f223c70f3626",
+          "text": "Based on the provided evidence, you **cannot** disable the captions.\n\nThe evidence explicitly states that captions must remain enabled on exhibition videos unless there is a recorded exemption from the accessibility steward [1]. While the curator requested to disable them to make the display cleaner, no such exemption is recorded [2]. Furthermore, the curator lacks the authority to authorize a caption exemption; only the accessibility steward can grant one [1].\n\nTherefore, the request to disable captions must be denied.\n\n**Answer:** No, you may not disable the captions.\n\n**Supporting Source Indexes:** [1], [2]"
+        },
+        {
+          "label": "f40f7656f16b",
+          "text": "Based on the provided evidence, you **cannot** disable the captions.\n\nThe evidence explicitly states that captions must remain enabled on exhibition videos unless there is a recorded exemption from the accessibility steward [1]. While the curator requested to disable them to make the display cleaner, no such exemption is recorded [2]. Furthermore, the curator lacks the authority to authorize a caption exemption; only the accessibility steward can grant one [1].\n\nTherefore, the request to disable captions must be denied.\n\n**Answer:** No, you may not disable the captions.\n\n**Supporting Source Indexes:** [1], [2]"
+        },
+        {
+          "label": "8fc7a9dac138",
+          "text": "The curator requested captions be disabled today, but no accessibility-steward exemption is recorded. Do you have an exemption from the accessibility steward?",
+          "attachedCitationIds": [
+            "ae2"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "constraint02",
+      "question": "Can we enable the motors for today's demonstration using yesterday's successful test?",
+      "sources": [
+        {
+          "index": 1,
+          "id": "ra1",
+          "text": "Before motors are enabled in each arena session, the operator must complete that session's emergency-stop test and record its result. A successful test from an earlier session cannot satisfy this requirement. Demonstrations are not exempt.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 2,
+          "id": "ra2",
+          "text": "Yesterday's session has a successful test record. Today's demonstration is a new session and has no emergency-stop test record yet. The sponsor asked to start immediately.",
+          "standing": "confirmed"
+        },
+        {
+          "index": 3,
+          "id": "ra3",
+          "text": "The robot's cosmetic lights can be displayed with motors disabled. The sponsor controls the demonstration running order, not the test requirement.",
+          "standing": "confirmed"
+        }
+      ],
+      "criteria": {
+        "behavior": "answer_constraint",
+        "requiredSourceIds": [
+          "ra1",
+          "ra2"
+        ],
+        "requirements": [
+          "Conclude that motors cannot be enabled on yesterday's test; today's session requires its own completed and recorded emergency-stop test first.",
+          "Preserve the mandatory session-specific prerequisite despite the demonstration context and sponsor request."
+        ],
+        "forbidden": [
+          "Reuse the earlier session's successful test as sufficient.",
+          "Treat demonstration status or sponsor urgency as authority to waive the prerequisite.",
+          "Soften the test and recording requirement into an optional recommendation."
+        ]
+      },
+      "answers": [
+        {
+          "label": "3de0edf17470",
+          "text": "Before motors are enabled in each arena session, the operator must complete that session's emergency-stop test and record its result. A successful test from an earlier session cannot satisfy this requirement. Demonstrations are not exempt. Yesterday's session has a successful test record, but today's demonstration is a new session and has no emergency-stop test record yet. The sponsor controls the demonstration running order, not the test requirement. Do you have the emergency-stop test result for today's session?",
+          "attachedCitationIds": [
+            "ra1",
+            "ra2",
+            "ra3"
+          ]
+        },
+        {
+          "label": "073040bee0ce",
+          "text": "No, we cannot enable the motors for today's demonstration using yesterday's successful test.\n\nAccording to the project records, before motors are enabled in any arena session, the operator must complete **that specific session's** emergency-stop test and record its result. A successful test from an earlier session **cannot satisfy this requirement**. While yesterday's session had a successful test record [2], today's demonstration is a new session with no emergency-stop test record yet [2]. Although the sponsor controls the running order and cosmetic lights can be displayed with motors disabled [3], the test requirement remains mandatory and cannot be waived or substituted by prior session data [1].\n\n**Answer:** No.\n\n**Supporting Source Indexes:** [1], [2], [3]"
+        },
+        {
+          "label": "207875735261",
+          "text": "Before motors are enabled in each arena session, the operator must complete that session's emergency-stop test and record its result. A successful test from an earlier session cannot satisfy this requirement. Do you have a completed emergency-stop test record for today's demonstration session?",
+          "attachedCitationIds": [
+            "ra1"
+          ]
+        },
+        {
+          "label": "d37f7fe5e411",
+          "text": "No, we cannot enable the motors for today's demonstration using yesterday's successful test.\n\nAccording to the project records, before motors are enabled in any arena session, the operator must complete **that specific session's** emergency-stop test and record its result. A successful test from an earlier session **cannot satisfy this requirement**. While yesterday's session had a successful test record [2], today's demonstration is a new session with no emergency-stop test record yet [2]. Although the sponsor controls the running order and cosmetic lights can be displayed with motors disabled [3], the test requirement remains mandatory and cannot be waived or substituted by prior session data [1].\n\n**Answer:** No.\n\n**Supporting Source Indexes:** [1], [2], [3]"
+        }
+      ]
+    }
+  ]
+}

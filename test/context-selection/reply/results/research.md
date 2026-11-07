@@ -1,0 +1,9 @@
+# Retrieval and utilization remain separate hypotheses
+
+Primary-source review on 7 November 2026. These findings guide experiments. None establishes an effect on the pinned Qwen3.5 4B Q6_K artifact.
+
+- [Can Small Language Models Use What They Retrieve?](https://arxiv.org/abs/2603.11513) evaluates SmolLM2, Qwen2.5 and Llama 3.1 across no-retrieval, lexical, dense and oracle conditions. Its preprint reports substantial context-utilization failures even with answer-containing passages. It does not test our Qwen3.5 artifact. Separate retrieval recall from answer correctness before adding an index.
+- [The Distracting Effect](https://aclanthology.org/2025.acl-long.892/) studies passages that distract answer generation and reports benefits from training with hard distractors. It motivates distractor-rich evaluation. Its fine-tuning results do not imply that a prompt filter will improve an unchanged local model.
+- [ReflectiveRAG](https://aclanthology.org/2026.eacl-industry.27/) combines evidence-sufficiency decisions and adaptive retrieval with embedding-based removal of noise. Its reported gains motivate a bounded source-selection experiment, with full call costs and a strong direct refinement control. Do not transfer its timing claim to our runtime or adopt iterative query rewriting after our earlier rewriting failure without a distinct hypothesis.
+
+The current #98 fix addresses response generation and parsing. It is not a retrieval improvement. Evaluate its fresh mixed-task results first. If it restores reliable dialogue without an answer-quality advantage, retain that distinction and test source selection on a separate fresh corpus with paraphrases, distractors and unavailable evidence. Generated index descriptions may locate originals but must never become independent facts.

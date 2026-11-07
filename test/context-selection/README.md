@@ -47,3 +47,17 @@ The model-card recommendation and API field documentation are primary sources fo
 These probes are development evidence. Three responses to the same question are repeated samples, not three independent tasks. Count a question mark separately from semantic usefulness: a reply can clearly request a missing fact in declarative wording, or ask a formally valid but irrelevant question.
 
 The decoding runner also supports `roles`, `field`, `bridge`, `compact` and `plain` modes, for example `node probe.mjs field`. Use a fresh directory for each mode. Roles changes instruction placement; field changes only the output text key; bridge tests the combined reply-field candidate on captured production prompts; compact tests shorter instructions while retaining every source and metadata field; plain removes forced JSON output and compares indexed text with JSON input. Counts are 8, 8, 8, 12 and 8 calls respectively. `node probe.mjs MODE --dry-run` writes the planned requests without contacting a model. The request builder was checked offline against all 68 captured requests from the corresponding development probes.
+
+## Frozen conversational reply comparison
+
+The `reply` folder contains an independently authored sixteen-case mixture and a production Extension Host runner for candidate commit `2bf1d2f`. Build it with absolute candidate and fresh output paths.
+
+```sh
+node test/context-selection/reply/build.mjs /absolute/candidate /absolute/fresh-output
+```
+
+The builder checks the candidate commit, clean tree and fixed suite hash. It performs no inference. Run the generated `runner.cjs` as VS Code 1.144.0's `--extensionTestsPath` with the candidate extension and an isolated workspace/profile. An account-free Docker host must reach the existing private Model Runner endpoint. Mount the candidate read-only and the output directory writable. Do not mount personal account data or a working project. Use Xvfb directly where the image lacks xauth.
+
+The maximum is 64 serial local calls, two repetitions per case and arm. The candidate uses the production controller and client, validates its response, saves citations, and reopens SQLite. Direct Qwen receives all the same source texts with confirmed status in indexed plain text and can answer freely with inline citations. Neither arm receives the private criteria. The baseline is not forced into a summary schema. Runtime errors count as failures. The log captures dispatches, original envelopes, accepted answers, errors, source mappings and persistence checks. Stop on an interrupted run and inspect backend activity before any further experiment. Never overwrite or silently retry a partial run.
+
+Use the fixed semantic criteria with anonymized outputs. Valid direct inline citations and candidate attached citations both count. A clear request for a missing fact can be declarative. Two repetitions diagnose quality consistency, not statistical generalization or a latency advantage. The synthetic suite becomes development data after this comparison. See `reply/protocol.md` for the frozen protocol.

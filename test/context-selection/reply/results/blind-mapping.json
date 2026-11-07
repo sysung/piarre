@@ -1,0 +1,322 @@
+{
+  "d997205e7c9a": {
+    "id": "clarify01",
+    "repetition": 1,
+    "arm": "candidate"
+  },
+  "e481734c01a0": {
+    "id": "clarify01",
+    "repetition": 1,
+    "arm": "direct"
+  },
+  "68afa7836d4e": {
+    "id": "clarify01",
+    "repetition": 2,
+    "arm": "candidate"
+  },
+  "2b535f5206ba": {
+    "id": "clarify01",
+    "repetition": 2,
+    "arm": "direct"
+  },
+  "dff8ff12a5c7": {
+    "id": "clarify02",
+    "repetition": 1,
+    "arm": "candidate"
+  },
+  "2143e75405f6": {
+    "id": "clarify02",
+    "repetition": 1,
+    "arm": "direct"
+  },
+  "64f4158ebd8c": {
+    "id": "clarify02",
+    "repetition": 2,
+    "arm": "candidate"
+  },
+  "77298b2b5f86": {
+    "id": "clarify02",
+    "repetition": 2,
+    "arm": "direct"
+  },
+  "b5e9d37e6c19": {
+    "id": "clarify03",
+    "repetition": 1,
+    "arm": "candidate"
+  },
+  "894e5086b4b9": {
+    "id": "clarify03",
+    "repetition": 1,
+    "arm": "direct"
+  },
+  "16e4f5b62779": {
+    "id": "clarify03",
+    "repetition": 2,
+    "arm": "candidate"
+  },
+  "e7940560b77e": {
+    "id": "clarify03",
+    "repetition": 2,
+    "arm": "direct"
+  },
+  "a65cca48e99d": {
+    "id": "clarify04",
+    "repetition": 1,
+    "arm": "candidate"
+  },
+  "97b2ed141015": {
+    "id": "clarify04",
+    "repetition": 1,
+    "arm": "direct"
+  },
+  "adce93087380": {
+    "id": "clarify04",
+    "repetition": 2,
+    "arm": "candidate"
+  },
+  "5181a1a4d15c": {
+    "id": "clarify04",
+    "repetition": 2,
+    "arm": "direct"
+  },
+  "fb23a02a1133": {
+    "id": "lookup01",
+    "repetition": 1,
+    "arm": "candidate"
+  },
+  "2e6667416499": {
+    "id": "lookup01",
+    "repetition": 1,
+    "arm": "direct"
+  },
+  "f70a23b1e29a": {
+    "id": "lookup01",
+    "repetition": 2,
+    "arm": "candidate"
+  },
+  "e2e166a900e8": {
+    "id": "lookup01",
+    "repetition": 2,
+    "arm": "direct"
+  },
+  "2f0b8b23917b": {
+    "id": "lookup02",
+    "repetition": 1,
+    "arm": "candidate"
+  },
+  "8e2f54db8af2": {
+    "id": "lookup02",
+    "repetition": 1,
+    "arm": "direct"
+  },
+  "d2a277fd065b": {
+    "id": "lookup02",
+    "repetition": 2,
+    "arm": "candidate"
+  },
+  "fce5351c24b8": {
+    "id": "lookup02",
+    "repetition": 2,
+    "arm": "direct"
+  },
+  "159088f3f509": {
+    "id": "lookup03",
+    "repetition": 1,
+    "arm": "candidate"
+  },
+  "7ec06f47b05a": {
+    "id": "lookup03",
+    "repetition": 1,
+    "arm": "direct"
+  },
+  "9fe90098d882": {
+    "id": "lookup03",
+    "repetition": 2,
+    "arm": "candidate"
+  },
+  "f73e61b012cf": {
+    "id": "lookup03",
+    "repetition": 2,
+    "arm": "direct"
+  },
+  "88b6beac38f6": {
+    "id": "lookup04",
+    "repetition": 1,
+    "arm": "candidate"
+  },
+  "62728d45f02c": {
+    "id": "lookup04",
+    "repetition": 1,
+    "arm": "direct"
+  },
+  "8cd59ba5252b": {
+    "id": "lookup04",
+    "repetition": 2,
+    "arm": "candidate"
+  },
+  "76a8c59047b2": {
+    "id": "lookup04",
+    "repetition": 2,
+    "arm": "direct"
+  },
+  "bbada723793e": {
+    "id": "inference01",
+    "repetition": 1,
+    "arm": "candidate"
+  },
+  "0c96fa226c0d": {
+    "id": "inference01",
+    "repetition": 1,
+    "arm": "direct"
+  },
+  "e030da0abc50": {
+    "id": "inference01",
+    "repetition": 2,
+    "arm": "candidate"
+  },
+  "1356a07b007b": {
+    "id": "inference01",
+    "repetition": 2,
+    "arm": "direct"
+  },
+  "ee70fc3effd9": {
+    "id": "inference02",
+    "repetition": 1,
+    "arm": "candidate"
+  },
+  "ffd543c4575d": {
+    "id": "inference02",
+    "repetition": 1,
+    "arm": "direct"
+  },
+  "c8b249f9daee": {
+    "id": "inference02",
+    "repetition": 2,
+    "arm": "candidate"
+  },
+  "7c7a1b2aafc5": {
+    "id": "inference02",
+    "repetition": 2,
+    "arm": "direct"
+  },
+  "c936c90f6110": {
+    "id": "inference03",
+    "repetition": 1,
+    "arm": "candidate"
+  },
+  "904d4696b715": {
+    "id": "inference03",
+    "repetition": 1,
+    "arm": "direct"
+  },
+  "2b8cc2378e1a": {
+    "id": "inference03",
+    "repetition": 2,
+    "arm": "candidate"
+  },
+  "1fa83bf757ba": {
+    "id": "inference03",
+    "repetition": 2,
+    "arm": "direct"
+  },
+  "bbd15c04d119": {
+    "id": "inference04",
+    "repetition": 1,
+    "arm": "candidate"
+  },
+  "f232848c989d": {
+    "id": "inference04",
+    "repetition": 1,
+    "arm": "direct"
+  },
+  "a79ad8997cfe": {
+    "id": "inference04",
+    "repetition": 2,
+    "arm": "candidate"
+  },
+  "1f18b921f3bd": {
+    "id": "inference04",
+    "repetition": 2,
+    "arm": "direct"
+  },
+  "75cccbb0d5c7": {
+    "id": "unavailable01",
+    "repetition": 1,
+    "arm": "candidate"
+  },
+  "7da36e8789ae": {
+    "id": "unavailable01",
+    "repetition": 1,
+    "arm": "direct"
+  },
+  "c9a87c1668a3": {
+    "id": "unavailable01",
+    "repetition": 2,
+    "arm": "candidate"
+  },
+  "73bf73776387": {
+    "id": "unavailable01",
+    "repetition": 2,
+    "arm": "direct"
+  },
+  "b1b0fc0b91c6": {
+    "id": "unavailable02",
+    "repetition": 1,
+    "arm": "candidate"
+  },
+  "00f447a74284": {
+    "id": "unavailable02",
+    "repetition": 1,
+    "arm": "direct"
+  },
+  "cc4650a155fa": {
+    "id": "unavailable02",
+    "repetition": 2,
+    "arm": "candidate"
+  },
+  "2bc917d37718": {
+    "id": "unavailable02",
+    "repetition": 2,
+    "arm": "direct"
+  },
+  "8fc7a9dac138": {
+    "id": "constraint01",
+    "repetition": 1,
+    "arm": "candidate"
+  },
+  "f40f7656f16b": {
+    "id": "constraint01",
+    "repetition": 1,
+    "arm": "direct"
+  },
+  "45cbd4a3e623": {
+    "id": "constraint01",
+    "repetition": 2,
+    "arm": "candidate"
+  },
+  "f223c70f3626": {
+    "id": "constraint01",
+    "repetition": 2,
+    "arm": "direct"
+  },
+  "207875735261": {
+    "id": "constraint02",
+    "repetition": 1,
+    "arm": "candidate"
+  },
+  "d37f7fe5e411": {
+    "id": "constraint02",
+    "repetition": 1,
+    "arm": "direct"
+  },
+  "3de0edf17470": {
+    "id": "constraint02",
+    "repetition": 2,
+    "arm": "candidate"
+  },
+  "073040bee0ce": {
+    "id": "constraint02",
+    "repetition": 2,
+    "arm": "direct"
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "sol": {
+    "candidate": {
+      "samples": 32,
+      "strictPass": 24,
+      "faithful": 27,
+      "complete": 24,
+      "citationOk": 27,
+      "safetyIssues": 2,
+      "byRepetition": {
+        "1": 12,
+        "2": 12
+      },
+      "casesPassingBothRepetitions": 10
+    },
+    "direct": {
+      "samples": 32,
+      "strictPass": 24,
+      "faithful": 24,
+      "complete": 26,
+      "citationOk": 24,
+      "safetyIssues": 0,
+      "byRepetition": {
+        "1": 12,
+        "2": 12
+      },
+      "casesPassingBothRepetitions": 12
+    }
+  },
+  "astra": {
+    "candidate": {
+      "samples": 32,
+      "strictPass": 24,
+      "faithful": 27,
+      "complete": 24,
+      "citationOk": 28,
+      "safetyIssues": 2,
+      "byRepetition": {
+        "1": 12,
+        "2": 12
+      },
+      "casesPassingBothRepetitions": 10
+    },
+    "direct": {
+      "samples": 32,
+      "strictPass": 24,
+      "faithful": 24,
+      "complete": 26,
+      "citationOk": 24,
+      "safetyIssues": 0,
+      "byRepetition": {
+        "1": 12,
+        "2": 12
+      },
+      "casesPassingBothRepetitions": 12
+    }
+  }
+}

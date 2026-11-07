@@ -1,0 +1,15 @@
+{
+  "calls": 64,
+  "answers": {
+    "candidate": 31,
+    "direct": 32
+  },
+  "errors": {
+    "candidate": 1
+  },
+  "finishReasons": {
+    "stop": 63,
+    "length": 1
+  },
+  "rawLogSha256": "5e5a78fa93689e08f41e989598822f034ae701965d6b8fa8efe9e879fcbf0298"
+}

@@ -1,0 +1,25 @@
+{
+  "greedy": {
+    "samples": 5,
+    "finishReasons": {
+      "stop": 4,
+      "length": 1
+    },
+    "validWireObjects": 4
+  },
+  "recommended": {
+    "samples": 5,
+    "finishReasons": {
+      "stop": 5
+    },
+    "validWireObjects": 5
+  },
+  "recommended-json": {
+    "samples": 5,
+    "finishReasons": {
+      "stop": 5
+    },
+    "validWireObjects": 5
+  },
+  "verdict": "No promotion. One exposed sample per cell. Greedy reproduces the truncation. Recommended sampling gives a contradictory computation (24 remaining while its own arithmetic yields1). Recommended plus generic JSON repeats the computation question without answering. Generic JSON also fails to request the missing crop in one clarification."
+}

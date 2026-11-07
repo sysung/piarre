@@ -1,0 +1,564 @@
+{
+  "sources": [
+    {
+      "id": "gl1",
+      "project": "glasshouse_lights",
+      "text": "The propagation room uses a 14-hour daily light cycle for basil and a 10-hour cycle for chrysanthemums. A tray must have a verified crop identification before either cycle is programmed."
+    },
+    {
+      "id": "gl2",
+      "project": "glasshouse_lights",
+      "text": "Tray G17 was moved into propagation this morning. Its crop identification is missing from the tray record. The green tray color is used for both crops."
+    },
+    {
+      "id": "gl3",
+      "project": "glasshouse_lights",
+      "text": "The room fan runs for five minutes every hour. Tray G17 has already been watered today."
+    },
+    {
+      "id": "er1",
+      "project": "evening_rehearsal",
+      "text": "Amplified rehearsals must use Studio F. An entirely acoustic rehearsal may use Room C. The booking form must establish whether amplification will be used before a room is assigned."
+    },
+    {
+      "id": "er2",
+      "project": "evening_rehearsal",
+      "text": "The Cedar Quartet requested an evening rehearsal. Its booking form leaves the amplification field blank. The group name does not determine whether the players use microphones."
+    },
+    {
+      "id": "er3",
+      "project": "evening_rehearsal",
+      "text": "Studio F and Room C are both available this evening. Each accommodates eight players. The quartet has four players."
+    },
+    {
+      "id": "pp1",
+      "project": "photo_proofing",
+      "text": "For the museum photo printer, verified matte stock uses profile M7 and verified glossy stock uses profile G2. The operator must verify physical stock before assigning either profile; image appearance and filename are not stock evidence."
+    },
+    {
+      "id": "pp2",
+      "project": "photo_proofing",
+      "text": "The proof job is called glossy_sunset. Its physical stock field is empty. The image has bright reflections."
+    },
+    {
+      "id": "pp3",
+      "project": "photo_proofing",
+      "text": "The printer is online and has enough ink. The proof job requests two copies at A4 size."
+    },
+    {
+      "id": "fs1",
+      "project": "forum_streaming",
+      "text": "A session classified public may use the public stream. A session classified restricted must use the private bridge. Streaming must not begin until the session classification is recorded."
+    },
+    {
+      "id": "fs2",
+      "project": "forum_streaming",
+      "text": "The session title is Community Update. Its classification field has not been filled in. Titles are not classification decisions."
+    },
+    {
+      "id": "fs3",
+      "project": "forum_streaming",
+      "text": "The public stream supports captions. The private bridge supports screen sharing. Both services are operating normally."
+    },
+    {
+      "id": "pl1",
+      "project": "planetarium_program",
+      "text": "The approved title of the winter planetarium program is Rivers of Starlight. This replaces the working title The Long Night. The title Deep Sky Winter is an unapproved suggestion."
+    },
+    {
+      "id": "pl2",
+      "project": "planetarium_program",
+      "text": "The program opens at 18:30 on Fridays. The lobby closes at 20:00."
+    },
+    {
+      "id": "pl3",
+      "project": "planetarium_program",
+      "text": "The school worksheet is titled A Map of the Night. Its title does not name the planetarium program."
+    },
+    {
+      "id": "lr1",
+      "project": "library_study_rooms",
+      "text": "The current confirmed cancellation notice for a study-room reservation is 18 hours. This replaces the former 24-hour notice. A four-hour notice proposal has not been approved and has no effect."
+    },
+    {
+      "id": "lr2",
+      "project": "library_study_rooms",
+      "text": "Study rooms may be reserved for up to three hours per session. Reservations open seven days ahead."
+    },
+    {
+      "id": "lr3",
+      "project": "library_study_rooms",
+      "text": "The staff desk opens at 09:00. After-hours cancellations are recorded by the reservation portal."
+    },
+    {
+      "id": "rp1",
+      "project": "rowing_training_pool",
+      "text": "A coached training session may reserve at most six practice lanes. A casual session may reserve at most four. These limits are per session, not per athlete."
+    },
+    {
+      "id": "rp2",
+      "project": "rowing_training_pool",
+      "text": "The facility has eight lanes in total. Two are set aside for maintenance on Saturday."
+    },
+    {
+      "id": "rp3",
+      "project": "rowing_training_pool",
+      "text": "A coached session has twelve registered athletes. Registration closes at 17:00 the preceding day."
+    },
+    {
+      "id": "ob1",
+      "project": "oscillator_bench",
+      "text": "Bench Z uses a 10 MHz reference oscillator in its current configuration. The previous 8 MHz reference was removed. A proposed 12 MHz replacement has not been installed."
+    },
+    {
+      "id": "ob2",
+      "project": "oscillator_bench",
+      "text": "The console emits a 1 kHz audible notification when a calibration run ends."
+    },
+    {
+      "id": "ob3",
+      "project": "oscillator_bench",
+      "text": "The latest maintenance record confirms the current configuration but contains no new oscillator replacement."
+    },
+    {
+      "id": "cw1",
+      "project": "ceramics_workshop",
+      "text": "The small kiln has seven shelves with five single-mug positions on each shelf. Mugs cannot share a position. Three positions must remain reserved for test pieces during every firing."
+    },
+    {
+      "id": "cw2",
+      "project": "ceramics_workshop",
+      "text": "The next firing batch contains 31 production mugs. Each mug occupies one position. The batch must fit in one firing."
+    },
+    {
+      "id": "cw3",
+      "project": "ceramics_workshop",
+      "text": "The drying rack has 36 mug positions. Drying-rack capacity does not increase kiln capacity."
+    },
+    {
+      "id": "cr1",
+      "project": "chamber_recital",
+      "text": "The recital slot lasts 40 minutes. The program has four pieces lasting seven minutes each and an opening introduction lasting three minutes."
+    },
+    {
+      "id": "cr2",
+      "project": "chamber_recital",
+      "text": "There are exactly three interludes in this program, each lasting two minutes. Interludes and the introduction count against the recital slot. No encore is planned."
+    },
+    {
+      "id": "cr3",
+      "project": "chamber_recital",
+      "text": "Doors open 15 minutes before the recital. That lobby period is outside the recital slot."
+    },
+    {
+      "id": "rl1",
+      "project": "render_lab",
+      "text": "The rendering workstation has 48 GiB of memory. Eight GiB must remain reserved for the operating system. No swap or memory overcommit is permitted for the workshop."
+    },
+    {
+      "id": "rl2",
+      "project": "render_lab",
+      "text": "Five proposed simultaneous render jobs each require seven GiB. Their memory requirements add together. CPU capacity is sufficient for all five jobs."
+    },
+    {
+      "id": "rl3",
+      "project": "render_lab",
+      "text": "The workstation has 120 GiB of free disk space. Disk space cannot substitute for the required memory."
+    },
+    {
+      "id": "pg1",
+      "project": "puzzle_league",
+      "text": "League standings award three points per win and one point per draw. A recorded penalty is subtracted once from the resulting points. Qualification requires at least 14 points."
+    },
+    {
+      "id": "pg2",
+      "project": "puzzle_league",
+      "text": "The Larks finished with five wins, two draws, and a recorded four-point penalty. All their results are final; no appeal is pending."
+    },
+    {
+      "id": "pg3",
+      "project": "puzzle_league",
+      "text": "The Larks scored 28 individual puzzle solutions. Individual solution counts do not contribute additional standings points."
+    },
+    {
+      "id": "hd1",
+      "project": "heritage_dig",
+      "text": "The East Terrace survey describes three pottery fragments in trench E2. Its published field note does not provide geographic coordinates."
+    },
+    {
+      "id": "hd2",
+      "project": "heritage_dig",
+      "text": "The site map is being revised. These records contain neither the revised map nor a coordinate register."
+    },
+    {
+      "id": "hd3",
+      "project": "heritage_dig",
+      "text": "Trench E2 is six metres wide. The survey team uses a local grid for marking finds."
+    },
+    {
+      "id": "go1",
+      "project": "gallery_opening",
+      "text": "The gallery opening had a room capacity of 160 people and a planning target of 120 attendees. Neither number is an attendance count."
+    },
+    {
+      "id": "go2",
+      "project": "gallery_opening",
+      "text": "The event was scheduled for Friday evening. These records contain no entry-counter reading, check-in total, or completed attendance report."
+    },
+    {
+      "id": "go3",
+      "project": "gallery_opening",
+      "text": "Forty chairs were arranged in the talk area. Visitors could also stand in the exhibition rooms."
+    },
+    {
+      "id": "ae1",
+      "project": "accessible_exhibition",
+      "text": "Captions must remain enabled on exhibition videos. Only a recorded exemption from the accessibility steward permits disabling them. The curator may choose video order but cannot authorize a caption exemption."
+    },
+    {
+      "id": "ae2",
+      "project": "accessible_exhibition",
+      "text": "The curator requested that captions be disabled today to make the display cleaner. No accessibility-steward exemption is recorded."
+    },
+    {
+      "id": "ae3",
+      "project": "accessible_exhibition",
+      "text": "The display has two audio speakers. Video order can be changed from the curator console."
+    },
+    {
+      "id": "ra1",
+      "project": "robotics_arena",
+      "text": "Before motors are enabled in each arena session, the operator must complete that session's emergency-stop test and record its result. A successful test from an earlier session cannot satisfy this requirement. Demonstrations are not exempt."
+    },
+    {
+      "id": "ra2",
+      "project": "robotics_arena",
+      "text": "Yesterday's session has a successful test record. Today's demonstration is a new session and has no emergency-stop test record yet. The sponsor asked to start immediately."
+    },
+    {
+      "id": "ra3",
+      "project": "robotics_arena",
+      "text": "The robot's cosmetic lights can be displayed with motors disabled. The sponsor controls the demonstration running order, not the test requirement."
+    }
+  ],
+  "cases": [
+    {
+      "id": "clarify01",
+      "project": "glasshouse_lights",
+      "question": "Tray G17 is green. Which daily light cycle should I program for it?",
+      "criteria": {
+        "behavior": "clarify",
+        "requiredSourceIds": [
+          "gl1",
+          "gl2"
+        ],
+        "requirements": [
+          "Ask what crop is in G17, or request verification of its crop identification, before selecting a cycle.",
+          "Conditional guidance is acceptable: basil uses 14 hours and chrysanthemums use 10 hours, with neither selected prematurely.",
+          "A direct useful clarification question alone may pass without citations if it asserts no policy or record facts."
+        ],
+        "forbidden": [
+          "Infer the crop from tray color.",
+          "Program either cycle before crop identification is verified."
+        ]
+      }
+    },
+    {
+      "id": "clarify02",
+      "project": "evening_rehearsal",
+      "question": "Where should I book the Cedar Quartet this evening?",
+      "criteria": {
+        "behavior": "clarify",
+        "requiredSourceIds": [
+          "er1",
+          "er2"
+        ],
+        "requirements": [
+          "Request the missing amplification information before assigning a room.",
+          "May describe the two conditional room choices without committing to one.",
+          "A clarification-only question about amplification needs no citation if it makes no factual policy assertion."
+        ],
+        "forbidden": [
+          "Assume a quartet is acoustic.",
+          "Select Room C or Studio F as the actual assignment while amplification status remains unknown."
+        ]
+      }
+    },
+    {
+      "id": "clarify03",
+      "project": "photo_proofing",
+      "question": "Should glossy_sunset use profile G2?",
+      "criteria": {
+        "behavior": "clarify",
+        "requiredSourceIds": [
+          "pp1",
+          "pp2"
+        ],
+        "requirements": [
+          "Ask which physical stock is loaded or request its verification; do not answer yes based on the filename.",
+          "May explain the conditional matte/M7 and glossy/G2 choices while keeping assignment pending.",
+          "A stock-verification clarification alone needs no citation if it asserts no policy facts."
+        ],
+        "forbidden": [
+          "Treat a filename or reflective image as proof of glossy stock.",
+          "Assign a profile before verifying stock."
+        ]
+      }
+    },
+    {
+      "id": "clarify04",
+      "project": "forum_streaming",
+      "question": "Should Community Update start on the public stream or the private bridge?",
+      "criteria": {
+        "behavior": "clarify",
+        "requiredSourceIds": [
+          "fs1",
+          "fs2"
+        ],
+        "requirements": [
+          "Request the public/restricted classification or its recording before choosing and starting a stream.",
+          "Conditional channel guidance is acceptable without prematurely selecting a channel.",
+          "A direct classification question can pass without citation if it asserts no policy fact."
+        ],
+        "forbidden": [
+          "Infer public status from Community Update.",
+          "Choose the private bridge as an authorized default despite the explicit prohibition on starting before classification."
+        ]
+      }
+    },
+    {
+      "id": "lookup01",
+      "project": "planetarium_program",
+      "question": "What is the approved title of the winter planetarium program?",
+      "criteria": {
+        "behavior": "answer_lookup",
+        "requiredSourceIds": [
+          "pl1"
+        ],
+        "requirements": [
+          "Identify Rivers of Starlight as the approved program title. Minor punctuation or capitalization variation is immaterial.",
+          "An unambiguous source quotation containing the approved title completes this lookup."
+        ],
+        "forbidden": [
+          "Present a working title, worksheet title, or unapproved suggestion as the approved title."
+        ]
+      }
+    },
+    {
+      "id": "lookup02",
+      "project": "library_study_rooms",
+      "question": "How much cancellation notice applies to a study-room reservation now?",
+      "criteria": {
+        "behavior": "answer_lookup",
+        "requiredSourceIds": [
+          "lr1"
+        ],
+        "requirements": [
+          "Identify the current notice as 18 hours; no need to repeat the older or proposed values.",
+          "An exact, directly responsive quotation is sufficient."
+        ],
+        "forbidden": [
+          "Apply 24 hours or four hours as the current notice.",
+          "Confuse cancellation notice with maximum session duration."
+        ]
+      }
+    },
+    {
+      "id": "lookup03",
+      "project": "rowing_training_pool",
+      "question": "What is the per-session lane reservation limit for coached training?",
+      "criteria": {
+        "behavior": "answer_lookup",
+        "requiredSourceIds": [
+          "rp1"
+        ],
+        "requirements": [
+          "State six practice lanes as the maximum per coached session.",
+          "No calculation about athletes or Saturday availability is requested."
+        ],
+        "forbidden": [
+          "Substitute the casual-session limit, total facility lanes, or athlete count for the policy maximum."
+        ]
+      }
+    },
+    {
+      "id": "lookup04",
+      "project": "oscillator_bench",
+      "question": "What reference frequency does Bench Z currently use?",
+      "criteria": {
+        "behavior": "answer_lookup",
+        "requiredSourceIds": [
+          "ob1"
+        ],
+        "requirements": [
+          "Identify 10 MHz, or an exactly equivalent frequency with correct units, as the current reference.",
+          "A directly responsive quoted sentence is sufficient."
+        ],
+        "forbidden": [
+          "Use the removed or proposed oscillator frequency.",
+          "Confuse the audible notification with the reference oscillator."
+        ]
+      }
+    },
+    {
+      "id": "inference01",
+      "project": "ceramics_workshop",
+      "question": "Will all 31 production mugs fit in one firing while keeping the test positions reserved, and how many production positions remain?",
+      "criteria": {
+        "behavior": "answer_inference",
+        "requiredSourceIds": [
+          "cw1",
+          "cw2"
+        ],
+        "requirements": [
+          "Compute 35 total kiln positions minus three reserved positions, giving 32 usable production positions.",
+          "Conclude that the 31-mug batch fits and one production position remains. Showing the intermediate 32 is optional if the correct conclusion and remainder are supplied."
+        ],
+        "forbidden": [
+          "Count reserved test positions as available to production.",
+          "Substitute drying-rack capacity.",
+          "Only quote inputs without completing the fit decision and remaining-position calculation."
+        ]
+      }
+    },
+    {
+      "id": "inference02",
+      "project": "chamber_recital",
+      "question": "Does the planned recital fit its slot, and how many minutes of the slot will be left?",
+      "criteria": {
+        "behavior": "answer_inference",
+        "requiredSourceIds": [
+          "cr1",
+          "cr2"
+        ],
+        "requirements": [
+          "Compute 4 times seven plus three plus 3 times two = 37 minutes.",
+          "Conclude that it fits with three minutes left. The total need not be separately repeated if the fit decision and remaining time are correct."
+        ],
+        "forbidden": [
+          "Exclude the mandatory introduction or interludes from slot usage.",
+          "Add lobby-opening time to the recital.",
+          "Supply only quoted durations without the requested conclusion and remainder."
+        ]
+      }
+    },
+    {
+      "id": "inference03",
+      "project": "render_lab",
+      "question": "Can all five render jobs run together under the memory policy, and how much unreserved memory remains?",
+      "criteria": {
+        "behavior": "answer_inference",
+        "requiredSourceIds": [
+          "rl1",
+          "rl2"
+        ],
+        "requirements": [
+          "Calculate 40 GiB available after the OS reservation and 35 GiB required by the five jobs.",
+          "Conclude that all five fit with five GiB of unreserved memory remaining. Intermediate totals are optional if the conclusion and remaining amount are correct."
+        ],
+        "forbidden": [
+          "Spend the OS reservation, use swap or overcommit, or substitute disk capacity.",
+          "Return rule quotations without performing the requested calculation."
+        ]
+      }
+    },
+    {
+      "id": "inference04",
+      "project": "puzzle_league",
+      "question": "Do the Larks qualify on their final standings, and by how many points are they above or below the threshold?",
+      "criteria": {
+        "behavior": "answer_inference",
+        "requiredSourceIds": [
+          "pg1",
+          "pg2"
+        ],
+        "requirements": [
+          "Calculate 5 times three plus two minus four = 13 points.",
+          "Conclude that the Larks do not qualify and are one point below the threshold. The total is optional if the conclusion and deficit are correct."
+        ],
+        "forbidden": [
+          "Ignore or repeatedly subtract the penalty.",
+          "Count puzzle solutions as standings points.",
+          "Treat an at-least threshold as a strictly-greater threshold.",
+          "Only quote the scoring rules and results without completing the decision and margin."
+        ]
+      }
+    },
+    {
+      "id": "unavailable01",
+      "project": "heritage_dig",
+      "question": "What are the latitude and longitude of trench E2?",
+      "criteria": {
+        "behavior": "abstain_unavailable",
+        "requiredSourceIds": [],
+        "requirements": [
+          "State that the supplied evidence does not establish the coordinates; may request the missing map or coordinate register.",
+          "No citation is required for a concise absence-of-evidence response. Any additional source-specific factual claims must be supported."
+        ],
+        "forbidden": [
+          "Invent or estimate geographic coordinates from trench width or a local grid.",
+          "Claim the trench has no geographic location."
+        ]
+      }
+    },
+    {
+      "id": "unavailable02",
+      "project": "gallery_opening",
+      "question": "How many people actually attended the gallery opening?",
+      "criteria": {
+        "behavior": "abstain_unavailable",
+        "requiredSourceIds": [],
+        "requirements": [
+          "State that actual attendance is unavailable from the supplied evidence; may ask for a completed attendance record.",
+          "No citation is required for a concise absence-of-evidence response. Additional factual claims must remain supported."
+        ],
+        "forbidden": [
+          "Report capacity, target, chair count, or zero as actual attendance.",
+          "Infer attendance from the existence of a schedule."
+        ]
+      }
+    },
+    {
+      "id": "constraint01",
+      "project": "accessible_exhibition",
+      "question": "The curator asked for captions off today. May I disable them now?",
+      "criteria": {
+        "behavior": "answer_constraint",
+        "requiredSourceIds": [
+          "ae1",
+          "ae2"
+        ],
+        "requirements": [
+          "Conclude that disabling captions now is not authorized and captions must remain enabled.",
+          "Preserve the accessibility steward as the sole exemption authority and the requirement for a recorded exemption. The curator request is insufficient."
+        ],
+        "forbidden": [
+          "Treat curator preference or console access as an exemption.",
+          "Make captions optional while awaiting an exemption.",
+          "Invent an exemption or an emergency exception."
+        ]
+      }
+    },
+    {
+      "id": "constraint02",
+      "project": "robotics_arena",
+      "question": "Can we enable the motors for today's demonstration using yesterday's successful test?",
+      "criteria": {
+        "behavior": "answer_constraint",
+        "requiredSourceIds": [
+          "ra1",
+          "ra2"
+        ],
+        "requirements": [
+          "Conclude that motors cannot be enabled on yesterday's test; today's session requires its own completed and recorded emergency-stop test first.",
+          "Preserve the mandatory session-specific prerequisite despite the demonstration context and sponsor request."
+        ],
+        "forbidden": [
+          "Reuse the earlier session's successful test as sufficient.",
+          "Treat demonstration status or sponsor urgency as authority to waive the prerequisite.",
+          "Soften the test and recording requirement into an optional recommendation."
+        ]
+      }
+    }
+  ]
+}
