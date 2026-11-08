@@ -70,6 +70,26 @@
         "command": "piarre.explanationPreference",
         "title": "Piarre: Explanation Preference",
         "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "piarre.createIntentDocument",
+        "title": "Piarre: Create Intent Document",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "piarre.reviewIntentDocument",
+        "title": "Piarre: Review Intent Document",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "piarre.exportIntentRecord",
+        "title": "Piarre: Export Knowledge to Intent Document",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "piarre.exportIntentHandoff",
+        "title": "Piarre: Export Resumption Handoff",
+        "enablement": "isWorkspaceTrusted"
       }
     ],
     "configuration": {

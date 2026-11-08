@@ -7,11 +7,13 @@ import { applyExecutionEvent, ownsExecutionLease, type ExecutionAction, type Exe
 export { currentExecutionPlan, planFreshness, executionDependenciesReady, hasUncertainProvider, ownsExecutionLease } from "./execution.js";
 export type { ExecutionAction, ExecutionEvent, ExecutionPlan, ExecutionPlanDraft, ExecutionRun, ExecutionResult, ExecutionCheck, CheckEvidence } from "./execution.js";
 import { applyKnowledgeEvent, knowledgeEvent, type KnowledgeAction, type KnowledgeEvent, type RecordedKnowledge, type KnowledgeImpact } from "./knowledge.js";
-export { currentKnowledge, knowledgeConflicts } from "./knowledge.js";
+export { currentKnowledge, knowledgeConflicts, latestIntentDocument } from "./knowledge.js";
 export type { RecordedKnowledge, KnowledgeImpact, KnowledgeAction, KnowledgeEvent } from "./knowledge.js";
 export { parseProposalOutput, parseProjectEvent, validateProjectCommand } from "./contracts.js";
 export { parseSubmittedStatement, parseInterpretationOutput, parseKnowledgeCorrection } from "./context.js";
 export type { SubmittedStatement, KnowledgeSource, SourcedText, Interpretation, KnowledgeVersion, KnowledgeEntry, KnowledgeCorrection } from "./context.js";
+export { parseIntentMarkdown, renderIntentMarkdown, intentDocumentHash, intentDocumentPath, parseReviewedIntentDocument } from "./intent-document.js";
+export type { IntentRecord, ReviewedIntentDocument } from "./intent-document.js";
 import { applyConversationEvent, conversationEvent, type ConversationAction, type ConversationEvent, type ConversationTurn } from "./conversation.js";
 export type { ConversationAction, ConversationEvent, ConversationTurn, ConversationSource } from "./conversation.js";
 
@@ -161,6 +163,7 @@ export function replay(events: readonly ProjectEvent[]): ProjectSnapshot {
       case "knowledge-observed":
       case "knowledge-confirmed":
       case "knowledge-corrected":
+      case "intent-document-adopted":
         snapshot = applyKnowledgeEvent(snapshot, event);
         break;
       case "conversation-started":
@@ -263,6 +266,7 @@ export function decideProjectEvent(command: ProjectCommand): ProjectEvent {
     case "observe-knowledge":
     case "confirm-knowledge":
     case "correct-knowledge":
+    case "adopt-intent-document":
       return knowledgeEvent(command.action, command.commandId);
     case "begin-conversation":
     case "record-conversation-reply":

@@ -1,4 +1,5 @@
 import type { ProjectSnapshot } from "./index.js";
+import { parseReviewedIntentDocument, type ReviewedIntentDocument } from "./intent-document.js";
 import type { RecordReference } from "./inspection.js";
 
 export interface SubmittedStatement {
@@ -10,7 +11,8 @@ export interface SubmittedStatement {
 
 export type KnowledgeSource =
   | { readonly kind: "submitted-statement"; readonly submitted: SubmittedStatement }
-  | { readonly kind: "project-record"; readonly reference: RecordReference };
+  | { readonly kind: "project-record"; readonly reference: RecordReference }
+  | ({ readonly kind: "intent-document"; readonly projectId: ProjectSnapshot["projectId"]; readonly adoptionCommandId: string } & ReviewedIntentDocument);
 
 export interface SourcedText {
   readonly text: string;
@@ -73,8 +75,14 @@ function selectSources(value: unknown, available: readonly KnowledgeSource[], pr
     if (typeof index !== "number" || !Number.isSafeInteger(index) || index < 0) invalid();
     const source = available[index];
     if (!source) invalid();
-    const sourceProject = source.kind === "submitted-statement" ? source.submitted.projectId : source.reference.projectId;
-    if (sourceProject !== projectId) invalid();
+    if (source.kind === "intent-document") {
+      parseReviewedIntentDocument({ path: source.path, sha256: source.sha256, markdown: source.markdown });
+      text(source.adoptionCommandId);
+      if (source.projectId !== projectId) invalid();
+    } else {
+      const sourceProject = source.kind === "submitted-statement" ? source.submitted.projectId : source.reference.projectId;
+      if (sourceProject !== projectId) invalid();
+    }
     return source;
   });
   const first = selected[0];

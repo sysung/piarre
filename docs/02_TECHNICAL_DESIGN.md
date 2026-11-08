@@ -14,6 +14,10 @@ The domain includes Project, Goal, Requirement, Plan, Task, Worker, Run, Approva
 
 Human-readable knowledge and decision files are possible, but their authority, import, revision, and conflict rules must be explicit. Do not create competing authoritative copies. Missing or invalid files must remain distinguishable from empty knowledge.
 
+The reviewed-intent prototype uses editable `docs/project-intent/<id>.md` proposals and exact-byte native review. An adoption event atomically records the accepted Markdown, source digest, prior knowledge revision and review command with the corresponding knowledge version. A hash-identified Markdown snapshot under `.piarre/accepted` is checked before portable handoff generation. Saving, committing, metadata labels and editing a handoff cannot grant adoption or execution authority. Working changes remain pending; missing accepted snapshots are unavailable, not silently replaced. Original authorship and source claims remain separate from human adoption.
+
+The portable handoff is a derived snapshot at a project revision, with accepted versions, pending proposals, disputes, explicitly linked stale work and gaps. It is not live state or independent verification. Legacy record export preserves identity and history without overwriting files; adopting new provenance can require review of plans bound to older knowledge revisions. Pilot instructions and the unmeasured human-value gate are in [the intent trial](../test/intent-pilot/README.md).
+
 ## UI and interaction
 
 The agent overview, work controls, supporting discussion, and inspection reference the same durable objects. Proposed, applied, running, unknown, failed, stale, and accepted states must be distinguishable without reading logs. Deferred tasks remain discoverable. Priority and agenda disposition are separate from execution state.

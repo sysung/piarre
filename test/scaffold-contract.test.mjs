@@ -51,6 +51,7 @@ test("the extension exposes the Piarre: Open activation seam", async () => {
     { command: "piarre.endSession", title: "Piarre: End Session (Optional Reflection)", enablement: "isWorkspaceTrusted" },
     { command: "piarre.reviewReflection", title: "Piarre: Review Reflection", enablement: "isWorkspaceTrusted" },
     { command: "piarre.explanationPreference", title: "Piarre: Explanation Preference", enablement: "isWorkspaceTrusted" },
+    ...[["createIntentDocument", "Create Intent Document"], ["reviewIntentDocument", "Review Intent Document"], ["exportIntentRecord", "Export Knowledge to Intent Document"], ["exportIntentHandoff", "Export Resumption Handoff"]].map(([command, title]) => ({ command: `piarre.${command}`, title: `Piarre: ${title}`, enablement: "isWorkspaceTrusted" })),
   ]);
 });
 
@@ -65,12 +66,12 @@ test("the editor toolchain stays aligned to the pinned VS Code version", async (
   assert.equal(rootManifest.devDependencies?.["@types/vscode"], vscodeVersion);
 });
 
-test("docs contains only the four lasting project documents", async () => {
+test("docs contains lasting project documents and optional reviewed intent records", async () => {
   const entries = await readdir(new URL("../docs/", import.meta.url));
-  assert.deepEqual(entries.sort(), [
+  assert.deepEqual(entries.filter(entry => entry !== "project-intent").sort(), [
     "00_README.md",
     "01_PRODUCT_PRD.md",
     "02_TECHNICAL_DESIGN.md",
     "03_USER_DESIGN_PRINCIPLES.md",
-  ], "Keep lasting content in the four docs files. Put temporary plans, evidence, and history in .artifacts; track work in GitHub issues.");
+  ], "Keep lasting content in the four docs files; project-intent is the explicit user-editable record directory. Put temporary plans, evidence, and history in .artifacts; track work in GitHub issues.");
 });

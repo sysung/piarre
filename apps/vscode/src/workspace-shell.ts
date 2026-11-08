@@ -38,6 +38,8 @@ function showGoal() {
   title.textContent = 'Plan a task'; step.textContent = 'Step 1 of 2 · Goal';
 }
 document.getElementById('inspection').addEventListener('click', (event) => {
+  const intent = event.target instanceof Element ? event.target.closest('[data-intent-action]') : null;
+  if (intent) api.postMessage({kind:'intent-command',action:intent.dataset.intentAction});
   const knowledge = event.target instanceof Element ? event.target.closest('[data-knowledge-action]') : null;
   if (knowledge) api.postMessage(knowledge.dataset.knowledgeId ? {kind:knowledge.dataset.knowledgeAction,knowledgeId:knowledge.dataset.knowledgeId} : {kind:knowledge.dataset.knowledgeAction});
   const card = event.target instanceof Element ? event.target.closest('[data-open-goal]') : null;

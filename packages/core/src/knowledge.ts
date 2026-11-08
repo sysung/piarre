@@ -1,4 +1,5 @@
-import { parseSubmittedStatement, type KnowledgeEntry, type KnowledgeVersion, type SubmittedStatement } from "./context.js";
+import { parseSubmittedStatement, type KnowledgeEntry, type KnowledgeSource, type KnowledgeVersion, type SubmittedStatement } from "./context.js";
+import { parseIntentMarkdown, parseReviewedIntentDocument, type ReviewedIntentDocument } from "./intent-document.js";
 import type { ProjectSnapshot } from "./index.js";
 
 export interface RecordedKnowledge extends KnowledgeEntry {
@@ -17,6 +18,7 @@ export interface KnowledgeImpact {
 }
 
 export type KnowledgeAction =
+  | { readonly kind: "adopt-intent-document"; readonly document: ReviewedIntentDocument; readonly expectedKnowledgeRevision: number | null }
   | { readonly kind: "observe-knowledge"; readonly topic: string; readonly category: "business" | "decision";
       readonly submitted: SubmittedStatement; readonly affectedTaskIds: readonly string[] }
   | { readonly kind: "confirm-knowledge"; readonly target: KnowledgeVersion }
@@ -24,6 +26,7 @@ export type KnowledgeAction =
       readonly affectedTaskIds: readonly string[] };
 
 export type KnowledgeEvent =
+  | { readonly kind: "intent-document-adopted"; readonly document: ReviewedIntentDocument; readonly previousKnowledgeRevision: number | null; readonly confirmationCommandId: string }
   | { readonly kind: "knowledge-observed"; readonly knowledgeId: string; readonly topic: string; readonly category: "business" | "decision";
       readonly submitted: SubmittedStatement; readonly affectedTaskIds: readonly string[] }
   | { readonly kind: "knowledge-confirmed"; readonly target: KnowledgeVersion; readonly confirmationCommandId: string }
@@ -38,6 +41,11 @@ function taskIds(value: unknown): readonly string[] {
   if (!Array.isArray(value)) invalid();
   const ids = value.map(text); if (new Set(ids).size !== ids.length) invalid(); return ids;
 }
+function knowledgeRevision(value: unknown): number | null {
+  if (value === null) return null;
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1) invalid();
+  return value;
+}
 function target(value: unknown): KnowledgeVersion {
   if (!object(value) || !keys(value, ["projectId", "knowledgeId", "recordedAtRevision"]) || !("projectId" in value) || !("knowledgeId" in value) || !("recordedAtRevision" in value) ||
     typeof value.recordedAtRevision !== "number" || !Number.isSafeInteger(value.recordedAtRevision) || value.recordedAtRevision < 1) invalid();
@@ -49,6 +57,10 @@ function observedFields(value: object) {
 }
 export function parseKnowledgeAction(value: unknown): KnowledgeAction | undefined {
   if (!object(value) || !("kind" in value)) return undefined;
+  if (value.kind === "adopt-intent-document") {
+    if (!keys(value, ["kind", "document", "expectedKnowledgeRevision"]) || !("document" in value) || !("expectedKnowledgeRevision" in value)) invalid();
+    return { kind: value.kind, document: parseReviewedIntentDocument(value.document), expectedKnowledgeRevision: knowledgeRevision(value.expectedKnowledgeRevision) };
+  }
   if (value.kind === "observe-knowledge") {
     if (!keys(value, ["kind", "topic", "category", "submitted", "affectedTaskIds"])) invalid();
     const parsed = observedFields(value);
@@ -67,6 +79,10 @@ export function parseKnowledgeAction(value: unknown): KnowledgeAction | undefine
 }
 export function parseKnowledgeEvent(value: unknown): KnowledgeEvent | undefined {
   if (!object(value) || !("kind" in value)) return undefined;
+  if (value.kind === "intent-document-adopted") {
+    if (!keys(value, ["kind", "document", "previousKnowledgeRevision", "confirmationCommandId"]) || !("document" in value) || !("previousKnowledgeRevision" in value) || !("confirmationCommandId" in value)) invalid();
+    return { kind: value.kind, document: parseReviewedIntentDocument(value.document), previousKnowledgeRevision: knowledgeRevision(value.previousKnowledgeRevision), confirmationCommandId: text(value.confirmationCommandId) };
+  }
   if (value.kind === "knowledge-observed") {
     if (!keys(value, ["kind", "knowledgeId", "topic", "category", "submitted", "affectedTaskIds"]) || !("knowledgeId" in value)) invalid();
     const parsed = observedFields(value);
@@ -86,10 +102,17 @@ export function parseKnowledgeEvent(value: unknown): KnowledgeEvent | undefined 
 export function currentKnowledge(project: ProjectSnapshot): readonly RecordedKnowledge[] {
   return [...new Map(project.knowledge.map(entry => [entry.knowledgeId, entry])).values()];
 }
+export function latestIntentDocument(entry: KnowledgeEntry): Extract<KnowledgeSource, { readonly kind: "intent-document" }> | undefined {
+  return [...entry.content.sources].reverse().find(source => source.kind === "intent-document");
+}
 export function knowledgeConflicts(project: ProjectSnapshot, entry: RecordedKnowledge): readonly RecordedKnowledge[] {
   const normalize = (value: string) => value.trim().toLocaleLowerCase().replace(/\s+/g, " ");
+  const statement = (knowledge: RecordedKnowledge): string => {
+    const document = latestIntentDocument(knowledge);
+    return document ? parseIntentMarkdown(document.markdown).statement : knowledge.content.text;
+  };
   return currentKnowledge(project).filter(other => other.knowledgeId !== entry.knowledgeId && other.standing.kind === "confirmed" && entry.standing.kind === "confirmed" &&
-    other.category === entry.category && normalize(other.topic) === normalize(entry.topic) && normalize(other.content.text) !== normalize(entry.content.text));
+    other.category === entry.category && normalize(other.topic) === normalize(entry.topic) && normalize(statement(other)) !== normalize(statement(entry)));
 }
 export function applyKnowledgeEvent(project: ProjectSnapshot, event: KnowledgeEvent): ProjectSnapshot {
   const revision = project.revision + 1;
@@ -100,7 +123,25 @@ export function applyKnowledgeEvent(project: ProjectSnapshot, event: KnowledgeEv
   const validateTasks = (ids: readonly string[]) => { if (ids.some(id => !project.tasks.some(task => task.taskId === id))) invalid(); };
   let entry: RecordedKnowledge;
   let impacts = project.knowledgeImpacts;
-  if (event.kind === "knowledge-observed") {
+  if (event.kind === "intent-document-adopted") {
+    const document = parseReviewedIntentDocument(event.document);
+    const record = parseIntentMarkdown(document.markdown);
+    const previous = currentKnowledge(project).find(item => item.knowledgeId === record.id);
+    if ((previous?.recordedAtRevision ?? null) !== event.previousKnowledgeRevision) invalid();
+    validateTasks(record.linkedTaskIds.filter(id => !previous?.affectedTaskIds.includes(id)));
+    const previousDocument = previous && latestIntentDocument(previous);
+    if (previousDocument?.sha256 === document.sha256 && previousDocument.markdown === document.markdown) invalid();
+    const affectedTaskIds = [...new Set([...(previous?.affectedTaskIds ?? []), ...record.linkedTaskIds])];
+    const source: KnowledgeSource = { kind: "intent-document", ...document, projectId: project.projectId, adoptionCommandId: event.confirmationCommandId };
+    entry = { projectId: project.projectId, knowledgeId: record.id, recordedAtRevision: revision,
+      topic: record.topic, category: record.category, affectedTaskIds, supersedes: previous?.recordedAtRevision ?? null,
+      standing: { kind: "confirmed", confirmationCommandId: event.confirmationCommandId },
+      content: { text: document.markdown, sources: previous ? [...previous.content.sources, source] : [source] } };
+    const unchangedLegacy = previous && !previousDocument && record.statement === previous.content.text &&
+      record.topic === previous.topic && record.category === previous.category &&
+      record.rationale === "Unknown" && record.scope === "Unknown" && record.openQuestions === "Unknown";
+    if (previous?.standing.kind === "confirmed" && !unchangedLegacy) impacts = correctionImpacts(project, previous, affectedTaskIds, revision);
+  } else if (event.kind === "knowledge-observed") {
     validateSubmitted(event.submitted); validateTasks(event.affectedTaskIds);
     if (project.knowledge.some(item => item.knowledgeId === event.knowledgeId)) invalid();
     entry = { projectId: project.projectId, knowledgeId: event.knowledgeId, recordedAtRevision: revision,
@@ -116,20 +157,24 @@ export function applyKnowledgeEvent(project: ProjectSnapshot, event: KnowledgeEv
         standing: { kind: "confirmed", confirmationCommandId: event.confirmationCommandId } };
     } else {
       validateSubmitted(event.submitted); validateTasks(event.affectedTaskIds.filter(id => !previous.affectedTaskIds.includes(id)));
-      if (previous.standing.kind !== "confirmed") invalid();
+      if (previous.standing.kind !== "confirmed" || latestIntentDocument(previous)) invalid();
       const affectedTaskIds = [...new Set([...previous.affectedTaskIds, ...event.affectedTaskIds])];
       entry = { ...previous, recordedAtRevision: revision, supersedes: previous.recordedAtRevision,
         affectedTaskIds, content: { text: event.submitted.originalStatement, sources: [{ kind: "submitted-statement", submitted: event.submitted }] },
         standing: { kind: "confirmed", confirmationCommandId: event.confirmationCommandId } };
-      impacts = [...project.knowledgeImpacts.filter(impact => impact.knowledgeId !== previous.knowledgeId),
-        ...affectedTaskIds.map((taskId): KnowledgeImpact => ({ kind: "stale", taskId, knowledgeId: previous.knowledgeId,
-          fromRevision: project.knowledgeImpacts.find(impact => impact.taskId === taskId && impact.knowledgeId === previous.knowledgeId)?.fromRevision ?? previous.recordedAtRevision, toRevision: revision }))];
+      impacts = correctionImpacts(project, previous, affectedTaskIds, revision);
     }
   }
   return { ...project, revision, knowledge: [...project.knowledge, entry], knowledgeImpacts: impacts };
 }
+function correctionImpacts(project: ProjectSnapshot, previous: RecordedKnowledge, affectedTaskIds: readonly string[], revision: number): readonly KnowledgeImpact[] {
+  return [...project.knowledgeImpacts.filter(impact => impact.knowledgeId !== previous.knowledgeId),
+    ...affectedTaskIds.map((taskId): KnowledgeImpact => ({ kind: "stale", taskId, knowledgeId: previous.knowledgeId,
+      fromRevision: project.knowledgeImpacts.find(impact => impact.taskId === taskId && impact.knowledgeId === previous.knowledgeId)?.fromRevision ?? previous.recordedAtRevision, toRevision: revision }))];
+}
 export function knowledgeEvent(action: KnowledgeAction, commandId: string): KnowledgeEvent {
   switch (action.kind) {
+    case "adopt-intent-document": return { kind: "intent-document-adopted", document: action.document, previousKnowledgeRevision: action.expectedKnowledgeRevision, confirmationCommandId: commandId };
     case "observe-knowledge": return { kind: "knowledge-observed", knowledgeId: `knowledge:${commandId}`, topic: action.topic,
       category: action.category, submitted: action.submitted, affectedTaskIds: action.affectedTaskIds };
     case "confirm-knowledge": return { kind: "knowledge-confirmed", target: action.target, confirmationCommandId: commandId };

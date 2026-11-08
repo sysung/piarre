@@ -1,4 +1,5 @@
 import { registerDiagnosticCommands } from "./diagnostic-commands.js";
+import { registerIntentCommands } from "./intent-commands.js";
 import { parseProviderConfiguration } from "../../../packages/core/src/inspection.js";
 import type { SuppliedSource } from "../../../packages/core/src/supplied-source.js";
 import { selectSharedFiles } from "./source-sharing.js";
@@ -210,6 +211,7 @@ export function activate(context: vscode.ExtensionContext): void {
   };
   context.subscriptions.push(
     registerDiagnosticCommands(context, () => repository),
+    registerIntentCommands(() => repository, snapshot => { view.update(snapshot); }),
     view,
     output,
     stopWork,

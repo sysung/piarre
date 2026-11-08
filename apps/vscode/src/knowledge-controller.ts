@@ -5,6 +5,7 @@ import { lookupProjectSources, type RetrievalResult } from "./project-retrieval.
 import * as vscode from "vscode";
 import { randomUUID } from "node:crypto";
 import { currentKnowledge, knowledgeConflicts, type KnowledgeAction, type ProjectSnapshot, type RecordedKnowledge } from "../../../packages/core/src/index.js";
+import { latestIntentDocument } from "../../../packages/core/src/knowledge.js";
 import type { SqliteProjectRepository } from "./sqlite-project-repository.js";
 
 export class KnowledgeController {
@@ -68,6 +69,10 @@ export class KnowledgeController {
   }
 
   private async review(entry: RecordedKnowledge, correcting: boolean): Promise<void> {
+    if (latestIntentDocument(entry)) {
+      await vscode.commands.executeCommand("piarre.reviewIntentDocument", entry.knowledgeId);
+      return;
+    }
     if (correcting !== (entry.standing.kind === "confirmed")) return;
     const text = correcting ? await vscode.window.showInputBox({ prompt: "Correct the confirmed record. Original wording and history will be retained.", value: entry.content.text, ignoreFocusOut: true,
       validateInput: value => value.trim() && value.length <= 10_000 ? undefined : "Enter 1 to 10,000 characters." }) : entry.content.text;
