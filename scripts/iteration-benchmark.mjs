@@ -4,7 +4,8 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { isDeepStrictEqual } from "node:util";
 import path from "node:path";
-import { build } from "esbuild";
+import { stressCases } from "../test/iteration-benchmark/stress-cases.mjs";
+import { coverage, dimensions } from "../test/iteration-benchmark/metrics.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
 const sha = value => createHash("sha256").update(value).digest("hex");
@@ -104,6 +105,7 @@ function schedule(cases, phase) {
 const git = (directory, ...args) => execFileSync("git", ["-C", directory, ...args], { encoding: "utf8" }).trim();
 
 async function bundle(directory, output) {
+  const { build } = await import("esbuild");
   const sources = {
     "apps/vscode/src/conversation-controller.ts": ["ConversationController"],
     "apps/vscode/src/conversation-context.ts": ["resolveConversationContext"],
@@ -121,7 +123,7 @@ async function bundle(directory, output) {
 }
 
 async function run(cases, [phase, base, candidate, output, code]) {
-  assert(["probe", "paired"].includes(phase), "Expected probe or paired");
+  assert(["probe", "paired", "stress"].includes(phase), "Expected probe, paired or stress");
   assert([base, candidate, output, code].every(value => typeof value === "string" && path.isAbsolute(value)), "Use absolute paths");
   assert.equal(git(base, "rev-parse", "HEAD"), baseline);
   assert.equal(git(base, "status", "--porcelain"), "");
@@ -131,9 +133,9 @@ async function run(cases, [phase, base, candidate, output, code]) {
   const jobs = schedule(cases, phase);
   const attempts = jobs.reduce((sum, job) => sum + (job.scenario.kind === "control" ? 0 :
     job.condition === "retained" ? job.scenario.turns.length : 1), 0);
-  assert.equal(attempts, phase === "probe" ? 3 : 112);
+  assert.equal(attempts, phase === "probe" ? 3 : phase === "stress" ? 40 : 112);
   const revisions = { B0: baseline };
-  if (phase === "paired") {
+  if (phase !== "probe") {
     assert.equal(git(candidate, "status", "--porcelain"), "");
     revisions.C1 = git(candidate, "rev-parse", "HEAD");
     assert.notEqual(revisions.C1, baseline);
@@ -151,7 +153,8 @@ async function run(cases, [phase, base, candidate, output, code]) {
   }
   const sealed = jobs.map(({ scenario, ...job }) => {
     const { turns, ...meta } = scenario;
-    return { ...job, scenario: { ...meta, ...(turns && { turns: turns.map(({ facts, question }) => ({ facts, question })) }) } };
+    return { ...job, scenario: { ...meta, ...(turns && { turns: turns.map(({ facts, question, selectedTopics }) =>
+      ({ facts, question, ...(selectedTopics && { selectedTopics }) })) }) } };
   });
   const config = { schemaVersion: 1, phase, revisions, corpusSha256: sha(JSON.stringify(cases)), jobs: sealed, attempts,
     model: { ...installed, modelRunner, temperature: 0, maxTokens: 1024, maxPromptBytes: 6000, timeoutMs: 60_000 },
@@ -213,8 +216,9 @@ function score(cases, [directory, destination]) {
   });
   const gains = families.filter(item => item.B0.every(value => value === false) && item.C1.every(value => value === true)).length;
   const losses = families.filter(item => item.B0.some((value, index) => value === true && item.C1[index] === false)).length;
-  const scheduledResults = manifest.jobs.reduce((total, job) => total + (job.condition === "retained" ? job.scenario.turns?.length ?? 1 : 1), 0);
-  const complete = results.length === scheduledResults && rows.at(-1)?.type === "end";
+  const observed = coverage(manifest.jobs, results);
+  const scheduledResults = observed.scheduled;
+  const complete = observed.missing.length === 0 && rows.at(-1)?.type === "end" && !rows.some(row => row.type === "error");
   const critical = results.some(row => row.noEffects === false ||
     row.issues.some(issue => ["false completion", "control failed"].includes(issue)));
   const latency = Object.fromEntries(["B0", "C1"].map(arm => {
@@ -229,17 +233,34 @@ function score(cases, [directory, destination]) {
     : losses > 0 ? "regressed" : "no clear change";
   write(destination, { schemaVersion: 1, verdict, complete, scheduledResults, observedResults: results.length,
     gains, losses, critical, latency, families, errors: rows.filter(row => row.type === "error"),
+    missingResults: observed.missing, dimensions: dimensions(results, cases),
     results: results.map(result => ({ id: result.id, arm: result.arm, repetition: result.repetition,
       condition: result.condition, index: result.index, status: result.status, issues: result.issues })) });
 }
 
 const [command, ...args] = process.argv.slice(2);
-const cases = corpus();
+const stress = command === "validate-stress" || command === "freeze-stress" ||
+  command === "run" && args[0] === "stress" ||
+  command === "score" && read(path.join(args[0], "manifest.json")).phase === "stress";
+const cases = stress ? stressCases : corpus();
 verifyScorer();
-if (command === "validate") {
+if (command === "validate-stress") {
+  assert.equal(args.length, 0);
+  const jobs = schedule(cases, "stress");
+  const requestCap = jobs.reduce((sum, job) => sum + (job.scenario.kind === "control" ? 0 :
+    job.condition === "retained" ? job.scenario.turns.length : 1), 0);
+  assert.equal(requestCap, 40);
+  const expectedResults = coverage(jobs, []).scheduled;
+  console.log(JSON.stringify({ cases: cases.length, corpusSha256: sha(JSON.stringify(cases)),
+    requestCap, expectedResults, scorerSelfCheck: "passed", hostBundle: "not run", inferenceRequests: 0 }));
+} else if (command === "freeze-stress") {
+  assert.equal(args.length, 1);
+  write(args[0], { schemaVersion: 1, split: "synthetic regression", corpusSha256: sha(JSON.stringify(cases)),
+    cases, inferenceRequests: 0, independentHoldout: false });
+} else if (command === "validate") {
   assert.equal(args.length, 0);
   await bundle(root);
   console.log(JSON.stringify({ schemaVersion: 1, cases: cases.length, corpusSha256: sha(JSON.stringify(cases)), scorerSelfCheck: "passed", hostBundle: "passed" }));
 } else if (command === "run") await run(cases, args);
 else if (command === "score") score(cases, args);
-else throw new Error("Usage: iteration-benchmark.mjs validate | run <probe|paired> <B0> <C1> <output-dir> <VS-Code-executable> | score <output-dir> <score.json>");
+else throw new Error("Usage: iteration-benchmark.mjs validate | validate-stress | freeze-stress <new-file> | run <probe|paired|stress> <B0> <C1> <output-dir> <VS-Code-executable> | score <output-dir> <score.json>");

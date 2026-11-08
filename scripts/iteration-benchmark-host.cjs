@@ -93,7 +93,12 @@ module.exports = ({ ConversationController, resolveConversationContext, SqlitePr
         }
         const snapshot = repository.read();
         const knowledge = currentKnowledge(snapshot).filter(entry => entry.standing.kind === "confirmed");
-        const sources = resolveConversationContext(snapshot, knowledge.map(entry => entry.knowledgeId));
+        // Explicit reviewed selections exercise insufficient evidence without hiding
+        // the omitted records from the project itself. This is not a ranking algorithm.
+        const selectedKnowledge = turn.selectedTopics
+          ? knowledge.filter(entry => turn.selectedTopics.includes(entry.topic)) : knowledge;
+        if (turn.selectedTopics) assert.equal(selectedKnowledge.length, turn.selectedTopics.length);
+        const sources = resolveConversationContext(snapshot, selectedKnowledge.map(entry => entry.knowledgeId));
         controller = new ConversationController(repository, (_project, next) => { state = next; }, route => {
           assert.equal(route, "docker-model-runner");
           const client = new DockerModelRunnerConversationClient(configuration);
@@ -109,7 +114,21 @@ module.exports = ({ ConversationController, resolveConversationContext, SqlitePr
           emit({ index, status: "blocked", reason: state?.message });
           return false;
         }
-        const reviewed = controller.review(snapshot, turn.question, sources, defaultSessionId, configuration.model);
+        let reviewed;
+        try {
+          reviewed = controller.review(snapshot, turn.question, sources, defaultSessionId, configuration.model);
+        } catch (error) {
+          // Keep an oversized stress case in the denominator without truncating it
+          // or silently increasing the production prompt budget.
+          if (scenario.id.startsWith("s-") && /6,000 UTF-8 bytes/.test(String(error))) {
+            assert.deepEqual(repository.read(), snapshot);
+            emit({ index, status: "unsupported", reason: String(error), elapsedMs: null,
+              noEffects: true, activeSources: sources.map(source => ({ reference: source.reference,
+                topic: knowledge.find(entry => entry.knowledgeId === source.reference.recordId)?.topic })) });
+            return true;
+          }
+          throw error;
+        }
         const start = performance.now();
         await controller.send(turn.question, [], snapshot.revision, { sessionId: defaultSessionId, model: configuration.model,
           recordSources: sources, reviewed });
