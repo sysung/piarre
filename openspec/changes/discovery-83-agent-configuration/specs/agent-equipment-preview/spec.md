@@ -42,3 +42,7 @@ The experiment SHALL satisfy the following observable case outcomes without gran
 #### Scenario: Composition, criterion evidence and aggregate budgets
 - **WHEN** the experiment exercises composition, criterion evidence and aggregate budgets
 - **THEN** Bind immutable reviewer input and criterion pass/fail/untested/needs-human-judgment to dependency/model/provider/evaluator hashes. Detect dropped constraints even when individual skills pass.
+
+#### Scenario: Optional test after saving
+- **WHEN** the user saves the copied proposal and chooses to test it or skip
+- **THEN** only an approved offline verification fixture can record criterion outcomes, and skipping keeps behavioral coverage untested without granting launch authority

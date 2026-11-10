@@ -20,7 +20,7 @@ Prepare a disposable roster and inspector, with a small canvas alternative over 
 
 ### Proposed defaults for review
 
-One repository-local copied bundle. Global sources and linked originals remain read-only. Five prescribed activities cover start fresh, skip/import later, selected import with conflicts, versioned copy and composition verification. Keep optional drag/drop plus keyboard Add agent. No import, copy or preview launches an agent.
+One repository-local copied bundle. Global sources and linked originals remain read-only. Five prescribed activities cover start fresh, skip/import later, selected import with conflicts, versioned copy and composition verification. Keep optional drag/drop plus keyboard Add agent. No import, copy or preview launches an agent. After saving, offer an optional approved offline verification fixture. Skip leaves behavioral coverage explicitly untested and does not change launch permission. An actual agent behavior trial remains separately gated.
 
 Use repaired B as base with A’s single inspected local format and copied ownership. Add the complete optional onboarding path, queue-time revalidation, criterion-bound evidence and workspace-wide contention. Reject silent Codex/Claude fidelity promises and skill-count-only success metrics.
 

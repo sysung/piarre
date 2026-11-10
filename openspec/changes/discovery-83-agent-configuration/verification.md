@@ -12,6 +12,7 @@ This plan has not been applied. No new test, model request, runtime benchmark or
 | Duplicate names, repeated import, changed source and missing assets | Expose stable identity, scope, mapping/conflict and unsupported-format information; never silently convert unknown fields or overwrite sources. | Not run |
 | Template, session copy, skills, principles and enforced permissions | Show these as distinct concepts. Distinguish skill availability, loading, invocation and unknown coverage; passive instructions do not enforce permissions. | Not run |
 | Queued copy after template/dependency edit, active copy and unknown writer | Revalidate exact revisions, current authority and workspace-wide writer contention before launch; active copies stay pinned. Lost stop acknowledgment remains uncertain. | Not run |
+| Save then optionally test, or skip the test | An approved offline fixture can record criterion outcomes. Skip preserves untested status, source bytes and zero launches; actual agent/model trials remain gated. | Not run |
 | Composition, criterion evidence and aggregate budgets | Bind immutable reviewer input and criterion pass/fail/untested/needs-human-judgment to dependency/model/provider/evaluator hashes. Detect dropped constraints even when individual skills pass. | Not run |
 
 Tests start red for the relevant missing behavior, then the minimum implementation makes them green. Deliberately wrong controls must fail the scorer or contract. Never use a missing dependency as the claimed behavioral red result.

@@ -10,7 +10,7 @@ All tasks remain pending. The user chose plan publication and review before Appl
 ## 2. Build the approved offline slice with TDD
 
 - [ ] 2.1 Add the story-specific positive, negative and deliberately wrong controls in verification.md before implementation. Record the meaningful failing assertions against current behavior or the incomplete experiment, excluding failures caused only by missing tools.
-- [ ] 2.2 Implement only the bounded scope and target paths in design.md, then refactor while keeping those assertions green. Verify with `node --test test/agent-equipment/import-preview.test.mjs` once its proposed tests exist and their required implementation base is selected.
+- [ ] 2.2 Implement only the bounded scope and target paths in design.md, then refactor while keeping those assertions green. Include the save/optional-test/skip flow and verify that skipped testing stays untested with zero launches. Verify with `node --test test/agent-equipment/import-preview.test.mjs` once its proposed tests exist and their required implementation base is selected.
 - [ ] 2.3 Document the exact fixture ownership, launch/reset procedure and outcome limits beside the experiment. Verify the documented offline commands as written without downloads and retain raw results, including failures and unknowns.
 
 ## 3. Verify and challenge the implementation
