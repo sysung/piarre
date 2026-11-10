@@ -1,0 +1,22 @@
+{
+  "issue": 104,
+  "issueUrl": "https://github.com/sysung/piarre/issues/104",
+  "issueBodySha256": "9bff5a6e9350c77ba051ef9c9ac220e061617995629f292bf5a2a4a167d15273",
+  "baseCommit": "0b36edc6c2ead6b7094518d9d98747cd79c98b6e",
+  "phase": "plan-review",
+  "implementation": "not-started",
+  "modelRequests": 0,
+  "humanObservations": "not-collected",
+  "openSpecStrict": "passed",
+  "implementationTasks": {
+    "complete": 0,
+    "total": 14
+  },
+  "runtimeChanges": false,
+  "sharedContractCheck": {
+    "passed": 15,
+    "failed": 0,
+    "source": "unchanged master source in sibling issue79 planning worktree",
+    "scope": "repository contract; not experiment behavior"
+  }
+}
