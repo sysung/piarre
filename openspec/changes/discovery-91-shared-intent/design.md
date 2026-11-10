@@ -20,7 +20,7 @@ This plan depends logically on PR #101 for later implementation, not on PR #89/#
 
 ### Proposed defaults for review
 
-Reuse the agreed 120-minute total pilot and existing plain-Markdown baseline first. Compare readable files, database-readable exports and the existing hybrid at the ownership/maintenance level, not by building both stores. At least two genuine resumptions and voluntary preference remain human evidence. No storage winner is preselected.
+Reuse the agreed 120-minute total pilot and existing plain-Markdown baseline first. Compare readable files, database-readable exports and the existing hybrid at the ownership/maintenance level, not by building both stores. The existing worksheet calls for three genuine resumptions within one week, with voluntary preference in at least two for continuation; all remain pending human evidence. No storage winner is preselected.
 
 Use B as base with A’s add-only-uncovered-tests rule and machine-readable effort worksheet. Correct native syntax to CONTAINER, not PROFILE. Preserve the 120-minute pilot and original author/adopter distinction. Reject a second intent store or a claim that technical tests establish usefulness.
 

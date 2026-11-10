@@ -40,3 +40,5 @@ The selected base is B. The synthesized contract is in design.md and verificatio
 ## Review checkpoint
 
 The current user decision covers all twelve stories, offline-only work and plan publication followed by human review. No Apply, TDD implementation, runtime verification, Interrogate of new code, Blast Radius execution or Archive is complete. All later tasks remain pending.
+
+Pilot-count correction from the actual PR #101 BASELINE.md: three genuine resumptions are scheduled, and preference in at least two is the continuation condition. This source readback supersedes the candidate excerpt’s compressed two-resumption wording.
