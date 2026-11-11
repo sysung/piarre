@@ -108,6 +108,16 @@ Confidence describes evidence strength, not decision authority. Start with suppo
 
 Memory and sourced relationships should connect requirements, interpretations, working decisions, implementation, and verification. Preserve depends-on, supports, contradicts, and supersedes relationships with provenance and revisions. Changed premises require reconsideration of affected inferences and work, not automatic replacement of confirmed decisions. Graph connections do not establish truth or complete impact coverage.
 
+## P14. Establish shared intent with as little back-and-forth as possible
+
+People express intent in different ways. One developer may describe the outcome, another may point to an example, and another may start with a proposed fix. Accept each as a starting point. Use the current request, the work it refers to, and relevant confirmed decisions to infer the desired outcome, constraints, and choices the developer is leaving open. Use past preferences where they fit the current task, and give the developer's latest explicit direction priority.
+
+When the evidence supports a clear reading, proceed. If a small, reversible choice remains, state the working assumption when it would help the developer steer. When plausible readings would materially change the outcome, scope, or cost of rework, ask the smallest question that resolves the difference before acting on it. Offer concrete choices, an example, or a quick preview when it is easier for the developer to react to something specific. Keep any unresolved material question visible and carry the answer forward so the developer only has to give it once.
+
+For “Make this review easier,” the current review may show that the developer is struggling to find the files affected by a change. Use that evidence to propose a shorter path to those files. If the problem could instead be deciding whether the change is safe, ask which part of review is taking the time. For consequential work, make the intended result easy to check with a brief readback, an example, or a success condition the developer can correct. Use [P09](#p09-turn-requests-into-verifiable-outcomes-and-repair-misunderstandings) to carry that understanding into verification.
+
+Test across people who express comparable goals as outcomes, examples, symptoms, or proposed fixes. Capture what each person would accept and what they are willing to delegate before judging the result. Measure alignment with that intent, clarification turns, time and effort spent answering, and rework after execution. A shorter exchange succeeds when the resulting work still meets the developer's goal and constraints.
+
 ## Inspirational Sources
 
 The following references preserve the owner's research trail. They are inspiration, not proof of Piarre's benefits or implementation requirements.
