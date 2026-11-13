@@ -17,9 +17,14 @@ export class SqliteProjectRepository {
 
   constructor(databasePath: string) {
     this.database = new DatabaseSync(databasePath);
-    this.database.exec(
-      "PRAGMA busy_timeout = 5000; PRAGMA synchronous = FULL; CREATE TABLE IF NOT EXISTS project_visit (singleton INTEGER PRIMARY KEY CHECK(singleton = 1), revision INTEGER NOT NULL); CREATE TABLE IF NOT EXISTS events (revision INTEGER PRIMARY KEY, schema_version INTEGER NOT NULL, payload TEXT NOT NULL); CREATE TABLE IF NOT EXISTS commands (command_id TEXT PRIMARY KEY, input TEXT NOT NULL, result_revision INTEGER NOT NULL REFERENCES events(revision));",
-    );
+    try {
+      this.database.exec(
+        "PRAGMA busy_timeout = 5000; PRAGMA synchronous = FULL; CREATE TABLE IF NOT EXISTS project_visit (singleton INTEGER PRIMARY KEY CHECK(singleton = 1), revision INTEGER NOT NULL); CREATE TABLE IF NOT EXISTS events (revision INTEGER PRIMARY KEY, schema_version INTEGER NOT NULL, payload TEXT NOT NULL); CREATE TABLE IF NOT EXISTS commands (command_id TEXT PRIMARY KEY, input TEXT NOT NULL, result_revision INTEGER NOT NULL REFERENCES events(revision));",
+      );
+    } catch (error) {
+      this.database.close();
+      throw error;
+    }
   }
 
   private transaction<T>(operation: () => T): T {

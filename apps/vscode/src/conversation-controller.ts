@@ -132,19 +132,24 @@ export class ConversationController {
   }
 
   async interrupt(): Promise<void> {
-    if (!this.client || this.state.kind !== "busy") return;
+    const client = this.client;
+    if (!client || this.state.kind !== "busy") return;
     this.update({ kind: "stopping", message: "Stop requested. Waiting for Codex to report a terminal state…" });
-    try { await this.client.interrupt(); }
-    catch { this.disconnect(); }
+    try { await client.interrupt(); }
+    catch { if (this.client === client) this.disconnect(); }
   }
 
   disconnect(): void {
     ++this.generation;
-    this.client?.dispose(); this.client = undefined;
-    if (this.active) this.record({ kind: "end-conversation", requestId: this.active, outcome: "unknown",
-      reason: "Disconnected before a terminal reply was recorded. Completion and usage are unknown." });
+    const client = this.client;
+    this.client = undefined;
+    const requestId = this.active;
     this.active = undefined;
-    this.update({ kind: "disconnected", message: "Disconnected. Saved conversation remains available; nothing was retried." });
+    try {
+      if (requestId) this.record({ kind: "end-conversation", requestId, outcome: "unknown",
+        reason: "Disconnected before a terminal reply was recorded. Completion and usage are unknown." });
+      this.update({ kind: "disconnected", message: "Disconnected. Saved conversation remains available; nothing was retried." });
+    } finally { client?.dispose(); }
   }
 
   dispose(): void { this.disconnect(); }

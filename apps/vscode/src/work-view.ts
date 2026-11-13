@@ -158,7 +158,7 @@ export class WorkView {
   }
 
   private current: { readonly panel: vscode.WebviewPanel; readonly project: ProjectSnapshot; readonly draft: WorkspaceDraft } | undefined;
-  private deleting = false;
+  private deleting: { readonly panel: vscode.WebviewPanel } | undefined;
   private runDetail: { readonly panel: vscode.WebviewPanel; readonly runId: string; readonly html?: string } | undefined;
   private lookup: { readonly projectId: string; readonly result: RetrievalResult } | undefined;
   private conversationState: ConversationState = { kind: "disconnected", message: "Connect your configured Codex account to discuss this project." };
@@ -261,10 +261,12 @@ export class WorkView {
   async deleteProposal(groupId: string): Promise<void> {
     const current = this.current;
     const proposal = current?.project.proposals.find(item => item.groupId === groupId);
-    if (!current || !proposal || !this.operations.deleteProposal || this.deleting) return;
-    this.deleting = true;
+    if (!current || !proposal || !this.operations.deleteProposal || this.deleting?.panel === current.panel) return;
+    const request = { panel: current.panel };
+    this.deleting = request;
     try {
       if (!await this.confirmDelete(proposal.goal)) return;
+      if (this.current?.panel !== current.panel) return;
       if (this.current !== current) {
         await vscode.window.showInformationMessage("The project changed. Review the goal before deleting it."); return;
       }
@@ -272,8 +274,8 @@ export class WorkView {
       if (result) this.update(result);
       else await vscode.window.showInformationMessage("The goal could not be deleted. Refresh the project and try again.");
     } catch {
-      await vscode.window.showErrorMessage("The goal could not be deleted. Refresh the project and try again.");
-    } finally { this.deleting = false; }
+      if (this.current?.panel === current.panel) await vscode.window.showErrorMessage("The goal could not be deleted. Refresh the project and try again.");
+    } finally { if (this.deleting === request) this.deleting = undefined; }
   }
 
   openProposal(groupId: string): void {
@@ -381,6 +383,13 @@ document.addEventListener('focusin', remember);
     this.current = undefined;
     current?.draft.dispose();
     current?.panel.dispose();
+  }
+
+  detachProject(): void {
+    this.visit = undefined;
+    this.lookup = undefined;
+    this.conversationState = { kind: "disconnected", message: "Connect your configured Codex account to discuss this project." };
+    this.close();
   }
 
   dispose(): void {

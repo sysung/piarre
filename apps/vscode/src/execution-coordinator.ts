@@ -35,27 +35,41 @@ interface Options {
   readonly hasDirtyDocuments?: (absolutePaths: readonly string[]) => boolean;
 }
 export class ExecutionCoordinator {
-  private disposedSnapshot: ProjectSnapshot | undefined;
+  private disposed = false;
+  private lastSnapshot: ProjectSnapshot | undefined;
+  private readonly closedClients = new WeakSet<Client>();
+  private readonly preparing = new Set<Client>();
   private readonly ownerId = randomUUID();
   private readonly reviewingPlans = new Set<string>();
   private readonly prepared = new Map<string, { client: Client; authType: "chatgpt" | "apiKey" | "unknown"; expiresAt: number; timer: NodeJS.Timeout }>();
   private readonly recoveryPreviews = new Map<string, RecoveryPreview>();
   private readonly publishing = new Set<string>();
-  private readonly active = new Map<string, { client: Client; runner: Runner; stopped: boolean }>();
+  private readonly active = new Map<string, { client: Client; runner: Runner; stopped: boolean; deadlineTimer?: NodeJS.Timeout }>();
   constructor(private readonly options: Options) {}
   private beginPublication(runId: string): void { this.publishing.add(runId); pendingPublicationOwners.add(this.ownerId); }
   private endPublication(runId: string): void { this.publishing.delete(runId); if (!this.publishing.size) pendingPublicationOwners.delete(this.ownerId); }
-  private isDisposed(): boolean { return this.disposedSnapshot !== undefined; }
-  private snapshot(): ProjectSnapshot { return this.disposedSnapshot ?? this.options.repository.read(); }
-  private dispatch(action: ExecutionAction, commandId: string = randomUUID()): void {
-    if (this.disposedSnapshot) throw new Error("Execution coordinator is disposed.");
-    const project = this.snapshot();
+  private isDisposed(): boolean { return this.disposed; }
+  private snapshot(): ProjectSnapshot {
+    if (!this.disposed) return this.lastSnapshot = this.options.repository.read();
+    if (this.lastSnapshot) return this.lastSnapshot;
+    throw new Error("Execution coordinator is disposed.");
+  }
+  private record(project: ProjectSnapshot, action: ExecutionAction, commandId: string): ProjectSnapshot {
     const result = this.options.repository.dispatch({ commandId, projectId: project.projectId, expectedProjectRevision: project.revision, action });
     if (result.kind !== "applied") throw new Error(`Execution authority was not acquired: ${result.kind}`);
-    this.options.publish(result.snapshot);
+    return this.lastSnapshot = result.snapshot;
+  }
+  private dispatch(action: ExecutionAction, commandId: string = randomUUID()): void {
+    this.clean();
+    this.options.publish(this.record(this.snapshot(), action, commandId));
+  }
+  private disposeClient(client: Client): void {
+    if (this.closedClients.has(client)) return;
+    this.closedClients.add(client);
+    client.dispose();
   }
   private clean(candidate?: CandidateWorkspace): void {
-    if (this.disposedSnapshot) throw new Error("Execution coordinator is disposed.");
+    if (this.disposed) throw new Error("Execution coordinator is disposed.");
     if (candidate && this.options.hasDirtyDocuments?.(candidate.files.flatMap(file => [path.join(candidate.sourceRoot, file.baseline.relativePath), path.join(candidate.root, file.baseline.relativePath)]))) throw new Error("Save or discard dirty editor documents in this execution scope before execution or workspace changes.");
   }
   private run(runId: string): ExecutionRun { const run = this.snapshot().executionRuns.find(item => item.runId === runId); if (!run) throw new Error("Execution run does not exist."); return run; }
@@ -94,13 +108,16 @@ export class ExecutionCoordinator {
   }
   async prepare(input: { readonly taskId: string; readonly relativePaths: readonly string[]; readonly objective: string; readonly criteria: readonly ExecutionCriterion[]; readonly checks: readonly ExecutionCheck[]; readonly durationMs?: number; readonly maxTokens?: number; readonly requestedModel?: string }) {
     this.clean();
-    for (const value of this.prepared.values()) { clearTimeout(value.timer); value.client.dispose(); } this.prepared.clear();
+    for (const value of this.prepared.values()) { clearTimeout(value.timer); this.disposeClient(value.client); } this.prepared.clear();
     const client = this.options.createClient();
+    this.preparing.add(client);
     let retained = false;
     try {
       const connection = await client.connect();
+      this.clean();
       if (connection.kind !== "ready") throw new Error("Connect Codex before preparing execution.");
       const context = await client.readExecutionContext();
+      this.clean();
       if (context.authType !== undefined && context.authType !== connection.authType) throw new Error("Codex authentication changed during preparation.");
       const requestedModel = input.requestedModel ?? (context.model.kind === "resolved-default" ? context.model.model : undefined);
       if (!requestedModel) throw new Error("Codex did not report a default model. Configure an explicit coding model before preparing a run.");
@@ -125,11 +142,12 @@ export class ExecutionCoordinator {
       const plan = this.snapshot().executionPlans.at(-1);
       if (!plan) throw new Error("Prepared plan was not persisted.");
       const capability = await (this.options.createRunner?.() ?? new CandidateCheckRunner()).capability();
+      this.clean();
       if (forecast.kind !== "configured-v1") throw new Error("Forecast unavailable.");
-      const timer = setTimeout(() => { this.prepared.delete(plan.planId); client.dispose(); }, Math.max(0, forecast.validUntil - Date.now()));
+      const timer = setTimeout(() => { this.prepared.delete(plan.planId); this.disposeClient(client); }, Math.max(0, forecast.validUntil - Date.now()));
       timer.unref(); this.prepared.set(plan.planId, { client, authType: connection.authType, expiresAt: forecast.validUntil, timer }); retained = true;
       return { plan, capability };
-    } finally { if (!retained) client.dispose(); }
+    } finally { this.preparing.delete(client); if (!retained) this.disposeClient(client); }
   }
   async approveAndRun(input: { readonly planId: string; readonly planRevision: number; readonly approvalId: string }): Promise<ExecutionRun> {
     const duplicate = this.snapshot().executionRuns.find(run => run.grant.approvalId === input.approvalId);
@@ -151,9 +169,11 @@ export class ExecutionCoordinator {
     const runId = `run:${input.approvalId}`;
     try {
       const context = await client.readExecutionContext();
+      this.clean();
       if (!this.contextMatches(plan, context)) throw new Error("Account, model, usage reset or profile changed. Prepare a new plan.");
       const disclosure = `${executionForecastText(forecast)}\n\nExact files: ${plan.files.map(file => file.relativePath).join(", ")}. Local duration ${String(plan.durationMs / 1000)} seconds. Plan ${plan.planId}, revision ${String(plan.recordedAtRevision)}; attempt ${runId}.\n\nThe provider has no supported per-turn included-only billing control. This exact attempt may consume allowance or incur charges, including continuing remote usage after interruption/disconnection. No dollar cap, paid fallback, alternate provider, retry or future run is authorized. ${forecast.accountHash === null ? "Account identity is unavailable. Consent applies only to this short-lived prepared connection; applicability of calibration remains unknown." : "The account binding is a local hash of supported provider metadata."}`;
       if (await this.options.confirmSpending?.(disclosure) !== "consent") throw new ExecutionReviewCancelled("Spending consent was cancelled. No generation was requested.");
+      this.clean();
       const finalContext = await client.readExecutionContext();
       if (!this.contextMatches(plan, finalContext) || this.configuration(plan.provider.requestedModel).hash !== forecast.configurationHash || Date.now() >= forecast.validUntil) throw new Error("Account or configuration changed during review. Prepare a replacement plan and consent.");
       this.clean(candidate);
@@ -162,11 +182,11 @@ export class ExecutionCoordinator {
       const spendingConsent: SpendingConsent = { kind: "native-uncertain-one-attempt", forecastId: forecast.forecastId, configurationHash: forecast.configurationHash, planId: plan.planId, planRevision: plan.recordedAtRevision, runId, route: forecast.route, consentedAt: approvedAt };
       this.dispatch({ kind: "approve-execution", spendingConsent, planId: input.planId, planRevision: input.planRevision, runId, approvedAt, expiresAt: Math.min(approvedAt + plan.durationMs, forecast.validUntil), ownerPid: process.pid, ownerId: this.ownerId }, input.approvalId);
       this.dispatch({ kind: "record-execution-account-observation", runId, context: finalContext });
-    } catch (error) { client.dispose(); throw error; }
+    } catch (error) { this.disposeClient(client); throw error; }
     finally { this.reviewingPlans.delete(plan.planId); this.prepared.delete(plan.planId); clearTimeout(prepared.timer); }
     const runner = this.options.createRunner?.() ?? new CandidateCheckRunner();
-    const active = { client, runner, stopped: false }; this.active.set(runId, active);
-    let timer: NodeJS.Timeout | undefined;
+    const active: { client: Client; runner: Runner; stopped: boolean; deadlineTimer?: NodeJS.Timeout } = { client, runner, stopped: false };
+    this.active.set(runId, active);
     try {
       this.finalBoundary(runId, candidate);
       this.dispatch({ kind: "request-execution", runId, requestedAt: Date.now() });
@@ -190,14 +210,14 @@ export class ExecutionCoordinator {
           this.finalBoundary(runId, candidate);
           this.dispatch({ kind: "bind-execution-thread", runId, threadId });
         },
-        onTurnStarted: (threadId, turnId) => { this.dispatch({ kind: "bind-execution-turn", runId, threadId, turnId }); if (active.stopped) void client.interrupt().catch(() => { client.dispose(); }); },
-        onTurnTerminal: observation => { if (!this.disposedSnapshot) this.dispatch({ kind: "observe-execution-terminal", runId, ...observation, observedAt: Date.now() }); } }),
-      new Promise<never>((_, reject) => { timer = setTimeout(() => { active.stopped = true; void client.interrupt().catch(() => undefined); client.dispose(); reject(new Error("Approved absolute deadline expired; provider completion and usage are unknown.")); }, Math.max(0, this.run(runId).grant.deadlineAt - Date.now())); })]);
-      if (this.disposedSnapshot) return this.run(runId);
+        onTurnStarted: (threadId, turnId) => { this.dispatch({ kind: "bind-execution-turn", runId, threadId, turnId }); if (active.stopped) void client.interrupt().catch(() => { this.disposeClient(client); }).catch(() => undefined); },
+        onTurnTerminal: observation => { if (!this.disposed) this.dispatch({ kind: "observe-execution-terminal", runId, ...observation, observedAt: Date.now() }); } }),
+      new Promise<never>((_, reject) => { active.deadlineTimer = setTimeout(() => { active.stopped = true; void client.interrupt().catch(() => undefined); this.disposeClient(client); reject(new Error("Approved absolute deadline expired; provider completion and usage are unknown.")); }, Math.max(0, this.run(runId).grant.deadlineAt - Date.now())); })]);
+      if (this.disposed) return this.run(runId);
       if (this.run(runId).providerOutcome.kind === "unobserved") this.dispatch({ kind: "observe-execution-terminal", runId, threadId: response.threadId, turnId: response.turnId, status: response.status, observedAt: Date.now() });
       const completionContext = await client.readExecutionContext().catch(() => undefined);
       if (this.isDisposed()) return this.run(runId);
-      if (timer) { clearTimeout(timer); timer = undefined; }
+      clearTimeout(active.deadlineTimer);
       if (completionContext) this.dispatch({ kind: "record-execution-account-observation", runId, context: completionContext });
       if (response.status === "interrupted") { this.finish(runId, "failed", "Provider interruption was observed; no candidate was applied.", candidate); return this.run(runId); }
       if (this.stopped(runId)) throw new Error("Generation was interrupted; no candidate was applied.");
@@ -235,12 +255,17 @@ export class ExecutionCoordinator {
       if (candidate.inspectOriginal().kind !== "unchanged") throw new Error("Original files changed before result review.");
       this.finish(runId, passed ? "needs-review" : "failed", proposal.summary, candidate);
     } catch (error) {
-      if (this.disposedSnapshot) return this.run(runId);
+      if (this.disposed) return this.run(runId);
       const run = this.run(runId);
       if (run.state.kind !== "terminal" && run.state.kind !== "unknown") this.dispatch({ kind: "mark-execution-unknown", runId, reason: error instanceof Error ? error.message : "Execution completion is unknown." });
       const canRecordUnknownCompletion = !hasUncertainProvider(this.run(runId)) && this.run(runId).process.kind === "none" && this.run(runId).state.kind === "unknown" && run.state.kind !== "applying";
       if (canRecordUnknownCompletion) this.finish(runId, "unknown", error instanceof Error ? error.message : "Execution completion is unknown.", candidate);
-    } finally { this.endPublication(runId); if (timer) clearTimeout(timer); client.dispose(); if (this.run(runId).process.kind === "none") this.active.delete(runId); }
+    } finally {
+      this.endPublication(runId);
+      clearTimeout(active.deadlineTimer);
+      this.disposeClient(client);
+      if (!this.disposed && this.run(runId).process.kind === "none") this.active.delete(runId);
+    }
     return this.run(runId);
   }
   private stopped(runId: string): boolean { return this.active.get(runId)?.stopped ?? true; }
@@ -256,24 +281,46 @@ export class ExecutionCoordinator {
     if (active) {
       active.stopped = true;
       if (this.run(runId).state.kind === "generating" || this.run(runId).state.kind === "reserved") this.dispatch({ kind: "mark-execution-unknown", runId, reason: "Stop requested; provider termination is not yet confirmed." });
-      await Promise.allSettled([active.client.interrupt().catch(() => { active.client.dispose(); }), active.runner.interrupt()]);
+      await Promise.allSettled([active.client.interrupt().catch(() => { this.disposeClient(active.client); }), active.runner.interrupt()]);
     }
     else if (this.run(runId).state.kind !== "terminal" && this.run(runId).state.kind !== "unknown") this.dispatch({ kind: "mark-execution-unknown", runId, reason: "No live owner can confirm interruption; reconcile persisted effects." });
     return this.run(runId);
   }
   dispose(): void {
-    if (this.disposedSnapshot) return;
-    for (const value of this.prepared.values()) { clearTimeout(value.timer); value.client.dispose(); } this.prepared.clear();
+    if (this.isDisposed()) return;
+    this.disposed = true;
     disposedOwners.add(this.ownerId);
+    this.recoveryPreviews.clear();
+    const errors: unknown[] = [];
+    const release = (cleanup: () => void): void => {
+      try { cleanup(); } catch (error) { errors.push(error); }
+    };
+    let project: ProjectSnapshot | undefined;
+    release(() => { project = this.lastSnapshot = this.options.repository.read(); });
+    for (const client of this.preparing) release(() => { this.disposeClient(client); });
+    this.preparing.clear();
+    for (const { timer, client } of this.prepared.values()) {
+      clearTimeout(timer);
+      release(() => { this.disposeClient(client); });
+    }
+    this.prepared.clear();
     for (const [runId, active] of this.active) {
       active.stopped = true;
-      const run = this.run(runId);
-      if (run.state.kind !== "terminal" && run.state.kind !== "unknown") this.dispatch({ kind: "mark-execution-unknown", runId, reason: "Execution host disposed; completion requires reconciliation." });
-      active.client.dispose(); void active.runner.interrupt().catch(() => undefined);
+      clearTimeout(active.deadlineTimer);
+      release(() => {
+        const run = project?.executionRuns.find(item => item.runId === runId);
+        if (project && run && run.state.kind !== "terminal" && run.state.kind !== "unknown") {
+          project = this.record(project, { kind: "mark-execution-unknown", runId, reason: "Execution host disposed; completion requires reconciliation." }, randomUUID());
+        }
+      });
+      release(() => { this.disposeClient(active.client); });
+      release(() => { void active.runner.interrupt().catch(() => undefined); });
     }
-    this.disposedSnapshot = this.options.repository.read();
+    this.active.clear();
+    if (errors.length) throw new AggregateError(errors, "Execution coordinator could not release all resources.");
   }
   refreshWorkspaceFreshness(): void {
+    if (this.isDisposed()) return;
     for (const run of this.snapshot().executionRuns) {
       if (run.state.kind !== "terminal" || run.reviewFreshness.kind !== "current") continue;
       let reason: string | undefined;
@@ -291,8 +338,9 @@ export class ExecutionCoordinator {
   resume(): void { this.dispatch({ kind: "set-scheduling-paused", paused: false }); }
   async reconcile(): Promise<void> {
     await Promise.resolve();
-    if (this.disposedSnapshot) return;
+    if (this.isDisposed()) return;
     for (const initial of this.snapshot().executionRuns) {
+      if (this.isDisposed()) return;
       if (this.active.has(initial.runId) || this.publishing.has(initial.runId)) continue;
       const recoveryOwner = activeRecovery(initial);
       const workspaceWriter = initial.workspace.kind === "writing" || initial.workspace.kind === "unknown" ? initial.workspace.request.writer : undefined;
@@ -303,7 +351,7 @@ export class ExecutionCoordinator {
       try { process.kill(ownerPid, 0); } catch (error) { if (error instanceof Error && "code" in error && error.code === "ESRCH") ownerAlive = false; }
       if (ownerAlive && ownerId !== this.ownerId && !(ownerPid === process.pid && disposedOwners.has(ownerId))) continue;
       if (recoveryOwner) {
-        try { await this.completeRecovery(initial.runId, recoveryOwner.operationId); } catch { /* The durable unknown successor retains ownership. */ }
+        try { await this.completeRecovery(initial.runId, recoveryOwner.operationId, ownerId); } catch { /* The durable unknown successor retains ownership. */ }
         continue;
       }
       if (initial.workspace.kind === "writing" || initial.workspace.kind === "unknown") {
@@ -311,15 +359,21 @@ export class ExecutionCoordinator {
         const candidate = this.candidateForRun(initial.runId); this.clean(candidate);
         const operation = initial.workspace;
         this.beginPublication(initial.runId);
+        pendingPublicationOwners.add(ownerId);
         try {
           const result = operation.request.kind === "restore" && operation.request.target === "candidate"
             ? await candidate.restore({ commandId: operation.operationId, checkpointId: operation.request.checkpointId, expectedManifestHash: operation.request.expectedManifestHash, targetManifestHash: operation.request.targetManifestHash, parentIdentityHash: operation.request.parentIdentityHash })
             : await new WorkspaceIntegration({ candidate }).reconcile({ commandId: operation.operationId, authority: { ...operation.request, parentIdentityHash: operation.request.parentIdentityHash } });
+          if (this.isDisposed()) return;
           if ((result.kind === "changed" || result.kind === "current") && result.manifestHash === operation.request.targetManifestHash) this.dispatch({ kind: "finish-workspace-operation", runId: initial.runId, operationId: operation.operationId, manifestHash: result.manifestHash, observedAt: Date.now() });
           else if (operation.kind === "writing") this.dispatch({ kind: "mark-workspace-unknown", runId: initial.runId, reason: "Workspace journal conflicts with current bytes; newer work is preserved." });
         } catch {
+          if (this.isDisposed()) return;
           if (operation.kind === "writing") this.dispatch({ kind: "mark-workspace-unknown", runId: initial.runId, reason: "Workspace journal cannot establish completion; ownership retained." });
-        } finally { this.endPublication(initial.runId); }
+        } finally {
+          this.endPublication(initial.runId);
+          if (ownerId !== this.ownerId) pendingPublicationOwners.delete(ownerId);
+        }
       }
       if (initial.state.kind === "terminal") continue;
       const runId = initial.runId;
@@ -336,6 +390,7 @@ export class ExecutionCoordinator {
       } else if (!supersededOperation(run, `patch:${runId}`) && existsSync(path.join(candidate.controlDirectory, `journal-${digest(`patch:${runId}`)}.json`))) {
         this.clean(candidate);
         const journal = await candidate.reconcile({ commandId: `patch:${runId}` });
+        if (this.isDisposed()) return;
         if (journal.kind !== "changed" && journal.kind !== "current") continue;
       }
       if (hasUncertainProvider(this.run(runId))) continue;
@@ -345,7 +400,8 @@ export class ExecutionCoordinator {
   abandonProvider({ runId, reason }: { readonly runId: string; readonly reason: string }): ExecutionRun {
     const run = this.run(runId);
     if (run.state.kind !== "unknown" || !hasUncertainProvider(run) || run.process.kind !== "none" || run.workspace.kind !== "not-integrated") throw new Error("This run has no isolated uncertain provider request to resolve.");
-    this.active.get(runId)?.client.dispose();
+    const active = this.active.get(runId);
+    if (active) this.disposeClient(active.client);
     this.dispatch({ kind: "abandon-execution-provider", runId, reason, abandonedAt: Date.now(), manifestHash: this.candidateForRun(runId).manifestHash() });
     return this.run(runId);
   }
@@ -373,7 +429,7 @@ export class ExecutionCoordinator {
       this.clean(candidate);
       this.dispatch({ kind: "finish-workspace-operation", runId: input.runId, operationId: input.operationId, manifestHash: result.manifestHash, observedAt: Date.now() });
       this.dispatch({ kind: "accept-execution-result", runId: input.runId, resultId: input.resultId, resultRevision: input.resultRevision });
-    } catch (error) { if (this.run(input.runId).workspace.kind === "writing") this.dispatch({ kind: "mark-workspace-unknown", runId: input.runId, reason: error instanceof Error ? error.message : "Workspace completion unknown." }); throw error; }
+    } catch (error) { if (!this.disposed && this.run(input.runId).workspace.kind === "writing") this.dispatch({ kind: "mark-workspace-unknown", runId: input.runId, reason: error instanceof Error ? error.message : "Workspace completion unknown." }); throw error; }
     finally { this.endPublication(input.runId); }
     return this.run(input.runId);
   }
@@ -395,7 +451,7 @@ export class ExecutionCoordinator {
       const result = await (input.target === "source" ? integration.restore({ restoreCommandId: input.operationId, checkpointId: input.checkpointId, expectedManifestHash: input.expectedManifestHash, targetManifestHash: input.targetManifestHash, parentIdentityHash }) : candidate.restore({ commandId: input.operationId, checkpointId: input.checkpointId, expectedManifestHash: input.expectedManifestHash, targetManifestHash: input.targetManifestHash, parentIdentityHash }));
       if (result.kind !== "changed" && result.kind !== "current") throw new Error("Restore journal needs reconciliation.");
       this.dispatch({ kind: "finish-workspace-operation", runId: input.runId, operationId: input.operationId, manifestHash: result.manifestHash, observedAt: Date.now() });
-    } catch (error) { this.dispatch({ kind: "mark-workspace-unknown", runId: input.runId, reason: error instanceof Error ? error.message : "Restore completion unknown." }); throw error; }
+    } catch (error) { if (!this.disposed) this.dispatch({ kind: "mark-workspace-unknown", runId: input.runId, reason: error instanceof Error ? error.message : "Restore completion unknown." }); throw error; }
     finally { this.endPublication(input.runId); }
     return this.run(input.runId);
   }
@@ -436,6 +492,7 @@ export class ExecutionCoordinator {
   async previewRecovery(input: { readonly runId: string; readonly selection: RecoverySelection }): Promise<RecoveryPreview> {
     this.clean();
     const preview = await previewRecoveryFiles(this.run(input.runId), input.selection, this.snapshot().revision, this.recoveryBlockers(this.run(input.runId)));
+    this.clean();
     this.recoveryPreviews.set(preview.previewId, preview);
     return preview;
   }
@@ -461,18 +518,26 @@ export class ExecutionCoordinator {
     await this.completeRecovery(run.runId, input.operationId);
     return this.run(run.runId);
   }
-  private async completeRecovery(runId: string, operationId: string): Promise<void> {
+  private async completeRecovery(runId: string, operationId: string, ownerId: string = this.ownerId): Promise<void> {
     const run = this.run(runId);
+    let publishing = false;
     try {
       const blockers = this.recoveryBlockers(run); if (blockers.length) throw new Error(blockers.join("\n"));
       this.beginPublication(runId);
+      pendingPublicationOwners.add(ownerId);
+      publishing = true;
       const result = await replayRecoveryFiles(run, operationId);
       if (result.kind !== "changed" && result.kind !== "current") throw new Error("reason" in result ? result.reason : "Recovery completion unknown.");
       this.dispatch({ kind: "finish-recovery", runId, operationId, manifestHash: result.manifestHash, observedAt: Date.now() });
     } catch (error) {
-      this.dispatch({ kind: "mark-recovery-unknown", runId, operationId, reason: error instanceof Error ? error.message : "Recovery completion unknown; reservation retained." });
+      if (!this.disposed) this.dispatch({ kind: "mark-recovery-unknown", runId, operationId, reason: error instanceof Error ? error.message : "Recovery completion unknown; reservation retained." });
       throw error;
-    } finally { this.endPublication(runId); }
+    } finally {
+      if (publishing) {
+        this.endPublication(runId);
+        if (ownerId !== this.ownerId) pendingPublicationOwners.delete(ownerId);
+      }
+    }
   }
 
 }

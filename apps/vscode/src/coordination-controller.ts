@@ -13,6 +13,7 @@ type Prepare = { readonly fileSources?: readonly SuppliedSource[]; readonly idea
 export class CoordinationController {
   private readonly clients = new Map<string, Client>();
   private disposed = false;
+  private readonly timers = new Map<string, NodeJS.Timeout>();
   constructor(private readonly repository: Pick<SqliteProjectRepository, "read" | "dispatch">,
     private readonly publish: (project: ProjectSnapshot) => void,
     private readonly createClient: () => Client = () => new CodexConversationClient(),
@@ -84,6 +85,7 @@ export class CoordinationController {
     let timer: NodeJS.Timeout | undefined;
     let client: Client | undefined;
     const finish = (outcome: "completed" | "interrupted" | "failed" | "unknown", observation: string, sourceIndexes: readonly number[] = []) => {
+      if (this.disposed) return;
       const worker = this.repository.read().coordination.groups.find(item => item.groupId === group.groupId)?.assignments.find(item => item.assignmentId === assignmentId);
       if (worker?.state.kind === "active") this.record({ kind: "coordinate", operation: "finish", groupId: group.groupId, assignmentId, outcome, observation, sourceIndexes, observedAt: Date.now() });
     };
@@ -98,6 +100,7 @@ export class CoordinationController {
         finish("unknown", "Hard local deadline reached. Provider termination and usage remain unconfirmed; no automatic retry.");
         boundedClient.dispose();
       }, group.durationMs);
+      this.timers.set(assignmentId, timer);
       if ((await client.connect()).kind !== "ready") { finish("failed", "Provider requires login. No model turn was requested."); return; }
       if (this.clients.get(assignmentId) !== client || this.repository.read().schedulingPaused) { finish("unknown", "Scheduling paused or local connection ended before request; no automatic resumption."); return; }
       const snapshot = this.repository.read();
@@ -147,27 +150,41 @@ export class CoordinationController {
     } catch {
       finish("unknown", "Provider failed, disconnected or returned invalid evidence. Completion and usage remain unknown. No retry or fallback was requested.");
     } finally {
-      if (timer) clearTimeout(timer);
-      this.clients.delete(assignmentId); client?.dispose();
+      clearTimeout(timer);
+      this.timers.delete(assignmentId);
+      if (client && this.clients.get(assignmentId) === client) {
+        this.clients.delete(assignmentId); client.dispose();
+      }
     }
   }
   async stop(groupId: string, assignmentId: string): Promise<void> {
     const client = this.clients.get(assignmentId);
     if (!client) return;
     this.record({ kind: "coordinate", operation: "stop", groupId, assignmentId, observedAt: Date.now() });
-    try { await client.interrupt(); } catch { this.disconnect(assignmentId); }
+    try { await client.interrupt(); } catch { if (this.clients.get(assignmentId) === client) this.disconnect(assignmentId); }
   }
   private disconnect(assignmentId: string): void {
     const client = this.clients.get(assignmentId); this.clients.delete(assignmentId);
-    for (const group of this.repository.read().coordination.groups) {
-      const worker = group.assignments.find(item => item.assignmentId === assignmentId);
-      if (worker?.state.kind === "active") this.record({ kind: "coordinate", operation: "finish", groupId: group.groupId, assignmentId, outcome: "unknown", observation: "Disconnected without terminal evidence. Remote completion and usage unknown. No automatic retry.", sourceIndexes: [], observedAt: Date.now() });
-    }
-    client?.dispose();
+    clearTimeout(this.timers.get(assignmentId));
+    this.timers.delete(assignmentId);
+    try {
+      for (const group of this.repository.read().coordination.groups) {
+        const worker = group.assignments.find(item => item.assignmentId === assignmentId);
+        if (worker?.state.kind === "active") this.record({ kind: "coordinate", operation: "finish", groupId: group.groupId, assignmentId, outcome: "unknown", observation: "Disconnected without terminal evidence. Remote completion and usage unknown. No automatic retry.", sourceIndexes: [], observedAt: Date.now() });
+      }
+    } finally { client?.dispose(); }
   }
   async stopAll(): Promise<void> {
     const pending = this.repository.read().coordination.groups.flatMap(group => group.assignments.filter(worker => worker.state.kind === "active").map(worker => this.stop(group.groupId, worker.assignmentId)));
     await Promise.allSettled(pending);
   }
-  dispose(): void { this.disposed = true; for (const id of [...this.clients.keys()]) this.disconnect(id); }
+  dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
+    const errors: unknown[] = [];
+    for (const id of this.clients.keys()) {
+      try { this.disconnect(id); } catch (error) { errors.push(error); }
+    }
+    if (errors.length) throw new AggregateError(errors, "Coordination could not release all connections.");
+  }
 }

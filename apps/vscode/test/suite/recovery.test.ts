@@ -165,6 +165,48 @@ suite("Reviewed recovery with actual SQLite and filesystem", () => {
       assert.equal((await operation).workspace.kind, "restored");
     } finally { peer.dispose(); }
   });
+  test("a replacement cannot replay a departed owner's source journal while retired reconciliation is pending", async () => {
+    send({ kind: "finish-execution", runId, outcome: "unknown", summary: "Fixture completion", manifestHash: candidate.manifestHash() });
+    const before = currentImages(run(), "source");
+    const target = before.map(image => ({ ...image, content: `reviewed ${image.relativePath}`, mode: image.mode ?? 0o600 }));
+    const parentIdentityHash = digest(JSON.stringify(imageChanges(before, target).map(change => publicationParents(source, change.relativePath))));
+    const operationId = "retired-replay";
+    writeRecord(candidate.controlDirectory, `integration-checkpoint-${digest(operationId)}.json`, target);
+    send({ kind: "begin-workspace-operation", runId, request: { kind: "restore", target: "source", checkpointId: operationId, expectedManifestHash: imageHash(before), targetManifestHash: imageHash(target), parentIdentityHash } }, operationId);
+    assert.equal((await new WorkspaceIntegration({ candidate }).restore({ restoreCommandId: operationId, checkpointId: operationId, expectedManifestHash: imageHash(before), parentIdentityHash, afterStep: () => { throw new Error("Fixture interruption"); } })).kind, "partial");
+    let start = () => {};
+    let release = () => {};
+    const entered = new Promise<void>(resolve => { start = resolve; });
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- called with its integration receiver and restored in finally
+    const { reconcile } = WorkspaceIntegration.prototype;
+    let replays = 0;
+    WorkspaceIntegration.prototype.reconcile = async function (input) {
+      if (++replays === 1) { start(); await gate; }
+      return reconcile.call(this, input);
+    };
+    const opening = coordinator.reconcile();
+    try {
+      await entered;
+      coordinator.dispose();
+      repository.close();
+      repository = new SqliteProjectRepository(path.join(directory, "project.sqlite"));
+      coordinator = createCoordinator();
+      await coordinator.reconcile();
+      assert.equal(replays, 1, "the replacement cannot start the same replay before the first operation settles");
+      assert.equal(readFileSync(path.join(source, "b.txt"), "utf8"), "original b");
+      assert.ok(ownsExecutionLease(run()));
+      release();
+      await opening;
+      await coordinator.reconcile();
+      assert.equal(readFileSync(path.join(source, "b.txt"), "utf8"), "reviewed b.txt");
+      assert.equal(run().workspace.kind, "restored");
+    } finally {
+      release();
+      await opening;
+      WorkspaceIntegration.prototype.reconcile = reconcile;
+    }
+  });
   test("restart reconciliation binds a partial source journal to SQLite before any further write", async () => {
     send({ kind: "finish-execution", runId, outcome: "unknown", summary: "Fixture completion", manifestHash: candidate.manifestHash() });
     const before = currentImages(run(), "source");
