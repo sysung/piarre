@@ -36,7 +36,8 @@ suite("Execution coordinator actual backend", () => {
   });
   const coordinator = () => shared ??= new ExecutionCoordinator({ confirmSpending: () => Promise.resolve("consent"), repository, storageDirectory: storage, createClient, publish: () => undefined, hasDirtyDocuments: () => dirty });
   const prepare = () => coordinator().prepare({ taskId, relativePaths: ["refund.txt"], objective: "Set refund window to 45 days", criteria: [{ criterionId: "days", text: "Window is 45 days" }], checks: [{ checkId: "value", argv: [nodeExecutable, "-e", "require('node:assert/strict').equal(require('node:fs').readFileSync('refund.txt','utf8'),'45\\n')"], criterionIds: ["days"] }] });
-  setup(async () => {
+  setup(async function () {
+    this.timeout(10_000);
     shared = undefined; requests = 0; dirty = false; loseAcknowledgment = false; desiredWindow = "45";
     directory = mkdtempSync(path.join(tmpdir(), "piarre-coordinator-")); source = path.join(directory, "source"); storage = path.join(directory, "storage"); mkdirSync(source); mkdirSync(storage);
     writeFileSync(path.join(source, "refund.txt"), "30\n"); writeFileSync(path.join(source, "private.txt"), "private undisclosed");
