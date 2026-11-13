@@ -6,30 +6,29 @@ import { stripVTControlCharacters } from "node:util";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { vscodeVersion } from "../config/vscode-version.mjs";
+import { resolveDocumentation, validateCatalogSources, validateHistoricalSources } from "./documentation-sources.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const args = process.argv.slice(2);
-const scope = args.length === 0 ? "foundation" : args[0]?.replace(/^--scope=/, "");
-assert.ok(args.length <= 1 && ["foundation", "candidate"].includes(scope), "Use --scope=foundation or --scope=candidate");
-function git(...args) {
-  const result = spawnSync("git", args, { cwd: root, encoding: "utf8" });
-  assert.equal(result.status, 0, "Cannot bind acceptance evidence to a Git revision");
-  return result.stdout.trim();
-}
-const revision = git("rev-parse", "HEAD");
+const preview = args.includes("--preview");
+const scopes = args.filter((arg) => arg !== "--preview");
+const scope = scopes.length === 0 ? "foundation" : scopes[0].replace(/^--scope=/, "");
+assert.ok(args.length <= scopes.length + 1 && scopes.length <= 1 && ["foundation", "candidate"].includes(scope),
+  "Use --scope=foundation or --scope=candidate, optionally with --preview.");
+const documentation = resolveDocumentation(root, { preview });
+const { revision } = documentation;
 const catalogText = readFileSync(path.join(root, "test/acceptance/catalog.json"), "utf8");
 const catalog = JSON.parse(catalogText);
 const principleText = readFileSync(path.join(root, "test/acceptance/principles.json"), "utf8");
 const principleInventory = JSON.parse(principleText);
-assert.equal(catalog.schemaVersion, 1);
+validateCatalogSources(catalog, documentation);
+const retrievalFixture = JSON.parse(readFileSync(path.join(root, "test/acceptance/retrieval-fixture.json"), "utf8"));
+validateHistoricalSources(root, principleInventory, retrievalFixture);
 const ids = new Set();
 for (const scenario of catalog.scenarios) {
   assert.ok(/^[a-z][a-z0-9-]+$/.test(scenario.id) && !ids.has(scenario.id), "Duplicate or invalid scenario ID");
   ids.add(scenario.id);
   assert.ok(/^C0[1-8]$/.test(scenario.owner), "Missing owning issue package");
-  assert.ok(["docs/01_PRODUCT_PRD.md", "docs/02_TECHNICAL_DESIGN.md"].includes(scenario.source.document));
-  const document = readFileSync(path.join(root, scenario.source.document), "utf8");
-  assert.ok(document.split("\n").includes(`## ${scenario.source.heading}`), `Missing requirement source for ${scenario.id}`);
   assert.ok(["automated", "pending"].includes(scenario.verification.kind));
   if (scenario.verification.kind === "automated") {
     assert.equal(scenario.verification.check, "host-tests");
@@ -48,13 +47,13 @@ for (const principle of principleInventory.principles) {
 const directory = path.join(root, ".artifacts", "acceptance", randomUUID());
 mkdirSync(directory, { recursive: true });
 const report = {
-  scope, revision, catalogHash: createHash("sha256").update(catalogText).digest("hex"),
+  scope, revision, mode: preview ? "preview" : "pinned",
+  catalogHash: createHash("sha256").update(catalogText).digest("hex"),
   principleInventoryHash: createHash("sha256").update(principleText).digest("hex"),
   node: process.version, platform: process.platform, arch: process.arch, vscode: vscodeVersion,
   recordedAt: new Date().toISOString(), checks: [], scenarios: [], productReady: false,
 };
-const clean = () => git("rev-parse", "HEAD") === revision && git("status", "--porcelain", "--untracked-files=all") === "";
-const blocked = !clean() ? "Commit the working tree before collecting revision-bound acceptance evidence."
+const blocked = preview ? "Documentation preview is unverified."
   : scope === "candidate" && catalog.scenarios.some(({ verification }) => verification.kind === "pending")
     ? "The integrated candidate has unimplemented or unverified requirements. Foundation checks cannot satisfy them."
     : undefined;
@@ -69,12 +68,19 @@ if (!blocked) {
     if (result.status !== 0) break;
   }
 }
-const stable = clean();
+let stabilityBlocker;
+if (!preview) {
+  try {
+    validateCatalogSources(catalog, resolveDocumentation(root, { revision }));
+  } catch (error) {
+    stabilityBlocker = `Code or documentation changed or became inaccessible during verification. ${error.message}`;
+  }
+}
 const checksPassed = report.checks.length === 2 && report.checks.every(({ status }) => status === "passed");
 for (const scenario of catalog.scenarios) {
   const pending = scenario.verification.kind === "pending";
-  let status = pending ? "not-tested" : "blocked";
-  if (!pending && !blocked && stable) {
+  let status = preview ? "unverified" : pending ? "not-tested" : "blocked";
+  if (!pending && !blocked && !stabilityBlocker) {
     const observed = scenario.verification.tests.every((name) => {
       const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       return new RegExp(`[✓✔]\\s+${escaped}(?:\\s|$)`).test(hostOutput);
@@ -91,7 +97,7 @@ report.principles = principleInventory.principles.map((principle) => ({
   }),
 }));
 if (blocked) report.blocker = blocked;
-if (!stable) report.blocker = "Source changed during verification; evidence cannot establish acceptance.";
+if (stabilityBlocker) report.blocker = stabilityBlocker;
 const selected = report.scenarios.filter(({ owner }) => scope === "candidate" || owner === "C01");
 report.scopePassed = !report.blocker && selected.length > 0 && selected.every(({ status }) => status === "passed");
 report.productReady = scope === "candidate" && report.scopePassed;

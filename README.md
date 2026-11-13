@@ -4,9 +4,9 @@ Piarre is a centralized AI orchestrator for seeing, directing, and verifying age
 
 The implementation backlog lives in [GitHub Project 8](https://github.com/users/sysung/projects/8/views/1).
 
-The [product requirements](docs/01_PRODUCT_PRD.md) describe the business problem, design principles, and intended experience.
+Start with the [project overview](docs/overview.md), [user design principles](docs/USER_DESIGN_PRINCIPLE.md), and [documentation workflow](docs/workflow.md). [OpenSpec contracts](openspec/specs/) describe intended behavior; [changes](openspec/changes/) record scoped plans, decisions, verification and history. GitHub issues track feasibility and delivery. Requirements do not establish implemented capabilities.
 
-The [documentation index](docs/00_README.md) links the four lasting project documents. Requirements describe intended behavior, not implemented capabilities.
+Code and documentation share this repository and Git revision. No separate documentation checkout or Store registration is required.
 
 ## Install a package
 

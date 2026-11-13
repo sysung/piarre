@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
-import { readFile, readdir } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import { vscodeVersion } from "../config/vscode-version.mjs";
+import { resolveDocumentation, validateCatalogSources, validateHistoricalSources } from "../scripts/documentation-sources.mjs";
 
 const extensionManifestUrl = new URL(
   "../apps/vscode/package.json",
@@ -65,12 +67,32 @@ test("the editor toolchain stays aligned to the pinned VS Code version", async (
   assert.equal(rootManifest.devDependencies?.["@types/vscode"], vscodeVersion);
 });
 
-test("docs contains only the four lasting project documents", async () => {
-  const entries = await readdir(new URL("../docs/", import.meta.url));
-  assert.deepEqual(entries.sort(), [
-    "00_README.md",
-    "01_PRODUCT_PRD.md",
-    "02_TECHNICAL_DESIGN.md",
-    "03_USER_DESIGN_PRINCIPLES.md",
-  ], "Keep lasting content in the four docs files. Put temporary plans, evidence, and history in .artifacts; track work in GitHub issues.");
+test("the README links to the local documentation entry points", async () => {
+  const readme = await readFile(new URL("../README.md", import.meta.url), "utf8");
+  for (const file of ["docs/overview.md", "docs/workflow.md", "docs/USER_DESIGN_PRINCIPLE.md"]) {
+    assert.ok(readme.includes(`](${file})`), `README must link to ${file}`);
+    await access(new URL(`../${file}`, import.meta.url));
+  }
+});
+
+test("the local OpenSpec project owns its specifications and changes", async () => {
+  const config = await readFile(new URL("../openspec/config.yaml", import.meta.url), "utf8");
+  assert.match(config, /^schema: spec-driven$/m);
+  assert.doesNotMatch(config, /^store:/m);
+  await access(new URL("../openspec/specs/", import.meta.url));
+  await access(new URL("../openspec/changes/", import.meta.url));
+});
+
+test("the local OpenSpec project resolves every live acceptance reference", async () => {
+  const catalog = JSON.parse(await readFile(new URL("./acceptance/catalog.json", import.meta.url), "utf8"));
+  const codeRoot = fileURLToPath(new URL("../", import.meta.url));
+  validateCatalogSources(catalog, resolveDocumentation(codeRoot, { preview: true }));
+});
+
+test("historical acceptance inputs resolve in the original code repository", async () => {
+  const [principles, retrievalFixture] = await Promise.all([
+    readFile(new URL("./acceptance/principles.json", import.meta.url), "utf8").then(JSON.parse),
+    readFile(new URL("./acceptance/retrieval-fixture.json", import.meta.url), "utf8").then(JSON.parse),
+  ]);
+  validateHistoricalSources(fileURLToPath(new URL("../", import.meta.url)), principles, retrievalFixture);
 });
