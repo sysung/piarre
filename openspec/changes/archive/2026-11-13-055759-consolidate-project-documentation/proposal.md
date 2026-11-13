@@ -33,10 +33,10 @@ No separate documentation checkout, Store pointer, documentation lock or cross-r
 ## History
 
 - Created at: 2026-11-13T05:57:59Z (2026-11-12 in America/Chicago).
-- Outcome: implementation in progress; storage design revised by the user on 2026-11-13.
+- Outcome: implementation complete and archived at the user's request; implementation PR #122 is merged.
 - Origin: this conversation's documentation consolidation review and user annotations.
 - Originating issue: https://github.com/sysung/piarre/issues/121. Implementation branch: `codex/121-consolidate-documentation`. Implementation PR: https://github.com/sysung/piarre/pull/122. Verified implementation commit: `a301b008650569c410799391af9304b9ac8e4cc4`. See [verification results](verification/results.md).
-- Storage revision accepted by the user: 2026-11-13. Merge and archive: pending final review.
+- Storage revision accepted by the user: 2026-11-13. Merge: implementation PR #122 merged; archive recorded in a follow-up PR. Archived at: 2026-11-13T06:49:20Z.
 - Dependencies: no prerequisite change identified; the selected target revision is `8a8b7ab38d9cb0d272389ef89a089e5cee9b7832`.
 - Supersedes: the informal recommendation to discard legacy documents after extraction; this proposal preserves their historical bytes.
 
