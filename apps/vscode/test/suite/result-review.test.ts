@@ -53,6 +53,8 @@ suite("Result acceptance through the actual Webview and native confirmation", ()
     resultDialogs.warning = (message, options, ...choices) => {
       payloads.push(`${message}\n${options?.detail ?? ""}`);
       if (choices.length) {
+        assert.equal(options?.modal, true);
+        assert.deepEqual(choices, [integrated ? "Accept current result" : "Apply and accept"]);
         if (scenario === "source drift") writeFileSync(path.join(source, "review.txt"), "new source work");
         if (scenario === "candidate drift") writeFileSync(path.join(candidate.root, "review.txt"), "new candidate work");
         if (scenario === "dirty editor") fixture.dirty.value = true;
