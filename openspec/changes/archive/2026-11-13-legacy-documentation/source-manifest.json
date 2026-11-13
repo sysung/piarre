@@ -1,0 +1,427 @@
+{
+  "sourceRepository": "https://github.com/sysung/piarre.git",
+  "targetCodeRevision": "8a8b7ab38d9cb0d272389ef89a089e5cee9b7832",
+  "planningCodeRevision": "a16447a9dbeac224d1ffc1c793fb1a14ea12576a",
+  "catalogVerificationKinds": {
+    "automated": 4,
+    "pending": 17
+  },
+  "draftSpecs": {
+    "openspec/specs/approved-execution/spec.md": {
+      "Bind approval to reviewed scope": [
+        "Change provider context before generation"
+      ],
+      "Keep uncertain ownership": [
+        "Lose a provider acknowledgment"
+      ],
+      "Disclose missing estimates": [
+        "Estimate without matching calibration"
+      ]
+    },
+    "openspec/specs/goal-proposals/spec.md": {
+      "Preview and save separately": [
+        "Review a typed goal"
+      ],
+      "Invalidate outdated previews": [
+        "Edit a goal during preview"
+      ],
+      "Inspect saved proposals": [
+        "Open a saved proposal"
+      ],
+      "Remove a saved goal": [
+        "Delete one goal"
+      ]
+    },
+    "openspec/specs/project-knowledge/spec.md": {
+      "Preserve observation provenance": [
+        "Record an observation"
+      ],
+      "Invalidate affected work on correction": [
+        "Correct a task premise"
+      ]
+    },
+    "openspec/specs/project-state/spec.md": {
+      "Restore project state": [
+        "Reopen a renamed project"
+      ],
+      "Reject stale writes and replay receipts": [
+        "Retry after an intervening write"
+      ]
+    },
+    "openspec/specs/result-review/spec.md": {
+      "Bind checks to reviewed results": [
+        "Change the candidate after a passing check"
+      ],
+      "Require user acceptance": [
+        "Complete a run with passing checks"
+      ]
+    },
+    "openspec/specs/typed-discussion/spec.md": {
+      "Preserve submitted context": [
+        "Receive an inference claiming approval"
+      ],
+      "Represent uncertain turns": [
+        "Restart with a pending turn"
+      ]
+    },
+    "openspec/specs/workspace-recovery/spec.md": {
+      "Publish reviewed changes within scope": [
+        "Find a manual edit before integration"
+      ],
+      "Preserve current work during restore": [
+        "Restore a checkpoint after a newer edit"
+      ]
+    }
+  },
+  "snapshots": [
+    {
+      "source": "target",
+      "path": "README.md",
+      "sourceRevision": "8a8b7ab38d9cb0d272389ef89a089e5cee9b7832",
+      "gitBlob": "6117290ae8298a0aacb9c66d4267e9a7de11319f",
+      "sha256": "ad8f461f3af5ba18ba971e1358dbc78b1dac610eeb267bd4ac28625e88877d1d",
+      "bytes": 10417,
+      "snapshot": "sources/target/README.md"
+    },
+    {
+      "source": "target",
+      "path": "docs/00_README.md",
+      "sourceRevision": "8a8b7ab38d9cb0d272389ef89a089e5cee9b7832",
+      "gitBlob": "45232801d2d662664da61b5fe4e8baf7c26873f0",
+      "sha256": "22e2c1b423ad1bd81eb2e065ad2621ef26e8e4904572b6fe3885e155aeab92e2",
+      "bytes": 2478,
+      "snapshot": "sources/target/docs/00_README.md"
+    },
+    {
+      "source": "target",
+      "path": "docs/01_PRODUCT_PRD.md",
+      "sourceRevision": "8a8b7ab38d9cb0d272389ef89a089e5cee9b7832",
+      "gitBlob": "ae9e173bfed4075ff8a49caa46cf6f4a964a230a",
+      "sha256": "9fa5c7eb9c808b3e8beda098d087479f847193669ab9c4c41c355e6e79315e1a",
+      "bytes": 16243,
+      "snapshot": "sources/target/docs/01_PRODUCT_PRD.md"
+    },
+    {
+      "source": "target",
+      "path": "docs/02_TECHNICAL_DESIGN.md",
+      "sourceRevision": "8a8b7ab38d9cb0d272389ef89a089e5cee9b7832",
+      "gitBlob": "f9adb8ca6fc1f598b5eea3dd24aa847132ff26db",
+      "sha256": "b510800860ed80141a40ae8d5e6d7512b65380001354f7e928510d9e5b4244ab",
+      "bytes": 18381,
+      "snapshot": "sources/target/docs/02_TECHNICAL_DESIGN.md"
+    },
+    {
+      "source": "target",
+      "path": "docs/03_USER_DESIGN_PRINCIPLES.md",
+      "sourceRevision": "8a8b7ab38d9cb0d272389ef89a089e5cee9b7832",
+      "gitBlob": "01cc56044c123ef401ed25a4fc120a1307baa2ab",
+      "sha256": "83c201b1ed36148ee01b5da5422b70a03abe04b7a3c18e29af56c1aeea881fa4",
+      "bytes": 20031,
+      "snapshot": "sources/target/docs/03_USER_DESIGN_PRINCIPLES.md"
+    },
+    {
+      "source": "target",
+      "path": "test/acceptance/catalog.json",
+      "sourceRevision": "8a8b7ab38d9cb0d272389ef89a089e5cee9b7832",
+      "gitBlob": "678fe3d612a110b3a0e5406ecf68112a355869d7",
+      "sha256": "7654179c23b151599605b895bb7c569469f87599ae611b8bf1b25a0ad0afcbbf",
+      "bytes": 11780,
+      "snapshot": "sources/target/test/acceptance/catalog.json"
+    },
+    {
+      "source": "target",
+      "path": "test/acceptance/principles.json",
+      "sourceRevision": "8a8b7ab38d9cb0d272389ef89a089e5cee9b7832",
+      "gitBlob": "5e768f00c72e01fbec58c63b8a8951b0c7ae42dd",
+      "sha256": "5bd489fd91e4fbde4be2d6582c59f92025a0d513bd856f9ad70c4358ad65a412",
+      "bytes": 7397,
+      "snapshot": "sources/target/test/acceptance/principles.json"
+    },
+    {
+      "source": "target",
+      "path": "test/acceptance/retrieval-fixture.json",
+      "sourceRevision": "8a8b7ab38d9cb0d272389ef89a089e5cee9b7832",
+      "gitBlob": "dc021e6f2aef237993ff73582b2d86b7796f0604",
+      "sha256": "3021fa352b745166b753ae9e54ccb9f01a95427675f4a2dd394dd2f4f960dccb",
+      "bytes": 5274,
+      "snapshot": "sources/target/test/acceptance/retrieval-fixture.json"
+    },
+    {
+      "source": "planning-head",
+      "path": "README.md",
+      "sourceRevision": "a16447a9dbeac224d1ffc1c793fb1a14ea12576a",
+      "gitBlob": "82f83787f1323bab0333c338d0b7e8a47169a0a4",
+      "sha256": "22ab8277253c34fe662b77f664880e85a4ee604b673b6c76e0aa3298749e067a",
+      "bytes": 3893,
+      "snapshot": "sources/planning-head/README.md"
+    },
+    {
+      "source": "planning-head",
+      "path": "docs/00_README.md",
+      "sourceRevision": "a16447a9dbeac224d1ffc1c793fb1a14ea12576a",
+      "gitBlob": "1c43f04a5f98172a690b5bf8a72c8a6cd638604e",
+      "sha256": "10c27f16cdfd8348367432ebb07bd35f90e605ebc533d7444903687239be3b55",
+      "bytes": 1715,
+      "snapshot": "sources/planning-head/docs/00_README.md"
+    },
+    {
+      "source": "planning-head",
+      "path": "docs/01_PRODUCT_PRD.md",
+      "sourceRevision": "a16447a9dbeac224d1ffc1c793fb1a14ea12576a",
+      "gitBlob": "9e28286f6706c2d4e5dfa5697445cba98a44b11e",
+      "sha256": "790f7b520033ba3e3de023fa63b8e382cec2aa35fc64da10ce6471aa9e13b0ea",
+      "bytes": 15723,
+      "snapshot": "sources/planning-head/docs/01_PRODUCT_PRD.md"
+    },
+    {
+      "source": "planning-head",
+      "path": "docs/02_TECHNICAL_DESIGN.md",
+      "sourceRevision": "a16447a9dbeac224d1ffc1c793fb1a14ea12576a",
+      "gitBlob": "4ddd1b1211a1a0fed0c3bd491f4c295e71b2c514",
+      "sha256": "143dc8177210c4bf28682551762721aa420eeb03b7e4a3da9b26ac524035eefd",
+      "bytes": 17293,
+      "snapshot": "sources/planning-head/docs/02_TECHNICAL_DESIGN.md"
+    },
+    {
+      "source": "planning-head",
+      "path": "docs/03_USER_DESIGN_PRINCIPLES.md",
+      "sourceRevision": "a16447a9dbeac224d1ffc1c793fb1a14ea12576a",
+      "gitBlob": "2996be8113bdec6594d288cb5d5f29d23d8b67ec",
+      "sha256": "736c2b105d29d9a96759f483a7cdb40011893cf3d84b1056476307ebb34ece39",
+      "bytes": 15807,
+      "snapshot": "sources/planning-head/docs/03_USER_DESIGN_PRINCIPLES.md"
+    },
+    {
+      "source": "planning-working",
+      "path": "README.md",
+      "sourceRevision": "a16447a9dbeac224d1ffc1c793fb1a14ea12576a",
+      "gitBlob": null,
+      "sha256": "bdbd9dd930aab1357e79130d7813d087f8f1facca98c0d8620f605a957e084a3",
+      "bytes": 3082,
+      "snapshot": "sources/planning-working/README.md"
+    },
+    {
+      "source": "planning-working",
+      "path": "docs/00_README.md",
+      "sourceRevision": "a16447a9dbeac224d1ffc1c793fb1a14ea12576a",
+      "gitBlob": null,
+      "sha256": "09623ba91a0a826e305227887f726e5c430ea5d27a458accfd351309689414a0",
+      "bytes": 2462,
+      "snapshot": "sources/planning-working/docs/00_README.md"
+    },
+    {
+      "source": "planning-working",
+      "path": "docs/01_PRODUCT_PRD.md",
+      "sourceRevision": "a16447a9dbeac224d1ffc1c793fb1a14ea12576a",
+      "gitBlob": null,
+      "sha256": "790f7b520033ba3e3de023fa63b8e382cec2aa35fc64da10ce6471aa9e13b0ea",
+      "bytes": 15723,
+      "snapshot": "sources/planning-working/docs/01_PRODUCT_PRD.md"
+    },
+    {
+      "source": "planning-working",
+      "path": "docs/02_TECHNICAL_DESIGN.md",
+      "sourceRevision": "a16447a9dbeac224d1ffc1c793fb1a14ea12576a",
+      "gitBlob": null,
+      "sha256": "143dc8177210c4bf28682551762721aa420eeb03b7e4a3da9b26ac524035eefd",
+      "bytes": 17293,
+      "snapshot": "sources/planning-working/docs/02_TECHNICAL_DESIGN.md"
+    },
+    {
+      "source": "planning-working",
+      "path": "docs/03_USER_DESIGN_PRINCIPLES.md",
+      "sourceRevision": "a16447a9dbeac224d1ffc1c793fb1a14ea12576a",
+      "gitBlob": null,
+      "sha256": "736c2b105d29d9a96759f483a7cdb40011893cf3d84b1056476307ebb34ece39",
+      "bytes": 15807,
+      "snapshot": "sources/planning-working/docs/03_USER_DESIGN_PRINCIPLES.md"
+    },
+    {
+      "source": "planning-working",
+      "path": "docs/research/2026-11-07-shared-project-truth.md",
+      "sourceRevision": "a16447a9dbeac224d1ffc1c793fb1a14ea12576a",
+      "gitBlob": null,
+      "sha256": "3f74ec44656c342abcfc1c9e0ef4c9db73f75ca03854e61d1996b5cd5ee62c9a",
+      "bytes": 10849,
+      "snapshot": "sources/planning-working/docs/research/2026-11-07-shared-project-truth.md"
+    },
+    {
+      "source": "planning-draft",
+      "path": "openspec/specs/approved-execution/spec.md",
+      "sourceRevision": null,
+      "gitBlob": null,
+      "sha256": "54f391e4d02ce872be87dd840dcd8f64f1c72a5b84df8290554cdb749b541ef0",
+      "bytes": 1564,
+      "snapshot": "sources/planning-draft/openspec/specs/approved-execution/spec.md"
+    },
+    {
+      "source": "planning-draft",
+      "path": "openspec/specs/goal-proposals/spec.md",
+      "sourceRevision": null,
+      "gitBlob": null,
+      "sha256": "3757499e004867245beb25e247c50b0583d310875d47b020142be0556a4668e7",
+      "bytes": 1941,
+      "snapshot": "sources/planning-draft/openspec/specs/goal-proposals/spec.md"
+    },
+    {
+      "source": "planning-draft",
+      "path": "openspec/specs/project-knowledge/spec.md",
+      "sourceRevision": null,
+      "gitBlob": null,
+      "sha256": "057c840f9f84916902c7652332632df391606e7b289b19ae78630264b76e1e68",
+      "bytes": 1121,
+      "snapshot": "sources/planning-draft/openspec/specs/project-knowledge/spec.md"
+    },
+    {
+      "source": "planning-draft",
+      "path": "openspec/specs/project-state/spec.md",
+      "sourceRevision": null,
+      "gitBlob": null,
+      "sha256": "0fe97ee2f2ad4d7a68ac58199d624d8b29202e4379df342c425e2ec7154f327c",
+      "bytes": 1289,
+      "snapshot": "sources/planning-draft/openspec/specs/project-state/spec.md"
+    },
+    {
+      "source": "planning-draft",
+      "path": "openspec/specs/result-review/spec.md",
+      "sourceRevision": null,
+      "gitBlob": null,
+      "sha256": "adebb27ff5e12e559a2d8451ccd50da5e0c23c9d220807edeca3b4ec6abcb791",
+      "bytes": 1109,
+      "snapshot": "sources/planning-draft/openspec/specs/result-review/spec.md"
+    },
+    {
+      "source": "planning-draft",
+      "path": "openspec/specs/typed-discussion/spec.md",
+      "sourceRevision": null,
+      "gitBlob": null,
+      "sha256": "05f727b1d4a6b981b3e636f4ac6746d88902fcbf08856491a0d42f5c2463e6e7",
+      "bytes": 1168,
+      "snapshot": "sources/planning-draft/openspec/specs/typed-discussion/spec.md"
+    },
+    {
+      "source": "planning-draft",
+      "path": "openspec/specs/workspace-recovery/spec.md",
+      "sourceRevision": null,
+      "gitBlob": null,
+      "sha256": "757884a8ae3dd2779c5f3a503dddaedaca6a8cc85fa011c59172c562d104c763",
+      "bytes": 1197,
+      "snapshot": "sources/planning-draft/openspec/specs/workspace-recovery/spec.md"
+    }
+  ],
+  "historicalPrincipleSources": [
+    {
+      "sourceRevision": "353e31bff3c1c86ff31bcf393346d50d5d413d85",
+      "path": "docs/01_PRODUCT_PRD.md",
+      "gitBlob": "84b00835870a2fcf9cd946b6b0a1ff0131dcab5e",
+      "sha256": "a5de8022d2ac11e6c59b17af4da4f5746a4653d7f2de5a1d8ccdbcebce169efa",
+      "recordedSha256": "a5de8022d2ac11e6c59b17af4da4f5746a4653d7f2de5a1d8ccdbcebce169efa",
+      "bytes": 15137,
+      "principles": [
+        "agent-visibility-first"
+      ]
+    },
+    {
+      "sourceRevision": "549552ecb699a32881adb026374cbd30697f4e4f",
+      "path": "docs/01_PRODUCT_PRD.md",
+      "gitBlob": "40069486d5f73ce59410a1fe1cd672018375925b",
+      "sha256": "62c38c0159745962de175aed431fbd62d2094f8ac4361491b142b99fecf330b9",
+      "recordedSha256": "62c38c0159745962de175aed431fbd62d2094f8ac4361491b142b99fecf330b9",
+      "bytes": 14192,
+      "principles": [
+        "business-intent",
+        "answer-first",
+        "simplicity",
+        "correctable-sources",
+        "runtime-authority",
+        "preserve-work",
+        "meaningful-progress",
+        "proportional-practices",
+        "coherent-review",
+        "translation-fidelity"
+      ]
+    }
+  ],
+  "historicalRetrievalSources": [
+    {
+      "sourceRevision": "549552ecb699a32881adb026374cbd30697f4e4f",
+      "path": "docs/01_PRODUCT_PRD.md",
+      "gitBlob": "40069486d5f73ce59410a1fe1cd672018375925b",
+      "sha256": "62c38c0159745962de175aed431fbd62d2094f8ac4361491b142b99fecf330b9",
+      "recordedSha256": null,
+      "bytes": 14192
+    },
+    {
+      "sourceRevision": "549552ecb699a32881adb026374cbd30697f4e4f",
+      "path": "docs/02_TECHNICAL_DESIGN.md",
+      "gitBlob": "20cbd625a053ae381846dcbf0315d2de5406df9d",
+      "sha256": "4ce45b28ff9262ed93da5675137b372ae764b428520ae1ccb7309893bad7bf57",
+      "recordedSha256": null,
+      "bytes": 13626
+    },
+    {
+      "sourceRevision": "549552ecb699a32881adb026374cbd30697f4e4f",
+      "path": "packages/core/src/index.ts",
+      "gitBlob": "184cd9674f0604ba1cc10e57b6137e7675f561ee",
+      "sha256": "1de6d6ae319f3ce299e26d5a60b9a1e5fed0570d206248898d9400d3d7ce1a7e",
+      "recordedSha256": null,
+      "bytes": 7337
+    },
+    {
+      "sourceRevision": "549552ecb699a32881adb026374cbd30697f4e4f",
+      "path": "packages/core/src/contracts.ts",
+      "gitBlob": "e62be1aba118569ed65aa0279c4a95e9cbf02a24",
+      "sha256": "b8b59cd426f66404ff1834d0dd3b18b06dec8c26cfb39414fcac4ddf813a586e",
+      "recordedSha256": null,
+      "bytes": 10458
+    },
+    {
+      "sourceRevision": "549552ecb699a32881adb026374cbd30697f4e4f",
+      "path": "packages/core/src/costs.ts",
+      "gitBlob": "05aec4197e4b3fd9cf316fcb57c534bb2168df99",
+      "sha256": "393bfd36c5b01ccf1738da333eb9ab5fa3196a8032f4bc32ff90b024363dd387",
+      "recordedSha256": null,
+      "bytes": 6244
+    },
+    {
+      "sourceRevision": "549552ecb699a32881adb026374cbd30697f4e4f",
+      "path": "packages/core/src/inspection.ts",
+      "gitBlob": "f73171c30904022cc7b4967d89b5b2e1d56a7ceb",
+      "sha256": "328e9b3ea65dae8f6a94a332b367b62ccbe5dce4ccfe0cf6105d69390f2db5cd",
+      "recordedSha256": null,
+      "bytes": 5826
+    },
+    {
+      "sourceRevision": "549552ecb699a32881adb026374cbd30697f4e4f",
+      "path": "apps/vscode/src/work-view.ts",
+      "gitBlob": "fb916a65aa5bf57c4cb06d14ff6c81292c902ee1",
+      "sha256": "d8e1f44453bada1c31d1a6243e0429e1f27c2e156714fb285f7daf56299363f0",
+      "recordedSha256": null,
+      "bytes": 19255
+    },
+    {
+      "sourceRevision": "549552ecb699a32881adb026374cbd30697f4e4f",
+      "path": "apps/vscode/src/sqlite-project-repository.ts",
+      "gitBlob": "9acf86f0186f5b4b3cee942b28e70a97cfa91ce8",
+      "sha256": "dfb01dac7be22a7b1bd9226726aa304c39f181a9493e31f51e117975a3a2c9a4",
+      "recordedSha256": null,
+      "bytes": 5251
+    },
+    {
+      "sourceRevision": "549552ecb699a32881adb026374cbd30697f4e4f",
+      "path": ".github/workflows/ci.yml",
+      "gitBlob": "3c2085166581e08500f2353bf69da2df7b82d7aa",
+      "sha256": "da1b3713795aec4041e6a5010bfcc9af7461755504930554745e64ec33921652",
+      "recordedSha256": null,
+      "bytes": 3145
+    },
+    {
+      "sourceRevision": "549552ecb699a32881adb026374cbd30697f4e4f",
+      "path": "package.json",
+      "gitBlob": "48a5211e12f16525cd49117637ba88078da07e17",
+      "sha256": "d1bf6a40e3fe1fd53a3c2f7ae85749b9240c66b29f39fa500324879bce4c3046",
+      "recordedSha256": null,
+      "bytes": 1065
+    }
+  ]
+}

@@ -5,8 +5,9 @@
       "id": "foundation-authority-and-recommendation",
       "owner": "C01",
       "source": {
-        "document": "docs/02_TECHNICAL_DESIGN.md",
-        "heading": "Ownership and data"
+        "document": "openspec/specs/imported-acceptance-baseline/spec.md",
+        "heading": "Requirement: foundation-authority-and-recommendation",
+        "level": 3
       },
       "requirement": "Proposal authority, original record revisions, compatibility, and visible unsupported capabilities.",
       "verification": {
@@ -27,8 +28,9 @@
       "id": "resume",
       "owner": "C03",
       "source": {
-        "document": "docs/01_PRODUCT_PRD.md",
-        "heading": "Memory and the Recommendation view"
+        "document": "openspec/changes/2026-11-13-061200-retained-delivery-scope/design.md",
+        "heading": "resume",
+        "level": 2
       },
       "requirement": "Brief accomplishments, upcoming tasks, unresolved decisions, and correct project sources.",
       "verification": {
@@ -40,8 +42,9 @@
       "id": "conversation",
       "owner": "C02",
       "source": {
-        "document": "docs/01_PRODUCT_PRD.md",
-        "heading": "Agent visibility and project inspection"
+        "document": "openspec/changes/2026-11-13-061200-retained-delivery-scope/design.md",
+        "heading": "conversation",
+        "level": 2
       },
       "requirement": "Supporting typed instructions and consequential clarification preserve privacy and source meaning; agent visibility and direct controls do not require opening a conversation.",
       "verification": {
@@ -53,8 +56,9 @@
       "id": "progress",
       "owner": "C02",
       "source": {
-        "document": "docs/01_PRODUCT_PRD.md",
-        "heading": "Product principles"
+        "document": "openspec/changes/2026-11-13-061200-retained-delivery-scope/design.md",
+        "heading": "progress",
+        "level": 2
       },
       "requirement": "Observed agent/task ownership, concise milestones, blockers and pending decisions remain visible without status questions.",
       "verification": {
@@ -66,8 +70,9 @@
       "id": "preparation",
       "owner": "C02",
       "source": {
-        "document": "docs/01_PRODUCT_PRD.md",
-        "heading": "Parallel ideas, council, and preparation"
+        "document": "openspec/changes/2026-11-13-061200-retained-delivery-scope/design.md",
+        "heading": "preparation",
+        "level": 2
       },
       "requirement": "Cancel provisional drafts when intent changes and reject obsolete results.",
       "verification": {
@@ -79,8 +84,9 @@
       "id": "memory-correction",
       "owner": "C03",
       "source": {
-        "document": "docs/01_PRODUCT_PRD.md",
-        "heading": "Memory and the Recommendation view"
+        "document": "openspec/changes/2026-11-13-061200-retained-delivery-scope/design.md",
+        "heading": "memory-correction",
+        "level": 2
       },
       "requirement": "Inspect and approve corrections with provenance and affected-work invalidation.",
       "verification": {
@@ -92,8 +98,9 @@
       "id": "triage",
       "owner": "C04",
       "source": {
-        "document": "docs/01_PRODUCT_PRD.md",
-        "heading": "Work and user authority"
+        "document": "openspec/changes/2026-11-13-061200-retained-delivery-scope/design.md",
+        "heading": "triage",
+        "level": 2
       },
       "requirement": "Reversible priorities and dependency-aware work without implied approval.",
       "verification": {
@@ -105,8 +112,9 @@
       "id": "execution",
       "owner": "C04",
       "source": {
-        "document": "docs/01_PRODUCT_PRD.md",
-        "heading": "Work and user authority"
+        "document": "openspec/changes/2026-11-13-061200-retained-delivery-scope/design.md",
+        "heading": "execution",
+        "level": 2
       },
       "requirement": "One supported coding writer under explicit scope, cost, and data-sharing authority.",
       "verification": {
@@ -118,8 +126,9 @@
       "id": "verification",
       "owner": "C04",
       "source": {
-        "document": "docs/01_PRODUCT_PRD.md",
-        "heading": "Testing experience and success"
+        "document": "openspec/changes/2026-11-13-061200-retained-delivery-scope/design.md",
+        "heading": "verification",
+        "level": 2
       },
       "requirement": "Review current independent checks and one outcome package.",
       "verification": {
@@ -131,8 +140,9 @@
       "id": "recovery",
       "owner": "C04",
       "source": {
-        "document": "docs/01_PRODUCT_PRD.md",
-        "heading": "Work and user authority"
+        "document": "openspec/changes/2026-11-13-061200-retained-delivery-scope/design.md",
+        "heading": "recovery",
+        "level": 2
       },
       "requirement": "Stop, restart, manual edits, and lost acknowledgments preserve honest state.",
       "verification": {
@@ -144,8 +154,9 @@
       "id": "checkpoints",
       "owner": "C04",
       "source": {
-        "document": "docs/01_PRODUCT_PRD.md",
-        "heading": "Work and user authority"
+        "document": "openspec/changes/2026-11-13-061200-retained-delivery-scope/design.md",
+        "heading": "checkpoints",
+        "level": 2
       },
       "requirement": "Preview and restore supported scope while preserving newer work.",
       "verification": {
@@ -157,8 +168,9 @@
       "id": "linked-ideas",
       "owner": "C05",
       "source": {
-        "document": "docs/01_PRODUCT_PRD.md",
-        "heading": "Parallel ideas, council, and preparation"
+        "document": "openspec/changes/2026-11-13-061200-retained-delivery-scope/design.md",
+        "heading": "linked-ideas",
+        "level": 2
       },
       "requirement": "Investigate side ideas and return without losing or silently changing the main goal.",
       "verification": {
@@ -170,8 +182,9 @@
       "id": "council",
       "owner": "C05",
       "source": {
-        "document": "docs/01_PRODUCT_PRD.md",
-        "heading": "Parallel ideas, council, and preparation"
+        "document": "openspec/changes/2026-11-13-061200-retained-delivery-scope/design.md",
+        "heading": "council",
+        "level": 2
       },
       "requirement": "Bounded independent findings, available traces, dissent, and resource transparency.",
       "verification": {
@@ -183,8 +196,9 @@
       "id": "reflection",
       "owner": "C06",
       "source": {
-        "document": "docs/01_PRODUCT_PRD.md",
-        "heading": "Reflection and adaptation"
+        "document": "openspec/changes/2026-11-13-061200-retained-delivery-scope/design.md",
+        "heading": "reflection",
+        "level": 2
       },
       "requirement": "Optional evidence-based reflection and correctable preferences without silent policy changes.",
       "verification": {
@@ -196,8 +210,9 @@
       "id": "documentation",
       "owner": "C06",
       "source": {
-        "document": "docs/01_PRODUCT_PRD.md",
-        "heading": "Product principles"
+        "document": "openspec/changes/2026-11-13-061200-retained-delivery-scope/design.md",
+        "heading": "documentation",
+        "level": 2
       },
       "requirement": "Promote reviewed lasting conclusions from linked temporary artifacts.",
       "verification": {
@@ -209,8 +224,9 @@
       "id": "candidate-isolation",
       "owner": "C07",
       "source": {
-        "document": "docs/01_PRODUCT_PRD.md",
-        "heading": "Testing experience and success"
+        "document": "openspec/changes/2026-11-13-061200-retained-delivery-scope/design.md",
+        "heading": "candidate-isolation",
+        "level": 2
       },
       "requirement": "Stable daily use remains separate from candidate tests and diagnostics.",
       "verification": {
@@ -222,8 +238,9 @@
       "id": "user-value",
       "owner": "C08",
       "source": {
-        "document": "docs/01_PRODUCT_PRD.md",
-        "heading": "Testing experience and success"
+        "document": "openspec/changes/2026-11-13-061200-retained-delivery-scope/design.md",
+        "heading": "user-value",
+        "level": 2
       },
       "requirement": "Observe useful, business-grounded explanations and supervision effort without hiding defects.",
       "verification": {
@@ -235,8 +252,9 @@
       "id": "billing-plan-estimates",
       "owner": "C01",
       "source": {
-        "document": "docs/01_PRODUCT_PRD.md",
-        "heading": "Models and business constraints"
+        "document": "openspec/specs/imported-acceptance-baseline/spec.md",
+        "heading": "Requirement: billing-plan-estimates",
+        "level": 3
       },
       "requirement": "API dollars or calibrated subscription-window consumption with explicit missing inputs and unverified billing context.",
       "verification": {
@@ -259,8 +277,9 @@
       "id": "workspace-session-brief-shell",
       "owner": "C02",
       "source": {
-        "document": "docs/01_PRODUCT_PRD.md",
-        "heading": "Agent visibility and project inspection"
+        "document": "openspec/specs/imported-acceptance-baseline/spec.md",
+        "heading": "Requirement: workspace-session-brief-shell",
+        "level": 3
       },
       "requirement": "Design B planning shell: record-backed brief, visible split inspection, responsive reading order, and private unsent input preserved across refresh. This does not establish connected dialogue or sourced session resumption.",
       "verification": {
@@ -276,8 +295,9 @@
       "id": "context-proposal-boundaries",
       "owner": "C01",
       "source": {
-        "document": "docs/01_PRODUCT_PRD.md",
-        "heading": "Translation and shared understanding"
+        "document": "openspec/specs/imported-acceptance-baseline/spec.md",
+        "heading": "Requirement: context-proposal-boundaries",
+        "level": 3
       },
       "requirement": "Preserve original statements and revisions, bind citations and correction targets to trusted inputs, and reject provider authority fields.",
       "verification": {
@@ -294,8 +314,9 @@
       "id": "agent-visibility",
       "owner": "C02",
       "source": {
-        "document": "docs/01_PRODUCT_PRD.md",
-        "heading": "Agent visibility and project inspection"
+        "document": "openspec/changes/2026-11-13-061200-retained-delivery-scope/design.md",
+        "heading": "agent-visibility",
+        "level": 2
       },
       "requirement": "Default overview shows known agents, task/scope ownership, parent work, last observed state, progress or blockers, pending decisions, outputs and supported direct controls; disconnected and unattached coverage is explicit.",
       "verification": {

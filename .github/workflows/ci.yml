@@ -25,6 +25,9 @@ jobs:
       artifact-id: ${{ steps.package.outputs.artifact-id }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
       - name: Check release branch
         if: inputs.create_release && github.ref != 'refs/heads/master'
         run: |
