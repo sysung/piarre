@@ -1,0 +1,7 @@
+ts	phase	decision	why	evidence	result
+2026-11-13T08:53:00Z	frame	Kept selection ownership in WorkView and generated authorization from rendered buttons	One map removes the independent unbound routing path while preserving pane policy	apps/vscode/src/work-view.ts	implemented
+2026-11-13T08:53:00Z	authority	Rechecked origin before durable approval and kept authorized work running after navigation	Selection changes invalidate review but do not revoke a running publication	.artifacts/stage-4/code-ready-focused.log	tests-green
+2026-11-13T08:53:00Z	verification	Separated browser DOM mechanics from blocked physical focus	The Mac is locked and native document focus cannot be established	.artifacts/stage-4/native-focus-blocker.txt	blocked
+2026-11-13T08:53:00Z	fixture	Corrected the migrated Webview proxy setter receiver	VS Code private fields require the real Webview instance	.artifacts/stage-4/focused-reviewed.log	tests-green
+2026-11-13T09:00:21Z	review	Added independent-review oracles and accepted the final full Host result	Revision drift, real document rotation, unknown controls, marker clearing and exact focus needed explicit proof	.artifacts/stage-4/independent-full-host-7d0d9bb.log	365 trusted and 1 restricted passed
+2026-11-13T09:00:21Z	delivery	Recorded integrated verification while leaving physical-focus tasks pending	CI and independent review passed but locked macOS still blocks native focus	https://github.com/sysung/piarre/actions/runs/43396944960	21 of 23 tasks complete
