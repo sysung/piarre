@@ -24,11 +24,11 @@ The [design](design.md) owns the implementation shape and [canonical verificatio
 
 ## 4. Explicit acceptance of recovered integration
 
-- [ ] 4.1 Add a real source-changing integration/restart regression that drives the offered acceptance control and native confirmation; record the V07 baseline failure and unreviewed state before implementation.
-- [ ] 4.2 Implement the host-only tagged review binding and mode-specific dialog from D3; migrate all applyAndAccept callers/tests and remove that old entry point. Verify V07 green with one original publication/checkpoint and no journal creation during acceptance-only review.
-- [ ] 4.3 Add cancel, exact replay, concurrent confirmation and drift-during-modal cases, including applicable check changes with unchanged file hashes; implement required revalidation and prove V08 plus idempotent V07 outcomes.
-- [ ] 4.4 Inventory coordinator restore callers, migrate meaningful direct tests to production recovery/adapter coverage, and remove test-only entry points only if proof permits. Verify V09 historical replay and preserved bytes; otherwise record retained methods and the concrete missing proof.
-- [ ] 4.5 Consolidate only remaining identical publication begin/end bookkeeping privately if it deletes duplication without moving authority or adding branch flags; otherwise record why no extraction is warranted. Verify V09 owner exclusion/journal failures and V07–V08, update affected review wording/guidance, and record the verified stage commit.
+- [x] 4.1 Add a real source-changing integration/restart regression that drives the offered acceptance control and native confirmation; record the V07 baseline failure and unreviewed state before implementation.
+- [x] 4.2 Implement the host-only tagged review binding and mode-specific dialog from D3; migrate all applyAndAccept callers/tests and remove that old entry point. Verify V07 green with one original publication/checkpoint and no journal creation during acceptance-only review.
+- [x] 4.3 Add cancel, exact replay, concurrent confirmation and drift-during-modal cases, including applicable check changes with unchanged file hashes; implement required revalidation and prove V08 plus idempotent V07 outcomes.
+- [x] 4.4 Inventory coordinator restore callers, migrate meaningful direct tests to production recovery/adapter coverage, and remove test-only entry points only if proof permits. Verify V09 historical replay and preserved bytes; otherwise record retained methods and the concrete missing proof.
+- [x] 4.5 Consolidate only remaining identical publication begin/end bookkeeping privately if it deletes duplication without moving authority or adding branch flags; otherwise record why no extraction is warranted. Verify V09 owner exclusion/journal failures and V07–V08, update affected review wording/guidance, and record the verified stage commit.
 
 ## 5. Detail identity and document mechanics
 

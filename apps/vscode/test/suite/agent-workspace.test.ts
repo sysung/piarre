@@ -99,13 +99,12 @@ suite("Agent workspace actual execution journey", () => {
             reviewPanel.webview.html = reviewPanel.webview.html.replace("</script>", `${reviewScript(scenario)}</script>`);
           } else if (message.action === "apply-accept" && "id" in message) {
             const run = repository.read().executionRuns.find(item => item.runId === message.id); assert.ok(run); assert.equal(run.state.kind, "terminal");
-            const input = { runId: run.runId, resultId: run.state.result.resultId, resultRevision: run.state.result.recordedAtRevision, operationId: `fixture-apply-${scenario}` };
             if (scenario === "stale") {
-              await assert.rejects(coordinator.applyAndAccept(input), /changed|stale/i);
+              assert.throws(() => coordinator.reviewResult(run.runId), /changed|stale/i);
               assert.equal(readFileSync(sourceFile, "utf8"), "30\n");
               assert.equal(repository.read().executionRuns[0]?.acceptance.kind, "unreviewed");
             } else {
-              assert.equal((await coordinator.applyAndAccept(input)).acceptance.kind, "accepted");
+              assert.equal((await coordinator.confirmResult(coordinator.reviewResult(run.runId).binding)).acceptance.kind, "accepted");
               assert.equal(readFileSync(sourceFile, "utf8"), "45\n");
             }
             finish({ kind: "journey-result", ok: true });

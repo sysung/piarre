@@ -3,7 +3,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { currentKnowledge, type ProjectSnapshot } from "../../../packages/core/src/index.js";
-import { hasUncertainProvider, planFreshness, executionDependenciesReady, type ExecutionAction, type ExecutionCheck, type ExecutionCriterion, type ExecutionRun, type CheckEvidence } from "../../../packages/core/src/execution.js";
+import { hasUncertainProvider, ownsExecutionLease, planFreshness, executionDependenciesReady, type ExecutionAction, type ExecutionCheck, type ExecutionCriterion, type ExecutionRun, type CheckEvidence } from "../../../packages/core/src/execution.js";
 import { createExecutionForecast, executionForecastText, type SpendingConsent } from "../../../packages/core/src/execution-forecast.js";
 import { type ProviderConfiguration } from "../../../packages/core/src/inspection.js";
 import type { CodexExecutionContext } from "../../../packages/core/src/provider-account-context.js";
@@ -21,6 +21,14 @@ import { checkEscrowLayout, publicationParents } from "./scoped-publication.js";
 
 type Client = Pick<CodexConversationClient, "connect" | "readExecutionContext" | "proposePatch" | "interrupt" | "dispose">;
 type Runner = Pick<CandidateCheckRunner, "capability" | "run" | "interrupt">;
+type ReviewEvidence = Readonly<{
+  planId: string; planRevision: number; resultManifestHash: string;
+  sourceManifestHash: string; candidateManifestHash: string; checksFingerprint: string;
+}>;
+export type ResultBinding = Readonly<{
+  runId: string; resultId: string; resultRevision: number; evidence: ReviewEvidence;
+} & ({ kind: "publish"; operationId: string } | { kind: "accept-existing"; operationId: string })>;
+export type ResultReview = Readonly<{ binding: ResultBinding; inspection: ReturnType<ExecutionCoordinator["inspection"]> }>;
 export class ExecutionReviewCancelled extends Error {}
 const disposedOwners = new Set<string>();
 const pendingPublicationOwners = new Set<string>();
@@ -405,55 +413,67 @@ export class ExecutionCoordinator {
     this.dispatch({ kind: "abandon-execution-provider", runId, reason, abandonedAt: Date.now(), manifestHash: this.candidateForRun(runId).manifestHash() });
     return this.run(runId);
   }
-  async applyAndAccept(input: { readonly runId: string; readonly resultId: string; readonly resultRevision: number; readonly operationId: string }): Promise<ExecutionRun> {
-    await Promise.resolve();
-    const run = this.run(input.runId);
-    if (run.workspace.kind === "integrated" && run.workspace.operationId === input.operationId) {
-      if (run.state.kind !== "terminal" || run.state.result.resultId !== input.resultId || run.state.result.recordedAtRevision !== input.resultRevision) throw new Error("Reviewed result identity changed.");
-      if (run.acceptance.kind === "accepted") return run;
-      this.clean();
-      const candidate = this.candidateForRun(input.runId); this.clean(candidate);
-      if (new WorkspaceIntegration({ candidate }).preview().sourceManifestHash !== run.workspace.manifestHash || candidate.manifestHash() !== run.workspace.manifestHash) throw new Error("Integrated source changed before acceptance.");
-      this.dispatch({ kind: "accept-execution-result", runId: input.runId, resultId: input.resultId, resultRevision: input.resultRevision }); return this.run(input.runId);
-    }
+  private reviewState(runId: string) {
     this.clean();
-    const candidate = this.candidateForRun(input.runId); this.clean(candidate); const integration = new WorkspaceIntegration({ candidate }); const preview = integration.preview();
-    if (run.state.kind !== "terminal" || run.state.result.resultId !== input.resultId || run.state.result.recordedAtRevision !== input.resultRevision || run.state.result.manifestHash !== preview.currentCandidateHash || candidate.inspectOriginal().kind !== "unchanged") throw new Error("Reviewed result or original workspace changed.");
-    const parentIdentityHash = digest(JSON.stringify(preview.changes.map(change => publicationParents(candidate.sourceRoot, change.relativePath))));
-    this.dispatch({ kind: "begin-workspace-operation", runId: input.runId, request: { kind: "integrate", parentIdentityHash, writer: { ownerId: this.ownerId, ownerPid: process.pid }, resultId: input.resultId, resultRevision: input.resultRevision, expectedManifestHash: preview.sourceManifestHash, targetManifestHash: preview.currentCandidateHash } }, input.operationId);
-    this.beginPublication(input.runId);
-    try {
-      this.clean(candidate);
-      const result = await integration.apply({ commandId: input.operationId, expectedSourceManifestHash: preview.sourceManifestHash, expectedCandidateManifestHash: preview.currentCandidateHash, parentIdentityHash });
-      if (result.kind !== "changed" && result.kind !== "current") throw new Error("Workspace journal is conflicted; preserved bytes require reconciliation.");
-      this.clean(candidate);
-      this.dispatch({ kind: "finish-workspace-operation", runId: input.runId, operationId: input.operationId, manifestHash: result.manifestHash, observedAt: Date.now() });
-      this.dispatch({ kind: "accept-execution-result", runId: input.runId, resultId: input.resultId, resultRevision: input.resultRevision });
-    } catch (error) { if (!this.disposed && this.run(input.runId).workspace.kind === "writing") this.dispatch({ kind: "mark-workspace-unknown", runId: input.runId, reason: error instanceof Error ? error.message : "Workspace completion unknown." }); throw error; }
-    finally { this.endPublication(input.runId); }
-    return this.run(input.runId);
+    const project = this.snapshot();
+    const run = project.executionRuns.find(item => item.runId === runId);
+    if (project.schedulingPaused || project.executionRuns.some(ownsExecutionLease)) throw new Error("Result review is paused or another operation still owns work.");
+    if (!run || run.state.kind !== "terminal" || run.state.result.outcome !== "needs-review" || run.reviewFreshness.kind !== "current" || planFreshness(project, run.grant.plan) !== "current" || !executionDependenciesReady(project, run.grant.plan.taskId)) throw new Error("Reviewed result or current plan changed.");
+    const result = run.state.result; const plan = run.grant.plan;
+    const bound = result.checks.filter(item => plan.checks.some(check => check.checkId === item.checkId && JSON.stringify(check.argv) === JSON.stringify(item.argv) && JSON.stringify(check.criterionIds) === JSON.stringify(item.criterionIds)));
+    if (!plan.checks.length || bound.length !== result.checks.length || bound.some(item => item.kind !== "passed" || item.termination !== "observed" || item.exitCode !== 0 || item.signal !== null || item.manifestHash !== result.manifestHash) || plan.checks.some(check => !bound.some(item => item.checkId === check.checkId)) || plan.criteria.some(criterion => !bound.some(item => item.criterionIds.includes(criterion.criterionId)))) throw new Error("Current criterion-bound checks do not pass.");
+    const checks = (items: readonly CheckEvidence[]) => items.map(item => ({ checkId: item.checkId, nonce: item.nonce, criterionIds: item.criterionIds, argv: item.argv, kind: item.kind, termination: item.termination, exitCode: item.exitCode, signal: item.signal, manifestHash: item.manifestHash, stdout: item.stdout, stderr: item.stderr, observedAt: item.observedAt })).sort((a, b) => a.checkId.localeCompare(b.checkId) || a.nonce.localeCompare(b.nonce));
+    const candidate = this.candidateForRun(runId); this.clean(candidate);
+    const inspection = this.inspection({ runId });
+    const evidence: ReviewEvidence = { planId: plan.planId, planRevision: plan.recordedAtRevision, resultManifestHash: result.manifestHash, sourceManifestHash: inspection.integration.sourceManifestHash, candidateManifestHash: inspection.integration.currentCandidateHash,
+      checksFingerprint: digest(JSON.stringify({ criteria: plan.criteria, checks: plan.checks, result: checks(result.checks), recorded: checks(run.evidence) })) };
+    if (evidence.candidateManifestHash !== result.manifestHash || (run.workspace.kind === "integrated" ? evidence.sourceManifestHash !== run.workspace.manifestHash || run.workspace.manifestHash !== result.manifestHash : run.workspace.kind !== "not-integrated" || inspection.original.kind !== "unchanged")) throw new Error("Reviewed result or original workspace changed.");
+    return { project, run, result, candidate, inspection, evidence };
   }
-  previewRestore(input: { readonly runId: string; readonly target: "source" | "candidate"; readonly checkpointId: string }) {
-    this.clean(); const candidate = this.candidateForRun(input.runId); this.clean(candidate);
-    return input.target === "source" ? new WorkspaceIntegration({ candidate }).previewRestore(input) : candidate.previewRestore(input);
+  reviewResult(runId: string): ResultReview {
+    const { run, result, inspection, evidence } = this.reviewState(runId);
+    const mode = run.workspace.kind === "integrated" ? { kind: "accept-existing", operationId: run.workspace.operationId } as const : { kind: "publish", operationId: randomUUID() } as const;
+    return { binding: { ...mode, runId, resultId: result.resultId, resultRevision: result.recordedAtRevision, evidence }, inspection };
   }
-  async restore(input: { readonly runId: string; readonly target: "source" | "candidate"; readonly checkpointId: string; readonly expectedManifestHash: string; readonly targetManifestHash: string; readonly operationId: string }): Promise<ExecutionRun> {
-    const previous = this.run(input.runId);
-    if (previous.workspace.kind === "restored" && previous.workspace.operationId === input.operationId) return previous;
-    this.clean(); const candidate = this.candidateForRun(input.runId); this.clean(candidate); const integration = new WorkspaceIntegration({ candidate });
-    const preview = this.previewRestore(input);
-    if (preview.currentManifestHash !== input.expectedManifestHash || preview.targetManifestHash !== input.targetManifestHash) throw new Error("Restore preview changed.");
-    const parentIdentityHash = digest(JSON.stringify(preview.changes.map(change => publicationParents(input.target === "source" ? candidate.sourceRoot : candidate.root, change.relativePath))));
-    this.dispatch({ kind: "begin-workspace-operation", runId: input.runId, request: { kind: "restore", parentIdentityHash, writer: { ownerId: this.ownerId, ownerPid: process.pid }, target: input.target, checkpointId: input.checkpointId, expectedManifestHash: input.expectedManifestHash, targetManifestHash: input.targetManifestHash } }, input.operationId);
-    this.beginPublication(input.runId);
-    try {
-      this.clean(candidate);
-      const result = await (input.target === "source" ? integration.restore({ restoreCommandId: input.operationId, checkpointId: input.checkpointId, expectedManifestHash: input.expectedManifestHash, targetManifestHash: input.targetManifestHash, parentIdentityHash }) : candidate.restore({ commandId: input.operationId, checkpointId: input.checkpointId, expectedManifestHash: input.expectedManifestHash, targetManifestHash: input.targetManifestHash, parentIdentityHash }));
-      if (result.kind !== "changed" && result.kind !== "current") throw new Error("Restore journal needs reconciliation.");
-      this.dispatch({ kind: "finish-workspace-operation", runId: input.runId, operationId: input.operationId, manifestHash: result.manifestHash, observedAt: Date.now() });
-    } catch (error) { if (!this.disposed) this.dispatch({ kind: "mark-workspace-unknown", runId: input.runId, reason: error instanceof Error ? error.message : "Restore completion unknown." }); throw error; }
-    finally { this.endPublication(input.runId); }
-    return this.run(input.runId);
+  private validateResult(binding: ResultBinding, published = false) {
+    const state = this.reviewState(binding.runId);
+    const { run, result, evidence } = state;
+    const expectedEvidence = published ? { ...binding.evidence, sourceManifestHash: binding.evidence.candidateManifestHash } : binding.evidence;
+    const modeMatches = published || binding.kind === "accept-existing"
+      ? run.workspace.kind === "integrated" && run.workspace.operationId === binding.operationId
+      : run.workspace.kind === "not-integrated";
+    if (!modeMatches || result.resultId !== binding.resultId || result.recordedAtRevision !== binding.resultRevision || JSON.stringify(evidence) !== JSON.stringify(expectedEvidence)) throw new Error("Reviewed result, checks, or publication mode changed. Review the current result again.");
+    return state;
+  }
+  async confirmResult(binding: ResultBinding): Promise<ExecutionRun> {
+    await Promise.resolve();
+    this.clean();
+    const history = this.options.repository.readDiagnosticSnapshot();
+    const accepted = history.events.some((event, index) => {
+      if (event.kind !== "execution-recorded" || event.action.kind !== "accept-execution-result" || event.action.runId !== binding.runId || event.action.resultId !== binding.resultId || event.action.resultRevision !== binding.resultRevision) return false;
+      const recorded = this.options.repository.read(index + 1).executionRuns.find(run => run.runId === binding.runId);
+      return recorded?.workspace.kind === "integrated" && recorded.workspace.operationId === binding.operationId;
+    });
+    if (accepted) return this.run(binding.runId);
+    const reviewed = this.validateResult(binding);
+    if (binding.kind === "publish") {
+      const { candidate, inspection, project } = reviewed;
+      const preview = inspection.integration;
+      const parentIdentityHash = digest(JSON.stringify(preview.changes.map(change => publicationParents(candidate.sourceRoot, change.relativePath))));
+      this.options.publish(this.record(project, { kind: "begin-workspace-operation", runId: binding.runId, request: { kind: "integrate", parentIdentityHash, writer: { ownerId: this.ownerId, ownerPid: process.pid }, resultId: binding.resultId, resultRevision: binding.resultRevision, expectedManifestHash: preview.sourceManifestHash, targetManifestHash: preview.currentCandidateHash } }, binding.operationId));
+      this.beginPublication(binding.runId);
+      try {
+        this.clean(candidate);
+        const result = await new WorkspaceIntegration({ candidate }).apply({ commandId: binding.operationId, expectedSourceManifestHash: preview.sourceManifestHash, expectedCandidateManifestHash: preview.currentCandidateHash, parentIdentityHash });
+        if (result.kind !== "changed" && result.kind !== "current") throw new Error("Workspace journal is conflicted; preserved bytes require reconciliation.");
+        this.clean(candidate);
+        this.dispatch({ kind: "finish-workspace-operation", runId: binding.runId, operationId: binding.operationId, manifestHash: result.manifestHash, observedAt: Date.now() });
+      } catch (error) { if (!this.disposed && this.run(binding.runId).workspace.kind === "writing") this.dispatch({ kind: "mark-workspace-unknown", runId: binding.runId, reason: error instanceof Error ? error.message : "Workspace completion unknown." }); throw error; }
+      finally { this.endPublication(binding.runId); }
+    }
+    const validated = this.validateResult(binding, binding.kind === "publish");
+    this.options.publish(this.record(validated.project, { kind: "accept-execution-result", runId: binding.runId, resultId: binding.resultId, resultRevision: binding.resultRevision }, randomUUID()));
+    return this.run(binding.runId);
   }
   savedVersions(runId: string) {
     const run = this.run(runId);

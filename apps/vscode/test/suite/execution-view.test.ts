@@ -98,6 +98,9 @@ suite("Execution review rendering", () => {
     const workspace = project.executionRuns[0]?.workspace; assert.equal(workspace?.kind, "unknown");
     send({ kind: "finish-workspace-operation", runId: "run", operationId: workspace.operationId, manifestHash: hash, observedAt: 1700 });
     assert.match(renderExecutionResult(project, "run"), /Accept current result/);
+    assert.match(renderExecutionResult(project, "run"), /changes are already integrated/);
+    assert.match(renderExecutionResult(project, "run"), /Accepting records your decision without applying source files again/);
+    assert.doesNotMatch(renderExecutionResult(project, "run"), /Applying changes and accepting this result requires/);
     assert.match(renderExecutionResult(project, "run"), /restore-source/);
     send({ kind: "invalidate-execution-workspace", runId: "run", reason: "Source changed" });
     assert.match(renderExecutionResult(project, "run"), /Historical result/);

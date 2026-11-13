@@ -113,7 +113,7 @@ type ResultBinding = Readonly<{
   runId: string; resultId: string; resultRevision: number;
   evidence: ReviewEvidence;
 } & (
-  | { kind: 'publish' }
+  | { kind: 'publish'; operationId: string }
   | { kind: 'accept-existing'; operationId: string }
 )>;
 // Host-only projection, never serialized into webview IPC.
@@ -127,7 +127,7 @@ class ExecutionCoordinator {
 
 Use existing plan/result/check domain identities in implementation; the sketch summarizes their required content. `checksFingerprint` derives deterministically from applicable criterion-bound check records and coverage, including their IDs, outcome and candidate binding. Exclude unrelated project revisions. Test relevant check replacement with unchanged file hashes. It is reviewed evidence, not a replacement authority store.
 
-Fresh mode uses an internally allocated operation ID and existing reservation, publication, checkpoint and completion transitions. The modal explicitly authorizes apply and acceptance. Existing mode binds the stored integration operation and asks only for acceptance. It must not call source publication, create a new checkpoint or append another integration event. A publish review cannot silently become acceptance-only if another actor integrates while its modal is open; require fresh review.
+Fresh mode allocates its operation ID during host review and carries it in the publish binding. This implementation adjustment gives exact confirmation retries a stable identity without another host cache. Existing reservation, publication, checkpoint and completion transitions remain authoritative. The modal explicitly authorizes apply and acceptance. Existing mode binds the stored integration operation and asks only for acceptance. It must not call source publication, create a new checkpoint or append another integration event. A publish review cannot silently become acceptance-only if another actor integrates while its modal is open; require fresh review.
 
 After confirmation compare exact result, operation and mode, current plan/dependency freshness, passing applicable checks, scoped dirty editors, and current source/candidate manifests. Use existing synchronous read/dispatch and SQLite expected revision checks after the last validation. Both paths use the same final acceptance validation. Reconciliation itself only records integration.
 

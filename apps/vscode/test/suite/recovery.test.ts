@@ -149,21 +149,35 @@ suite("Reviewed recovery with actual SQLite and filesystem", function () {
     assert.equal(run().recoveries.length, 0); assert.equal(readFileSync(path.join(candidate.root, "b.txt"), "utf8"), "new manual b");
   });
 
-  test("a second coordinator cannot replay while the actual workspace writer awaits native publication", async () => {
+  test("a second coordinator cannot replay while reviewed source recovery awaits native publication", async () => {
     send({ kind: "finish-execution", runId, outcome: "unknown", summary: "Fixture completion", manifestHash: candidate.manifestHash() });
     const before = currentImages(run(), "source");
     const target = before.map(image => ({ ...image, content: `reviewed ${image.relativePath}`, mode: image.mode ?? 0o600 }));
+    const parentIdentityHash = digest(JSON.stringify(imageChanges(before, target).map(change => publicationParents(source, change.relativePath))));
     writeRecord(candidate.controlDirectory, `integration-checkpoint-${digest("writer-target")}.json`, target);
-    const operation = coordinator.restore({ runId, target: "source", checkpointId: "writer-target", expectedManifestHash: imageHash(before), targetManifestHash: imageHash(target), operationId: "live-workspace-writer" });
-    const pending = run().workspace; assert.equal(pending.kind, "writing"); assert.equal(pending.request.writer?.ownerPid, process.pid);
-    assert.notEqual(pending.request.writer.ownerId, run().ownerId, "Workspace writer differs from the departed generation owner");
+    send({ kind: "begin-workspace-operation", runId, request: { kind: "restore", target: "source", checkpointId: "writer-target", expectedManifestHash: imageHash(before), targetManifestHash: imageHash(target), parentIdentityHash } }, "departed-writer");
+    assert.equal((await new WorkspaceIntegration({ candidate }).restore({ restoreCommandId: "departed-writer", checkpointId: "writer-target", expectedManifestHash: imageHash(before), parentIdentityHash, afterStep: () => { throw new Error("Interrupted source restore"); } })).kind, "partial");
     const peer = createCoordinator();
+    let inspected: Promise<void> | undefined;
+    coordinator.dispose();
+    coordinator = new ExecutionCoordinator({ repository, storageDirectory: storage, createClient: () => { throw new Error("Recovery must never connect to a provider"); }, publish: snapshot => {
+      const recovery = snapshot.executionRuns[0]?.recoveries.at(-1);
+      if (recovery?.state.kind === "writing" && !inspected) inspected = Promise.resolve().then(async () => {
+        assert.equal(recovery.ownerPid, process.pid);
+        assert.notEqual(recovery.ownerId, run().ownerId);
+        await peer.reconcile();
+        assert.equal(run().recoveries.at(-1)?.state.kind, "writing");
+        assert.equal(readFileSync(path.join(source, "b.txt"), "utf8"), "original b");
+        assert.equal(ownsExecutionLease(run()), true);
+      });
+    } });
     try {
-      await peer.reconcile();
-      assert.equal(run().workspace.kind, "writing");
-      assert.equal(readFileSync(path.join(source, "b.txt"), "utf8"), "original b");
-      assert.equal(ownsExecutionLease(run()), true);
-      assert.equal((await operation).workspace.kind, "restored");
+      const reviewed = await preview();
+      const operation = coordinator.recover({ previewId: reviewed.previewId, intendedPaths: ["a.txt", "b.txt", "new.txt"], operationId: "live-source-recovery" });
+      const completed = await operation;
+      assert.ok(inspected); await inspected;
+      assert.equal(completed.recoveries.at(-1)?.state.kind, "completed");
+      assert.equal(readFileSync(path.join(source, "b.txt"), "utf8"), "reviewed b.txt");
     } finally { peer.dispose(); }
   });
   test("a replacement cannot replay a departed owner's source journal while retired reconciliation is pending", async () => {
