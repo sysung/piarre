@@ -289,6 +289,37 @@ suite("Execution coordinator actual backend", () => {
     assert.equal(repository.read().executionRuns.some(ownsExecutionLease), true);
     assert.equal(requests, 0);
   });
+  test("a throwing provider disposer still interrupts the runner and makes retirement terminal", async () => {
+    let rejectTurn: (error: Error) => void = () => {};
+    let started = () => {};
+    const ready = new Promise<void>(resolve => { started = resolve; });
+    const pending = new Promise<never>((_, reject) => { rejectTurn = reject; });
+    let disposals = 0;
+    let interrupts = 0;
+    const control = new ExecutionCoordinator({ confirmSpending: () => Promise.resolve("consent"), repository, storageDirectory: storage, publish: () => undefined,
+      createRunner: () => ({ capability: () => Promise.resolve({ kind: "unsupported", reason: "Fixture only" }), interrupt: () => { interrupts++; throw new Error("Runner interruption failed"); }, run: () => { throw new Error("No check should start"); } }),
+      createClient: () => ({ ...createClient(), proposePatch: input => { input.onThreadMetadata?.({ model: "fixture-model", modelProvider: "openai" }); input.onThreadStarted?.("pending-thread"); started(); return pending; }, dispose: () => { disposals++; throw new Error("Provider dispose failed"); } }) });
+    const { plan } = await control.prepare({ taskId, relativePaths: ["refund.txt"], objective: "45 days", criteria: [{ criterionId: "days", text: "45 days" }], checks: [] });
+    const completion = control.approveAndRun({ planId: plan.planId, planRevision: plan.recordedAtRevision, approvalId: "disposing-failure" });
+    await ready;
+    try {
+      assert.throws(() => { control.dispose(); });
+      assert.equal(interrupts, 1, "the runner must still receive an interrupt after the client throws");
+      assert.equal(disposals, 1);
+      const before = repository.read();
+      assert.equal(before.executionRuns[0]?.state.kind, "unknown");
+      repository.close();
+      assert.throws(() => { control.resume(); }, /disposed/);
+      control.dispose();
+      rejectTurn(new Error("Late provider rejection"));
+      assert.equal((await completion).state.kind, "unknown");
+      assert.equal(disposals, 1);
+      repository = new SqliteProjectRepository(path.join(directory, "project.sqlite"));
+      assert.deepEqual(repository.read(), before);
+      await coordinator().reconcile();
+      assert.ok(repository.read().executionRuns.some(ownsExecutionLease));
+    } finally { rejectTurn(new Error("End fixture")); await completion.catch(() => undefined); }
+  });
   test("pause survives restart and blocks a prepared approval", async () => {
     const { plan } = await prepare(); await coordinator().stopAll(); shared?.dispose(); shared = undefined; repository.close(); repository = new SqliteProjectRepository(path.join(directory, "project.sqlite"));
     assert.equal(repository.read().schedulingPaused, true);

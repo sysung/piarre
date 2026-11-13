@@ -47,7 +47,10 @@ export class ExecutionUi {
         case "view": this.coordinator.refreshWorkspaceFreshness(); this.showResult(message.id); return;
         case "abandon-provider": await this.abandonProvider(message.id); return;
         case "stop": await this.coordinator.stop({ runId: message.id }); return;
-        case "reconcile": await this.coordinator.reconcile(); this.showResult(message.id); return;
+        case "reconcile":
+          await this.coordinator.reconcile();
+          if (this.current()) this.showResult(message.id);
+          return;
         case "apply-accept": await this.apply(message.id); return;
         case "recover": await this.recovery.resolve(message.id); return;
         case "saved-versions": await this.recovery.saved(message.id); return;
@@ -57,13 +60,14 @@ export class ExecutionUi {
         case "steer": {
           const run = this.snapshot().executionRuns.find(item => item.runId === message.id); if (!run) return;
           await this.coordinator.stop({ runId: run.runId });
-          await this.prepare(run.grant.plan.taskId); return;
+          if (this.current()) await this.prepare(run.grant.plan.taskId);
+          return;
         }
       }
     } catch (error) {
       if (error instanceof ExecutionReviewCancelled) return;
       if (this.current() && (message.action === "recover" || message.action === "saved-versions" || message.action === "restore-source" || message.action === "restore-candidate")) {
-        await this.recoveryDialogs.inspect("Recovery needs review", error instanceof Error ? error.message : "Recovery remains unknown; inspect recorded work.");
+        await this.recoveryDialogs.inspect("Recovery needs review", error instanceof Error ? error.message : "Recovery remains unknown; inspect recorded work.", () => this.current());
         return;
       }
       if (this.current()) await vscode.window.showWarningMessage(`Piarre could not complete this operation. ${error instanceof Error ? error.message : "Review the current work state and try again."}`);
@@ -143,7 +147,7 @@ export class ExecutionUi {
         detail: `${run.grant.plan.objective}\n\nRepository files:\n${observed.integration.changes.map(change => `${change.relativePath} (permissions ${modeLabel(change.beforeMode)} → ${modeLabel(change.afterMode)})`).join("\n") || "No file changes"}\n\nReview the exact diff and criterion-bound check outputs first. Current source files must still match their captured versions. A scoped source snapshot is preserved before applying changes. Unsaved or conflicting work blocks application. External services and charges are outside restore scope.\n\nResult ${result.resultId}, revision ${String(result.recordedAtRevision)}; manifest SHA-256 ${result.manifestHash}.` }, "Apply and accept");
       if (approved !== "Apply and accept" || !this.current()) return;
       await this.coordinator.applyAndAccept({ runId, resultId: result.resultId, resultRevision: result.recordedAtRevision, operationId: randomUUID() });
-      this.showResult(runId);
+      if (this.current()) this.showResult(runId);
     } finally { this.reviewing.delete(runId); }
   }
 

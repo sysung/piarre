@@ -31,7 +31,8 @@ export class KnowledgeController {
     if (!route || !this.isCurrent()) return;
     if (route === "Compiler references for active saved symbol") {
       const project = this.repository.read();
-      this.publishLookup?.(project.projectId, await lookupCompilerReferences(project));
+      const result = await lookupCompilerReferences(project);
+      if (this.isCurrent()) this.publishLookup?.(project.projectId, result);
       return;
     }
     const query = await vscode.window.showInputBox({ prompt: "Look up exact identifiers, module paths, infrastructure declarations or recorded business/decision wording", ignoreFocusOut: true,
