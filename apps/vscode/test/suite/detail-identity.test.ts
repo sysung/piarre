@@ -42,6 +42,7 @@ suite("Detail documents through the actual Webview", () => {
       host.hold = true;
       const captured = await host.click('[data-execution-action="saved-versions"]', "piarre.execution"); assert.ok(captured && typeof captured === "object");
       host.hold = false;
+      await host.command({ operation: "post", payload: { ...captured, controlKey: "unrendered-current-document-control" } }, "piarre.execution");
       await host.command({ operation: "post", payload: { ...captured, action: "pause-all" } }, "piarre.execution");
       await host.command({ operation: "post", payload: { ...captured, id: "unrelated-run" } }, "piarre.execution");
       await host.command({ operation: "post", payload: { kind: "execution", action: "pause-all" } }, "piarre.execution");
@@ -56,12 +57,12 @@ suite("Detail documents through the actual Webview", () => {
     const fixture = await resultFixture(); await secondRun(fixture);
     const host = new DetailHost(); let complete = () => {};
     const finished = new Promise<void>(resolve => { complete = resolve; });
-    let prompts = 0;
+    let prompts = 0; let extra = "";
     let answer: (choice: string | undefined) => void = () => {};
     const response = new Promise<string | undefined>(resolve => { answer = resolve; });
     const ui = new ExecutionUi(fixture.control, () => fixture.repository.read(), id => { view.openExecutionResult(id); });
     const view = new WorkView(host.createPanel, undefined, undefined, undefined, {
-      handle: async (message, origin) => { try { await ui.handle(message, origin); } finally { complete(); } }, renderDetails: id => ui.renderDetails(id),
+      handle: async (message, origin) => { try { await ui.handle(message, origin); } finally { complete(); } }, renderDetails: id => ui.renderDetails(id) + extra,
     });
     resultDialogs.warning = async (message, options, ...choices) => {
       prompts++; assert.equal(options?.modal, true); assert.equal(message, "Accept this integrated result?"); assert.deepEqual(choices, ["Accept current result"]);
@@ -72,7 +73,10 @@ suite("Detail documents through the actual Webview", () => {
       await host.click('[data-execution-action="apply-accept"]', "piarre.execution");
       if (change === "closed pane") host.panel("piarre.execution").dispose();
       else if (change === "unrelated progress") {
+        const document = host.panel("piarre.execution").webview.html.match(/script nonce="([^"]+)"/)?.[1];
+        assert.ok(document); extra = "<p>Unrelated progress observation</p>";
         fixture.send({ kind: "rename-project", name: "Unrelated update" }); view.update(fixture.repository.read());
+        assert.notEqual(host.panel("piarre.execution").webview.html.match(/script nonce="([^"]+)"/)?.[1], document);
       } else { view.openExecutionResult("other-run"); if (change === "away and back") view.openExecutionResult(fixture.runId); }
       answer("Accept current result"); await finished;
       assert.equal(prompts, 1);
@@ -95,8 +99,12 @@ suite("Detail documents through the actual Webview", () => {
     }, async goal => { assert.equal(goal, "Delete this goal"); prompts++; return new Promise(resolve => { answer = resolve; }); });
     try {
       view.show(before); view.openProposal(target.groupId);
+      const selected = await host.command({ operation: "inspect" }, "piarre.work"); assert.ok(selected && typeof selected === "object" && "selectedProposal" in selected); assert.equal(selected.selectedProposal, target.groupId);
       await host.click("#delete-goal"); view.openProposal(other.groupId); view.openProposal(target.groupId); answer(true); await nextTurn();
       assert.deepEqual(fixture.repository.read(), before);
+      host.panel().dispose();
+      const closed = await host.command({ operation: "inspect" }, "piarre.work"); assert.ok(closed && typeof closed === "object" && !("selectedProposal" in closed));
+      view.openProposal(target.groupId);
       await host.click("#delete-goal"); answer(false); await nextTurn(); assert.deepEqual(fixture.repository.read(), before);
       await host.click("#delete-goal"); answer(true); await nextTurn();
       assert.equal(prompts, 3);
@@ -137,11 +145,11 @@ suite("Detail documents through the actual Webview", () => {
       project = { ...project, tasks: project.tasks.map(task => task.taskId === taskId ? { ...task, title: "Changed title with the same task identity" } : task) };
       view.update(project);
       const after = await host.command({ operation: "inspect" }); assert.ok(after && typeof after === "object" && "open" in after && "active" in after && "scroll" in after);
-      assert.deepEqual(after.open, [`task:${taskId}`]); assert.match(String(after.active), /Changed title/); assert.equal(after.scroll, before.scroll);
+      assert.deepEqual(after.open, [`task:${taskId}`]); assert.match(String(after.active), /Changed title/); assert.equal(after.scroll, before.scroll); assertNativeFocus(before); assertNativeFocus(after);
       assert.match(host.panel().webview.html, /prefers-reduced-motion:reduce/);
       view.openProposal(other.groupId);
       const reset = await host.command({ operation: "inspect" }); assert.ok(reset && typeof reset === "object" && "open" in reset && "scroll" in reset);
-      assert.deepEqual(reset.open, []); assert.equal(reset.scroll, 0);
+      assert.deepEqual(reset.open, []); assert.equal(reset.scroll, 0); assertNativeFocus(reset);
     } finally { view.dispose(); fixture.dispose(); }
   });
 
@@ -156,10 +164,10 @@ suite("Detail documents through the actual Webview", () => {
       await host.command({ operation: "reading", selector: '[data-review-key="check:content:check-nonce"]', scroll: 180 }, "piarre.execution");
       await host.command({ operation: "reading", selector: '[data-execution-action="saved-versions"]', scroll: 180 }, "piarre.execution");
       const prior = await host.command({ operation: "inspect" }, "piarre.execution");
-      assert.ok(prior && typeof prior === "object" && "active" in prior); assert.match(String(prior.active), /saved-versions/, JSON.stringify(prior));
+      assert.ok(prior && typeof prior === "object" && "active" in prior); assert.match(String(prior.active), /saved-versions/, JSON.stringify(prior)); assertNativeFocus(prior);
       extra = "<p>Updated unrelated observation</p>"; view.update(fixture.repository.read());
       const state = await host.command({ operation: "inspect" }, "piarre.execution"); assert.ok(state && typeof state === "object" && "open" in state && "active" in state && "scroll" in state);
-      assert.deepEqual(state.open, ["check:content:check-nonce", "file:review.txt"]); assert.match(String(state.active), /saved-versions/, JSON.stringify({prior,state})); assert.equal(state.scroll, 180);
+      assert.deepEqual(state.open, ["check:content:check-nonce", "file:review.txt"]); assert.match(String(state.active), /saved-versions/, JSON.stringify({prior,state})); assert.equal(state.scroll, 180); assertNativeFocus(state);
     } finally { view.dispose(); ui.dispose(); fixture.dispose(); }
   });
 
@@ -216,13 +224,14 @@ suite("Detail documents through the actual Webview", () => {
     };
     try {
       panel.webview.html = render("Before refresh");
-      for (const selector of ["section:first-child button:nth-child(2)", "section:nth-child(2) button"]) {
+      for (const [selector, label] of [["section:first-child button:nth-child(2)", "Second"], ["section:nth-child(2) button", "Third"]] as const) {
         await host.command({ operation: "reading", selector }, "piarre.execution");
         const before = await host.command({ operation: "inspect" }, "piarre.execution");
         panel.webview.html = render(`Refresh ${selector}`);
         const after = await host.command({ operation: "inspect" }, "piarre.execution");
         assert.ok(before && after && typeof before === "object" && typeof after === "object" && "active" in before && "active" in after);
-        assert.equal(after.active, before.active);
+        assert.match(String(before.active), new RegExp(`^<button[^>]+>${label}</button>$`));
+        assert.equal(after.active, before.active); assertNativeFocus(before); assertNativeFocus(after);
       }
     } finally { panel.dispose(); }
   });
@@ -285,6 +294,25 @@ suite("Detail documents through the actual Webview", () => {
     } finally { resultDialogs.warning = undefined; view.dispose(); ui.dispose(); fixture.dispose(); }
   });
 
+  test("native proposal deletion rejects an advanced project revision", async function () {
+    this.timeout(20_000);
+    const fixture = await resultFixture(); fixture.send({ kind: "propose-tasks", draft: await new GoalInterpreter().propose("Delete revision") });
+    const project = fixture.repository.read(); const target = project.proposals.at(-1); assert.ok(target);
+    const host = new DetailHost(); let answer: (value: string) => void = () => {}; let notified = () => {};
+    const response = new Promise<string>(resolve => { answer = resolve; }); const notification = new Promise<void>(resolve => { notified = resolve; });
+    const view = new WorkView(host.createPanel, { prepare: goal => new GoalInterpreter().propose(goal), save: () => {}, deleteProposal: () => { throw new Error("An unreviewed revision cannot reach deletion"); } });
+    resultDialogs.warning = (message, options, ...choices) => {
+      assert.equal(message, "Delete “Delete revision” and its proposal?"); assert.equal(options?.modal, true); assert.match(options.detail ?? "", /Prior project history is retained/); assert.deepEqual(choices, ["Delete goal"]); return response;
+    };
+    resultDialogs.information = message => { assert.equal(message, "The project changed. Review the goal before deleting it."); notified(); return Promise.resolve(undefined); };
+    try {
+      view.show(project); view.openProposal(target.groupId); await host.click("#delete-goal");
+      fixture.send({ kind: "rename-project", name: "Changed while reviewing deletion" }); const changed = fixture.repository.read(); view.update(changed);
+      answer("Delete goal"); await notification; await nextTurn(); assert.deepEqual(fixture.repository.read(), changed);
+      assert.ok(changed.revision > project.revision); assert.ok(changed.proposals.some(item => item.groupId === target.groupId));
+    } finally { resultDialogs.warning = undefined; resultDialogs.information = undefined; view.dispose(); fixture.dispose(); }
+  });
+
 });
 
 async function secondRun(fixture: Awaited<ReturnType<typeof resultFixture>>): Promise<void> {
@@ -296,4 +324,10 @@ async function secondRun(fixture: Awaited<ReturnType<typeof resultFixture>>): Pr
   fixture.send({ kind: "approve-execution", spendingConsent: consentFixture(plan, "other-run"), planId: plan.planId, planRevision: plan.recordedAtRevision, runId: "other-run", ownerPid: 2147483647, ownerId: "gone", approvedAt: 1000, expiresAt: 120000 });
   fixture.send({ kind: "mark-execution-unknown", runId: "other-run", reason: "No provider requested" });
   fixture.send({ kind: "finish-execution", runId: "other-run", summary: "No provider requested", outcome: "no-change", manifestHash: fixture.candidate.manifestHash() });
+}
+
+function assertNativeFocus(value: unknown): void {
+  if (process.env.PIARRE_DETAIL_NATIVE_FOCUS !== "1") return;
+  assert.ok(value && typeof value === "object" && "focused" in value);
+  assert.equal(value.focused, true, "The actual detail document must keep keyboard focus after replacement");
 }

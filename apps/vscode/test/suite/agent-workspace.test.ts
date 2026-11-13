@@ -131,7 +131,7 @@ suite("Agent workspace actual execution journey", () => {
 
         });
         if (args[0] !== "piarre.execution" || scenario !== "stale") return panel;
-        const webview = new Proxy(panel.webview, { get: (target, key) => {
+        const webview = new Proxy(panel.webview, { set: (target, key, value: unknown) => Reflect.set(target, key, value, target), get: (target, key) => {
           if (key === "onDidReceiveMessage") return (listener: (message: unknown) => void) => target.onDidReceiveMessage((message: unknown) => {
             if (capturedReview === undefined && typeof message === "object" && message !== null && "kind" in message && message.kind === "detail-action") {
               capturedReview = message;

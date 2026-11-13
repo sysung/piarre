@@ -10,7 +10,6 @@ export class DetailHost {
   readonly createPanel: typeof vscode.window.createWebviewPanel = (...args) => {
     const panel = vscode.window.createWebviewPanel(...args);
     this.panels.set(args[0], panel);
-    if (args[0] === "piarre.work") return panel;
     panel.webview.onDidReceiveMessage((message: unknown) => {
       if (typeof message === "object" && message !== null && "testReply" in message && typeof message.testReply === "number") {
         this.replies.get(message.testReply)?.("value" in message ? message.value : undefined);
@@ -69,7 +68,7 @@ window.addEventListener('message', async event => {
   try {
     if (message.operation === 'click') document.querySelector(message.selector)?.click();
     if (message.operation === 'post') api.postMessage(message.payload);
-    if (message.operation === 'inspect') { await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))); value = {state:api.getState(), active:document.activeElement?.outerHTML, scroll:window.scrollY, open:[...document.querySelectorAll('details')].filter(item=>item.open).map(item=>item.dataset.reviewKey), focused:document.hasFocus(),reduced:matchMedia('(prefers-reduced-motion:reduce)').matches}; }
+    if (message.operation === 'inspect') { await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))); value = {state:api.getState(), active:document.activeElement?.outerHTML, scroll:window.scrollY, open:[...document.querySelectorAll('details')].filter(item=>item.open).map(item=>item.dataset.reviewKey), selectedProposal:document.querySelector('[data-open-goal][aria-current="true"]')?.dataset.openGoal,focused:document.hasFocus(),reduced:matchMedia('(prefers-reduced-motion:reduce)').matches}; }
     if (message.operation === 'reading') {
       await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
       window.focus(); if(message.nativeFocus&&!document.hasFocus())throw new Error('Native focus unavailable: unlock and focus the isolated VS Code Host'); const item=document.querySelector(message.selector); if(item){if(item.tagName==='DETAILS')item.open=true;(item.querySelector('summary')||item).focus({preventScroll:true});if(!message.nativeFocus)document.dispatchEvent(new FocusEvent('focusin'));}
