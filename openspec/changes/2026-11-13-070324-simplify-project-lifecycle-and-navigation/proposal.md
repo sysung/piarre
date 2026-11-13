@@ -33,7 +33,7 @@ Primary files are `apps/vscode/src/extension.ts`, `execution-coordinator.ts`, `e
 ## History
 
 - Created: 2026-11-13T07:03:24Z.
-- Outcome: implemented as an unmerged four-PR stack. Local integrated verification, independent review, and hosted CI passed. Physical keyboard-focus verification is blocked by the locked Mac; human acceptance remains pending.
+- Outcome: implemented as an unmerged four-PR stack. Local integrated verification, independent review, and hosted CI passed. Native keyboard-focus verification also passed after desktop access was restored; all 23 implementation tasks are complete. Human acceptance remains pending.
 - Origin: repository cleanup exploration and three-worker source review in this conversation.
 - Planning home: the original Piarre checkout resolved by OpenSpec. It is older than the audited implementation and contains unrelated untracked planning material.
 - Audited code baseline: `0119a55cccc2b4cc199222351e4cfb5e7bf5daf2`, branch `codex/121-archive-documentation`, following documentation migration PR #122 and archive PR #123.

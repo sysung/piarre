@@ -1,6 +1,6 @@
 # Lifecycle and navigation verification
 
-The change is implemented in four unmerged PRs for [issue #124](https://github.com/sysung/piarre/issues/124). Physical keyboard-focus verification is blocked because the Mac is locked. Tasks 5.3 and 5.4 remain pending. Automated checks do not establish human acceptance or satisfy the 17 retained pending product criteria.
+The change is implemented in four unmerged PRs for [issue #124](https://github.com/sysung/piarre/issues/124). Native keyboard-focus verification passed after desktop access was restored and the isolated test editor was activated. All 23 tasks are complete. Automated checks do not establish human acceptance or satisfy the 17 retained pending product criteria.
 
 ## Delivery revisions
 
@@ -27,7 +27,7 @@ Root verified that remote `master` remains `c6640f9cd9c6ed6144e6855b7e682327e8ae
 | V08 | Passed | [Stage 3 evidence binding](stage-3.md#behavioral-evidence) covers source, candidate, dirty buffers, result, plan, applicable checks, and concurrent confirmations. |
 | V09 | Passed | [Stage 3 recovery](stage-3.md#shape-and-cleanup-decisions) removes the unused restore API after production-path proof, preserving historical journal and receipt behavior. |
 | V10 | Passed | [Stage 4 authority](stage-4.md#behavior-and-authority) uses actual rendered clicks, captured envelopes, selection changes, native prompts, durable revisions, and positive paths. |
-| V11 | Partly passed; physical focus blocked | [Stage 4 reading state](stage-4.md#reading-state-and-its-limits) verifies browser DOM mechanics, repeated controls, different-record reset, Work draft privacy, responsive Stop, and proposal-marker clearing. Locked macOS prevents the separate native-focus oracle. Styles including reduced motion are byte-preserved. |
+| V11 | Passed | [Stage 4 reading state](stage-4.md#reading-state-and-its-limits) verifies browser DOM mechanics, repeated controls, different-record reset, Work draft privacy, responsive Stop, and proposal-marker clearing. The native-focus mode passed 67 trusted and one restricted tests at `20edee5954542ce23b26a9fe2dddc5773ddd6639`, requiring real focus before and after refresh. Styles including reduced motion are byte-preserved. |
 | V12 | Passed | [Stage 4 receipts](stage-4.md#verification-receipts) record passing package, contracts, preservation, and strict validation. The independent final-head Host run passed 365 trusted and one restricted test. Independent architecture, comments, final test coverage, and index review passed. Hosted CI passed on the exact final test revision, including package installation. |
 
 Native prompt tests inspect the production API call and supply controlled answers. They do not claim pixel interaction with OS dialogs. Deterministic provider fixtures make no external request and incur no spend. Human product acceptance remains separate from every automated result above.
