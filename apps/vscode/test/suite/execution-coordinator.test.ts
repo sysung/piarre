@@ -94,8 +94,8 @@ suite("Execution coordinator actual backend", () => {
       assert.equal(oldRun.state.kind, "terminal"); assert.equal(oldRun.state.result.outcome, "needs-review");
       assert.equal(oldRun.evidence[0]?.kind, "passed"); assert.equal(oldRun.evidence[0].manifestHash, oldRun.state.result.manifestHash);
       assert.equal(oldRun.grant.plan.knowledge[0]?.recordedAtRevision, originalKnowledgeRevision);
-      const oldReview = { runId: oldRun.runId, resultId: oldRun.state.result.resultId, resultRevision: oldRun.state.result.recordedAtRevision, operationId: "integrate-rule-30" };
-      if (acceptBeforeCorrection) await control.applyAndAccept(oldReview);
+      const oldReview = control.reviewResult(oldRun.runId).binding;
+      if (acceptBeforeCorrection) await control.confirmResult(oldReview);
       assert.equal(readFileSync(path.join(source, "refund.txt"), "utf8"), acceptBeforeCorrection ? "30\n" : "15\n");
       assert.equal(planFreshness(repository.read(), before.plan), "current");
       snapshot = repository.read();
@@ -105,7 +105,7 @@ suite("Execution coordinator actual backend", () => {
       const historical = renderExecutionResult(repository.read(), oldRun.runId);
       assert.match(historical, /Historical evidence: Passed scoped checks/); assert.doesNotMatch(historical, /data-execution-action="apply-accept"/);
       await assert.rejects(control.approveAndRun({ planId: before.plan.planId, planRevision: before.plan.recordedAtRevision, approvalId: "reuse-stale-approval" }));
-      if (!acceptBeforeCorrection) await assert.rejects(control.applyAndAccept(oldReview));
+      if (!acceptBeforeCorrection) await assert.rejects(control.confirmResult(oldReview));
       assert.equal(requests, 1);
       desiredWindow = "45"; const after = await prepareRule("45");
       assert.equal(after.plan.knowledge[0]?.recordedAtRevision, corrected.recordedAtRevision);
@@ -115,10 +115,10 @@ suite("Execution coordinator actual backend", () => {
       assert.notEqual(newRun.state.result.resultId, oldRun.state.result.resultId);
       assert.deepEqual(newRun.evidence[0]?.criterionIds, ["window-45"]); assert.equal(newRun.evidence[0].kind, "passed");
       assert.equal(readFileSync(path.join(source, "refund.txt"), "utf8"), acceptBeforeCorrection ? "30\n" : "15\n", "Fresh passing evidence alone does not apply changes");
-      await assert.rejects(control.applyAndAccept({ runId: newRun.runId, resultId: oldRun.state.result.resultId, resultRevision: oldRun.state.result.recordedAtRevision, operationId: "reuse-old-review" }));
-      const accepted = await control.applyAndAccept({ runId: newRun.runId, resultId: newRun.state.result.resultId, resultRevision: newRun.state.result.recordedAtRevision, operationId: "integrate-rule-45" });
+      await assert.rejects(control.confirmResult({ ...control.reviewResult(newRun.runId).binding, resultId: oldRun.state.result.resultId, resultRevision: oldRun.state.result.recordedAtRevision }));
+      const accepted = await control.confirmResult(control.reviewResult(newRun.runId).binding);
       assert.equal(accepted.acceptance.kind, "accepted"); assert.equal(readFileSync(path.join(source, "refund.txt"), "utf8"), "45\n");
-      if (acceptBeforeCorrection) await control.applyAndAccept(oldReview);
+      if (acceptBeforeCorrection) await control.confirmResult(oldReview);
       assert.equal(readFileSync(path.join(source, "refund.txt"), "utf8"), "45\n", "Replaying old review cannot restore obsolete behavior");
       const durable = repository.read(); control.dispose(); shared = undefined; repository.close(); repository = new SqliteProjectRepository(path.join(directory, "project.sqlite"));
       assert.deepEqual(repository.read(), durable); assert.match(renderExecutionResult(repository.read(), oldRun.runId), /Historical evidence/);
@@ -233,12 +233,14 @@ suite("Execution coordinator actual backend", () => {
     assert.equal(run.state.result.outcome, "needs-review"); assert.equal(run.evidence[0]?.kind, "passed");
     assert.equal(readFileSync(path.join(source, "refund.txt"), "utf8"), "30\n"); assert.equal(control.inspection({ runId: run.runId }).diff.length, 1);
     await control.approveAndRun(input); assert.equal(requests, 1);
-    const review = { runId: run.runId, resultId: run.state.result.resultId, resultRevision: run.state.result.recordedAtRevision, operationId: "apply" };
-    assert.equal((await control.applyAndAccept(review)).acceptance.kind, "accepted"); assert.equal(readFileSync(path.join(source, "refund.txt"), "utf8"), "45\n");
+    const review = control.reviewResult(run.runId).binding;
+    assert.equal((await control.confirmResult(review)).acceptance.kind, "accepted"); assert.equal(readFileSync(path.join(source, "refund.txt"), "utf8"), "45\n");
     writeFileSync(path.join(source, "refund.txt"), "new manual work");
-    await control.applyAndAccept(review); assert.equal(readFileSync(path.join(source, "refund.txt"), "utf8"), "new manual work");
-    const preview = control.previewRestore({ runId: run.runId, target: "source", checkpointId: "integration-before:apply" });
-    const restored = await control.restore({ runId: run.runId, target: "source", checkpointId: "integration-before:apply", expectedManifestHash: preview.currentManifestHash, targetManifestHash: preview.targetManifestHash, operationId: "restore" });
+    await control.confirmResult(review); assert.equal(readFileSync(path.join(source, "refund.txt"), "utf8"), "new manual work");
+    const preview = await control.previewRecovery({ runId: run.runId, selection: { kind: "snapshot", target: "source", versionId: `before:${review.operationId}` } });
+    const restored = await control.recover({ previewId: preview.previewId, intendedPaths: ["refund.txt"], operationId: "restore" });
+    const preserved = control.savedVersions(run.runId).versions.find(version => version.version.versionId === "preserved:restore");
+    assert.equal(preserved?.kind, "available"); assert.equal(preserved.images[0]?.content, "new manual work");
     assert.equal(restored.reviewFreshness.kind, "stale"); assert.equal(readFileSync(path.join(source, "refund.txt"), "utf8"), "30\n");
     assert.equal(readFileSync(path.join(source, "private.txt"), "utf8"), "private undisclosed");
   });
@@ -263,10 +265,11 @@ suite("Execution coordinator actual backend", () => {
     const control = coordinator(); const { plan } = await prepare();
     const run = await control.approveAndRun({ planId: plan.planId, planRevision: plan.recordedAtRevision, approvalId: "stale" });
     assert.equal(run.state.kind, "terminal"); assert.equal(run.state.result.outcome, "needs-review");
+    const review = control.reviewResult(run.runId).binding;
     writeFileSync(path.join(control.candidateForRun(run.runId).root, "refund.txt"), "unverified manual candidate edit");
     control.refreshWorkspaceFreshness();
     assert.equal(repository.read().executionRuns[0]?.reviewFreshness.kind, "stale");
-    await assert.rejects(control.applyAndAccept({ runId: run.runId, resultId: run.state.result.resultId, resultRevision: run.state.result.recordedAtRevision, operationId: "stale-apply" }), /changed/);
+    await assert.rejects(control.confirmResult(review), /changed/);
     assert.equal(readFileSync(path.join(source, "refund.txt"), "utf8"), "30\n");
   });
   test("disposal persists uncertain ownership and late provider rejection does not access a closed database", async () => {

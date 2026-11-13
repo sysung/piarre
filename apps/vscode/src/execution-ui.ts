@@ -140,13 +140,18 @@ export class ExecutionUi {
     this.reviewing.add(runId);
     try {
       this.coordinator.refreshWorkspaceFreshness();
-      const observed = this.coordinator.inspection({ runId }); const run = observed.run;
-      if (run.state.kind !== "terminal" || run.state.result.outcome !== "needs-review") throw new Error("This run has no current result ready for acceptance.");
-      const result = run.state.result;
-      const approved = await vscode.window.showWarningMessage("Apply and accept this result?", { modal: true,
-        detail: `${run.grant.plan.objective}\n\nRepository files:\n${observed.integration.changes.map(change => `${change.relativePath} (permissions ${modeLabel(change.beforeMode)} → ${modeLabel(change.afterMode)})`).join("\n") || "No file changes"}\n\nReview the exact diff and criterion-bound check outputs first. Current source files must still match their captured versions. A scoped source snapshot is preserved before applying changes. Unsaved or conflicting work blocks application. External services and charges are outside restore scope.\n\nResult ${result.resultId}, revision ${String(result.recordedAtRevision)}; manifest SHA-256 ${result.manifestHash}.` }, "Apply and accept");
-      if (approved !== "Apply and accept" || !this.current()) return;
-      await this.coordinator.applyAndAccept({ runId, resultId: result.resultId, resultRevision: result.recordedAtRevision, operationId: randomUUID() });
+      const review = this.coordinator.reviewResult(runId);
+      const { inspection: observed, binding } = review;
+      const run = observed.run;
+      const existing = binding.kind === "accept-existing";
+      const label = existing ? "Accept current result" : "Apply and accept";
+      const detail = existing
+        ? "The reviewed changes are already integrated. Accepting records your decision without applying files again or creating another source snapshot. Current source, candidate, and criterion-bound checks must still match this review."
+        : "Current source files must still match their captured versions. A scoped source snapshot is preserved before applying changes. Unsaved or conflicting work blocks application. External services and charges are outside restore scope.";
+      const approved = await vscode.window.showWarningMessage(existing ? "Accept this integrated result?" : "Apply and accept this result?", { modal: true,
+        detail: `${run.grant.plan.objective}\n\nRepository files:\n${observed.integration.changes.map(change => `${change.relativePath} (permissions ${modeLabel(change.beforeMode)} → ${modeLabel(change.afterMode)})`).join("\n") || "No pending file changes"}\n\nReview the exact diff and criterion-bound check outputs first. ${detail}\n\nResult ${binding.resultId}, revision ${String(binding.resultRevision)}; manifest SHA-256 ${binding.evidence.resultManifestHash}.` }, label);
+      if (approved !== label || !this.current()) return;
+      await this.coordinator.confirmResult(binding);
       if (this.current()) this.showResult(runId);
     } finally { this.reviewing.delete(runId); }
   }
