@@ -1,0 +1,25 @@
+# Stage 2 project lifetime
+
+Issue [#124](https://github.com/sysung/piarre/issues/124), branch `codex/124-02-project-lifetime`, stacked on [#125](https://github.com/sysung/piarre/pull/125) at `24d13e78955c380541fba41b33011f24006bf1e4`. Implementation commit `1d74d16947446f4563a2178f0d0158e8085248cc`; deadline-disposal test update `00a0b14267e7424185c866d4fc2a80e683b95944`.
+
+## Behavioral evidence
+
+- **V04.** In an actual trusted Extension Host, a production open command read a SQLite project containing an uncertain execution whose private capture was temporarily unavailable. The baseline retained the old selection and the retry left the original proposal last in SQLite. The fixed command withdrew the failed Work view and reopened the same root. A typed proposal reached SQLite with the original project ID, exact run snapshot and uncertain lease intact. A controlled watcher-setup failure released its allocated SQLite handle and allowed selecting and writing to a different project.
+- **V05.** Controlled reconciliation gates exercised stale success and failure after selecting B, reopening the same root, and disposing the Host. Before the fix, stale success raised `database is not open`, stale failure raised its obsolete error, and disposal raised `Channel has been closed`. With the fix, stale completions returned silently and the replacement handled subsequent commands. An old native rename answer could not rename a reopened instance. The real Work panel, status item, SQLite and repository capture were used. The fixture controlled workspace notifications, native answers and specific failure timing.
+- **V06.** While reconciliation was held open, Work rendered Stop and reconciliation and the Host Stop command durably paused scheduling. The uncertain lease survived. A throwing coordinator disposer originally skipped runner interruption. The fixed path attempted remaining cleanup, closed SQLite last and allowed late provider rejection to settle from the saved snapshot. A separate source-journal regression originally observed two replay entries while the first was pending. It now observes one, retains the lease, then completes through the replacement coordinator after the original replay settles. The coordination deadline previously called the same client disposer both from its timer and its completion handler. The test now requires one call and still requires unknown completion, blocked replacement before review and explicit approval after review.
+
+## Continuation inventory
+
+- `extension.ts` captures the private scope for rename, proposal, conversation file selection and consent, and paid execution consent. It guards callback delivery to Work, visits, lookup, Stop and file refresh. The separate opening attempt owns picker and preparation currentness. A scope becomes selectable only after synchronous execution and watcher setup, and ready after reconciliation.
+- `work-view.ts` detaches visit, lookup and conversation state on retirement. Draft operations already capture the live panel and draft. A pending deletion remains attached to its panel. An old panel cannot block deletion in a replacement or display an obsolete message.
+- Diagnostic collection captures its repository through the native prompts and preview. Reflection already guards post-prompt and document continuations. Its callbacks are now scoped. Compiler lookup checks again after its asynchronous read before publishing.
+- Coordination native prompts and shared-source selection check their initiating instance. Coordination and conversation interrupt rejection cannot disconnect a replacement client. Execution and recovery check lifetime after prompts, replay, preview and document creation. Coordinator retirement preserves the latest readable snapshot, rejects retired dispatches and leaves publication bookkeeping to the outstanding operation's completion handler.
+
+## Commands and receipts
+
+macOS arm64, Node v22.23.4, VS Code Extension Host 1.144.0. Used `npm ci --ignore-scripts` to preserve the lockfile's esbuild JavaScript launcher used by existing watchdog fixtures. The VS Code binary came from the pinned local cache. Local output is under `.artifacts/stage-2/`.
+
+- `npm run check` passed lint, typecheck, build and VSIX packaging. `npm run test:contract` passed 31 tests.
+- `PIARRE_GUI_TESTS=1 npm run test:smoke --workspace apps/vscode` passed 325 trusted tests and one restricted test. The runner also checked that restricted activation created no project database.
+- `PIARRE_GUI_TESTS=1 PIARRE_LIFETIME_TEST=1 npm run test:smoke --workspace apps/vscode` selects the lifetime, coordinator and recovery suites in the trusted Host for targeted red/green checks. The restricted Host still runs its separate suite. See `v04-focused-red.log`, `v05-focused-red.log`, `v04-v05-focused-green.log`, `v06-focused-red.log`, `v06-focused-green.log`, `v06-replay-red.log` and `host-final.log`.
+- The archive verifier preserved 26 snapshot hashes, 12 historical Git objects and all 21 catalog mappings. Strict OpenSpec validation and `git diff --check` passed.

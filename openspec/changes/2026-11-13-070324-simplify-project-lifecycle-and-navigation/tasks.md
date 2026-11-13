@@ -18,9 +18,9 @@ The [design](design.md) owns the implementation shape and [canonical verificatio
 - [x] 3.1 Add a controlled partial-open failure and immediate same-root retry regression in the Host fixture; execute it against the baseline and record the intended V04 failure before changing lifecycle code.
 - [x] 3.2 Introduce the private scope/attempt ownership and immediate cleanup registration from D2; remove independent nullable globals and repair failed-open rollback. Verify V04 turns green and trusted/untrusted activation still works.
 - [x] 3.3 Add and run deterministic A-to-B and dispose-during-open regressions, then guard stale success, failure and attempt cleanup; verify V05 is green with no obsolete controls, errors or visits.
-- [ ] 3.4 Inventory repository-touching continuations and preserve or add captured-instance checks where retirement can intervene, including native dialogs, lookup, conversation and status callbacks. Verify V05 plus existing controller behavior without redesigning those controllers.
-- [ ] 3.5 Make retirement/disposal idempotent and continue cleanup after a throwing resource, with DB close last; verify throwing-disposer and late-provider tests plus V06 Stop/recovery visibility and durable uncertainty.
-- [ ] 3.6 Record lifecycle test evidence, updated developer guidance only if behavior requires it, and the verified stage commit. Verify V04–V06 and typechecking before starting dependent pane work.
+- [x] 3.4 Inventory repository-touching continuations and preserve or add captured-instance checks where retirement can intervene, including native dialogs, lookup, conversation and status callbacks. Verify V05 plus existing controller behavior without redesigning those controllers.
+- [x] 3.5 Make retirement/disposal idempotent and continue cleanup after a throwing resource, with DB close last; verify throwing-disposer and late-provider tests plus V06 Stop/recovery visibility and durable uncertainty.
+- [x] 3.6 Record lifecycle test evidence, updated developer guidance only if behavior requires it, and the verified stage commit. Verify V04–V06 and typechecking before starting dependent pane work.
 
 ## 4. Explicit acceptance of recovered integration
 
