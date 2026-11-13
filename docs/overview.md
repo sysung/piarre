@@ -25,4 +25,3 @@ Installation, development, first-use, isolated candidate and diagnostic instruct
 ## Optional reflection
 
 Optional session reflection uses `.artifacts/sessions/<encoded-reflection-id>/reflection.md` for an exported work artifact. **Piarre: End Session (Optional Reflection)** offers decline, inspection, feedback, or deferred review. **Piarre: Review Reflection** reopens pending or historical records. Reflection and explanation preferences live in the canonical project event history. A generated reflection opens as an unsaved document; the developer chooses whether to save it. Source revisions and user corrections remain inspectable. Documentation and improvement proposals do not apply changes or approve work. Use **Piarre: Explanation Preference** to inspect, skip, or reset the optional reflection explanation detail and self-reported component familiarity.
-
