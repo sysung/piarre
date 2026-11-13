@@ -80,6 +80,9 @@ export class ExecutionCoordinator {
     if (this.disposed) throw new Error("Execution coordinator is disposed.");
     if (candidate && this.options.hasDirtyDocuments?.(candidate.files.flatMap(file => [path.join(candidate.sourceRoot, file.baseline.relativePath), path.join(candidate.root, file.baseline.relativePath)]))) throw new Error("Save or discard dirty editor documents in this execution scope before execution or workspace changes.");
   }
+  private requireOrigin(current: () => boolean): void {
+    if (!current()) throw new ExecutionReviewCancelled("The selected detail changed. Review the current record again.");
+  }
   private run(runId: string): ExecutionRun { const run = this.snapshot().executionRuns.find(item => item.runId === runId); if (!run) throw new Error("Execution run does not exist."); return run; }
   candidateForRun(runId: string): CandidateWorkspace {
     const plan = this.run(runId).grant.plan;
@@ -114,7 +117,8 @@ export class ExecutionCoordinator {
     this.clean(candidate);
     if (this.stopped(runId) || this.snapshot().schedulingPaused || !executionDependenciesReady(this.snapshot(), plan.taskId) || planFreshness(this.snapshot(), plan) !== "current" || Date.now() >= Math.min(run.grant.deadlineAt, run.grant.expiresAt) || forecast.kind !== "configured-v1" || Date.now() >= forecast.validUntil || this.configuration(plan.provider.requestedModel).hash !== forecast.configurationHash || candidate.inspectOriginal().kind !== "unchanged" || candidate.diff().length) throw new Error("Approved scope, configuration, forecast or execution authority changed before generation. Prepare and review a new plan.");
   }
-  async prepare(input: { readonly taskId: string; readonly relativePaths: readonly string[]; readonly objective: string; readonly criteria: readonly ExecutionCriterion[]; readonly checks: readonly ExecutionCheck[]; readonly durationMs?: number; readonly maxTokens?: number; readonly requestedModel?: string }) {
+  async prepare(input: { readonly taskId: string; readonly relativePaths: readonly string[]; readonly objective: string; readonly criteria: readonly ExecutionCriterion[]; readonly checks: readonly ExecutionCheck[]; readonly durationMs?: number; readonly maxTokens?: number; readonly requestedModel?: string }, originCurrent: () => boolean = () => true) {
+    this.requireOrigin(originCurrent);
     this.clean();
     for (const value of this.prepared.values()) { clearTimeout(value.timer); this.disposeClient(value.client); } this.prepared.clear();
     const client = this.options.createClient();
@@ -122,18 +126,23 @@ export class ExecutionCoordinator {
     let retained = false;
     try {
       const connection = await client.connect();
+      this.requireOrigin(originCurrent);
       this.clean();
       if (connection.kind !== "ready") throw new Error("Connect Codex before preparing execution.");
       const context = await client.readExecutionContext();
+      this.requireOrigin(originCurrent);
       this.clean();
       if (context.authType !== undefined && context.authType !== connection.authType) throw new Error("Codex authentication changed during preparation.");
       const requestedModel = input.requestedModel ?? (context.model.kind === "resolved-default" ? context.model.model : undefined);
       if (!requestedModel) throw new Error("Codex did not report a default model. Configure an explicit coding model before preparing a run.");
       let project = this.snapshot();
       const candidate = CandidateWorkspace.capture({ repositoryRoot: fileURLToPath(project.repositoryUri), relativePaths: input.relativePaths, storageDirectory: this.options.storageDirectory });
+      this.requireOrigin(originCurrent);
       this.clean(candidate);
       await checkEscrowLayout(candidate.sourceRoot, candidate.controlDirectory, candidate.files.map(file => file.baseline.relativePath));
+      this.requireOrigin(originCurrent);
       await checkEscrowLayout(candidate.root, candidate.controlDirectory, candidate.files.map(file => file.baseline.relativePath));
+      this.requireOrigin(originCurrent);
       this.clean(candidate);
       project = this.snapshot();
       const baselineCheckpoint = candidate.checkpoint({ checkpointId: "before-run" });
@@ -144,12 +153,14 @@ export class ExecutionCoordinator {
       const catalogProfile = context.modelProfiles?.find(profile => profile.model === requestedModel);
       const namedEffort = catalogProfile && ["none", "minimal", "low", "medium", "high", "xhigh"].includes(catalogProfile.defaultEffort) ? catalogProfile.defaultEffort : undefined;
       const forecast = createExecutionForecast({ forecastId: randomUUID(), now: Date.now(), configurationHash: configuration.hash, provider: "codex", model: requestedModel, authType: connection.authType, billing: configuration.billing, context, promptBytes: Buffer.byteLength(this.prompt({ ...input, maxTokens }, candidate, linked)), softTokenTarget: maxTokens, profile: namedEffort ? { kind: "named", effort: namedEffort } : { kind: "default", configurationHash: configuration.profileHash }, concurrentUsage: project.executionRuns.some(run => run.providerOutcome.kind === "abandoned" || hasUncertainProvider(run)) });
+      this.requireOrigin(originCurrent);
       this.dispatch({ kind: "prepare-execution-plan", plan: { taskId: input.taskId, objective: input.objective, criteria: input.criteria, checks: input.checks, knowledge,
         baselineCheckpoint, files: candidate.files.map(file => file.baseline), candidateRoot: candidate.root, controlDirectory: candidate.controlDirectory, captureHash: candidate.captureHash, sourceRoot: candidate.sourceRoot,
         provider: { kind: "codex-readonly-patch", authType: connection.authType, requestedModel }, accountContext: context, forecast, durationMs: input.durationMs ?? 120_000, maxTokens: input.maxTokens ?? 16_000 } });
       const plan = this.snapshot().executionPlans.at(-1);
       if (!plan) throw new Error("Prepared plan was not persisted.");
       const capability = await (this.options.createRunner?.() ?? new CandidateCheckRunner()).capability();
+      this.requireOrigin(originCurrent);
       this.clean();
       if (forecast.kind !== "configured-v1") throw new Error("Forecast unavailable.");
       const timer = setTimeout(() => { this.prepared.delete(plan.planId); this.disposeClient(client); }, Math.max(0, forecast.validUntil - Date.now()));
@@ -157,12 +168,13 @@ export class ExecutionCoordinator {
       return { plan, capability };
     } finally { this.preparing.delete(client); if (!retained) this.disposeClient(client); }
   }
-  async approveAndRun(input: { readonly planId: string; readonly planRevision: number; readonly approvalId: string }): Promise<ExecutionRun> {
+  async approveAndRun(input: { readonly planId: string; readonly planRevision: number; readonly approvalId: string }, originCurrent: () => boolean = () => true): Promise<ExecutionRun> {
     const duplicate = this.snapshot().executionRuns.find(run => run.grant.approvalId === input.approvalId);
     if (duplicate) {
       if (duplicate.grant.plan.planId !== input.planId || duplicate.grant.plan.recordedAtRevision !== input.planRevision) throw new Error("Approval identity conflicts with its frozen plan.");
       return duplicate;
     }
+    this.requireOrigin(originCurrent);
     this.clean();
     const plan = this.snapshot().executionPlans.find(item => item.planId === input.planId && item.recordedAtRevision === input.planRevision);
     if (!plan) throw new Error("Reviewed plan is unavailable.");
@@ -177,17 +189,21 @@ export class ExecutionCoordinator {
     const runId = `run:${input.approvalId}`;
     try {
       const context = await client.readExecutionContext();
+      this.requireOrigin(originCurrent);
       this.clean();
       if (!this.contextMatches(plan, context)) throw new Error("Account, model, usage reset or profile changed. Prepare a new plan.");
       const disclosure = `${executionForecastText(forecast)}\n\nExact files: ${plan.files.map(file => file.relativePath).join(", ")}. Local duration ${String(plan.durationMs / 1000)} seconds. Plan ${plan.planId}, revision ${String(plan.recordedAtRevision)}; attempt ${runId}.\n\nThe provider has no supported per-turn included-only billing control. This exact attempt may consume allowance or incur charges, including continuing remote usage after interruption/disconnection. No dollar cap, paid fallback, alternate provider, retry or future run is authorized. ${forecast.accountHash === null ? "Account identity is unavailable. Consent applies only to this short-lived prepared connection; applicability of calibration remains unknown." : "The account binding is a local hash of supported provider metadata."}`;
       if (await this.options.confirmSpending?.(disclosure) !== "consent") throw new ExecutionReviewCancelled("Spending consent was cancelled. No generation was requested.");
+      this.requireOrigin(originCurrent);
       this.clean();
       const finalContext = await client.readExecutionContext();
       if (!this.contextMatches(plan, finalContext) || this.configuration(plan.provider.requestedModel).hash !== forecast.configurationHash || Date.now() >= forecast.validUntil) throw new Error("Account or configuration changed during review. Prepare a replacement plan and consent.");
+      this.requireOrigin(originCurrent);
       this.clean(candidate);
       if (candidate.inspectOriginal().kind !== "unchanged" || candidate.diff().length) throw new Error("Disclosed files changed during review.");
       const approvedAt = Date.now();
       const spendingConsent: SpendingConsent = { kind: "native-uncertain-one-attempt", forecastId: forecast.forecastId, configurationHash: forecast.configurationHash, planId: plan.planId, planRevision: plan.recordedAtRevision, runId, route: forecast.route, consentedAt: approvedAt };
+      this.requireOrigin(originCurrent);
       this.dispatch({ kind: "approve-execution", spendingConsent, planId: input.planId, planRevision: input.planRevision, runId, approvedAt, expiresAt: Math.min(approvedAt + plan.durationMs, forecast.validUntil), ownerPid: process.pid, ownerId: this.ownerId }, input.approvalId);
       this.dispatch({ kind: "record-execution-account-observation", runId, context: finalContext });
     } catch (error) { this.disposeClient(client); throw error; }
@@ -445,8 +461,9 @@ export class ExecutionCoordinator {
     if (!modeMatches || result.resultId !== binding.resultId || result.recordedAtRevision !== binding.resultRevision || JSON.stringify(evidence) !== JSON.stringify(expectedEvidence)) throw new Error("Reviewed result, checks, or publication mode changed. Review the current result again.");
     return state;
   }
-  async confirmResult(binding: ResultBinding): Promise<ExecutionRun> {
+  async confirmResult(binding: ResultBinding, originCurrent: () => boolean = () => true): Promise<ExecutionRun> {
     await Promise.resolve();
+    this.requireOrigin(originCurrent);
     this.clean();
     const history = this.options.repository.readDiagnosticSnapshot();
     const accepted = history.events.some((event, index) => {
@@ -517,7 +534,7 @@ export class ExecutionCoordinator {
     return preview;
   }
   cancelRecovery(previewId: string): void { this.recoveryPreviews.delete(previewId); }
-  async recover(input: { readonly previewId: string; readonly intendedPaths: readonly string[]; readonly operationId: string }): Promise<ExecutionRun> {
+  async recover(input: { readonly previewId: string; readonly intendedPaths: readonly string[]; readonly operationId: string }, originCurrent: () => boolean = () => true): Promise<ExecutionRun> {
     const existing = this.snapshot().executionRuns.find(run => run.recoveries.some(record => record.operationId === input.operationId));
     if (existing) {
       const record = existing.recoveries.find(record => record.operationId === input.operationId);
@@ -528,6 +545,7 @@ export class ExecutionCoordinator {
     if (!preview) throw new Error("Recovery preview expired or was cancelled.");
     const run = this.run(preview.runId);
     const refreshed = await previewRecoveryFiles(run, preview.selection, this.snapshot().revision, this.recoveryBlockers(run));
+    this.requireOrigin(originCurrent);
     if (refreshed.blockers.length) throw new Error(refreshed.blockers.join("\n"));
     if (preview.projectRevision !== refreshed.projectRevision || preview.bindingHash !== refreshed.bindingHash || preview.currentManifestHash !== refreshed.currentManifestHash || preview.intendedManifestHash !== refreshed.intendedManifestHash) throw new Error("Recovery preview is stale. Review current files again.");
     if (new Set(input.intendedPaths).size !== input.intendedPaths.length || input.intendedPaths.some(relative => !preview.current.some(image => image.relativePath === relative))) throw new Error("Recovery choices are outside the reviewed scope.");

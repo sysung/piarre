@@ -1,8 +1,9 @@
+import { escapeDetail as escape } from "./detail-document.js";
+import type { ExecutionMessage } from "./execution-actions.js";
 import { executionForecastText } from "../../../packages/core/src/execution-forecast.js";
 import { accountContextText } from "./codex-account-context.js";
 import { currentExecutionPlan, executionDependenciesReady, hasUncertainProvider, ownsExecutionLease, planFreshness, type CheckEvidence, type ExecutionPlan, type ExecutionRun, type ProjectSnapshot } from "../../../packages/core/src/index.js";
 
-const escape = (value: string): string => value.replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character] ?? character);
 const button = (action: string, label: string, id?: string): string => `<button type="button" data-execution-action="${escape(action)}"${id === undefined ? "" : ` data-execution-id="${escape(id)}"`}>${escape(label)}</button>`;
 const title = (project: ProjectSnapshot, run: ExecutionRun): string => project.tasks.find(task => task.taskId === run.grant.plan.taskId)?.title ?? run.grant.plan.objective;
 const current = (project: ProjectSnapshot, run: ExecutionRun): boolean => planFreshness(project, run.grant.plan) === "current" && executionDependenciesReady(project, run.grant.plan.taskId) && run.reviewFreshness.kind === "current";
@@ -70,7 +71,8 @@ function boundEvidence(run: ExecutionRun, criterionId: string): readonly CheckEv
   return run.state.result.checks.filter(evidence => evidence.manifestHash === manifestHash && evidence.criterionIds.includes(criterionId) && run.grant.plan.checks.some(check => check.checkId === evidence.checkId && JSON.stringify(check.argv) === JSON.stringify(evidence.argv) && JSON.stringify(check.criterionIds) === JSON.stringify(evidence.criterionIds)));
 }
 
-export function renderExecutionResult(project: ProjectSnapshot, runId: string): string {
+export function renderExecutionResult(project: ProjectSnapshot, runId: string, control?: (message: ExecutionMessage) => string): string {
+  const button = (action: Extract<ExecutionMessage, { id: string }>["action"], label: string, id: string): string => `<button type="button" data-execution-action="${escape(action)}" data-execution-id="${escape(id)}" ${control?.({ kind: "execution", action, id }) ?? ""}>${escape(label)}</button>`;
   const run = project.executionRuns.find(item => item.runId === runId);
   if (!run) return "<section aria-label=\"Execution review\"><h2>Run unavailable</h2><p>This run is not in the current project snapshot. Open a recorded run from the execution desk.</p></section>";
   const result = run.state.kind === "terminal" ? run.state.result : undefined;

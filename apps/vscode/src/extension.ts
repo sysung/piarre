@@ -145,9 +145,9 @@ export function activate(context: vscode.ExtensionContext): void {
     interrupt: async () => { await controllers(selected())?.conversation.interrupt(); },
     knowledge: async (kind, id) => { await controllers(selected())?.knowledge.handle(kind, id); },
   }, {
-    handle: async message => {
+    handle: async (message, originCurrent) => {
       const scope = selected();
-      const operation = execution(scope)?.handle(message);
+      const operation = execution(scope)?.handle(message, originCurrent);
       if (message.action === "pause-all") await Promise.allSettled([operation, ...stopOtherWork(scope)]);
       else await operation;
     },

@@ -56,7 +56,7 @@ suite("Production recovery UI through the actual Webview bridge", () => {
       const ui = new ExecutionUi(coordinator, () => repository.read(), id => { view.openExecutionResult(id); }, dialogs);
       let handled: (() => void) | undefined;
       const view = new WorkView((...args) => { const panel = vscode.window.createWebviewPanel(...args); if (args[0] === "piarre.execution") reviewPanel = panel; return panel; }, undefined, undefined, undefined,
-        { handle: async message => { await ui.handle(message); handled?.(); }, renderDetails: id => ui.renderDetails(id) });
+        { handle: async (message, origin) => { await ui.handle(message, origin); handled?.(); }, renderDetails: id => ui.renderDetails(id) });
       const click = async (action: "recover" | "saved-versions") => {
         assert.ok(reviewPanel); assert.match(reviewPanel.webview.html, new RegExp(`data-execution-action="${action}"`));
         let timer: ReturnType<typeof setTimeout> | undefined;

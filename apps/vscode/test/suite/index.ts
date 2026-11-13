@@ -8,6 +8,8 @@ export function run(): Promise<void> {
     mocha.addFile(path.resolve(__dirname, "untrusted.test.js"));
   } else if (process.env.PIARRE_PACKAGE_TEST === "1") {
     mocha.addFile(path.resolve(__dirname, "activation.test.js"));
+  } else if (process.env.PIARRE_DETAIL_TEST === "1") {
+    mocha.addFile(path.resolve(__dirname, "detail-identity.test.js"));
   } else if (process.env.PIARRE_RESULT_REVIEW_TEST === "1") {
     mocha.addFile(path.resolve(__dirname, "result-review.test.js"));
     mocha.addFile(path.resolve(__dirname, "execution-coordinator.test.js"));

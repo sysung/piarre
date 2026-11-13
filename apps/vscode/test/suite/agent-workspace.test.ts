@@ -61,6 +61,7 @@ suite("Agent workspace actual execution journey", () => {
       let reviewPanel: vscode.WebviewPanel | undefined;
       let explicitApproval: (() => Promise<void>) | undefined;
       const calls: ExecutionMessage[] = [];
+      let capturedReview: unknown;
       let completion: Promise<void> | undefined;
       let finish: (value: unknown) => void = () => undefined;
       const observed = new Promise<unknown>(resolve => { finish = resolve; });
@@ -96,7 +97,7 @@ suite("Agent workspace actual execution journey", () => {
             await coordinator.stop({ runId: message.id });
           } else if (message.action === "view" && "id" in message) {
             view.openExecutionResult(message.id); assert.ok(reviewPanel);
-            reviewPanel.webview.html = reviewPanel.webview.html.replace("</script>", `${reviewScript(scenario)}</script>`);
+            reviewPanel.webview.html = reviewPanel.webview.html.replace("</script>", `${reviewScript()}</script>`);
           } else if (message.action === "apply-accept" && "id" in message) {
             const run = repository.read().executionRuns.find(item => item.runId === message.id); assert.ok(run); assert.equal(run.state.kind, "terminal");
             if (scenario === "stale") {
@@ -123,18 +124,36 @@ suite("Agent workspace actual execution journey", () => {
           }
           if (message.kind === "journey-release-provider") releaseProvider();
           if (message.kind === "journey-refresh") view.update(repository.read());
-          if (message.kind === "journey-stale") {
-            const run = repository.read().executionRuns[0]; assert.ok(run);
-            writeFileSync(path.join(coordinator.candidateForRun(run.runId).root, "refund.txt"), "unverified candidate edit\n");
-            coordinator.refreshWorkspaceFreshness();
-            assert.equal(repository.read().executionRuns[0]?.reviewFreshness.kind, "stale");
-            assert.ok(reviewPanel);
-            assert.doesNotMatch(reviewPanel.webview.html, /data-execution-action="apply-accept"/);
-            // Try a forged stale acceptance through the same parsed bridge after the UI removed its action.
-            reviewPanel.webview.html = reviewPanel.webview.html.replace("</script>", `api.postMessage({kind:'execution',action:'apply-accept',id:identity});</script>`);
+          if (message.kind === "journey-stale-replayed") {
+            assert.equal(calls.some(call => call.action === "apply-accept"), false);
+            finish({ kind: "journey-result", ok: true });
           }
+
         });
-        return panel;
+        if (args[0] !== "piarre.execution" || scenario !== "stale") return panel;
+        const webview = new Proxy(panel.webview, { get: (target, key) => {
+          if (key === "onDidReceiveMessage") return (listener: (message: unknown) => void) => target.onDidReceiveMessage((message: unknown) => {
+            if (capturedReview === undefined && typeof message === "object" && message !== null && "kind" in message && message.kind === "detail-action") {
+              capturedReview = message;
+              const run = repository.read().executionRuns[0]; assert.ok(run);
+              writeFileSync(path.join(coordinator.candidateForRun(run.runId).root, "refund.txt"), "unverified candidate edit\n");
+              coordinator.refreshWorkspaceFreshness();
+              assert.equal(repository.read().executionRuns[0]?.reviewFreshness.kind, "stale");
+              assert.doesNotMatch(panel.webview.html, /data-execution-action="apply-accept"/);
+              assert.throws(() => coordinator.reviewResult(run.runId), /changed|stale/i);
+              panel.webview.html = panel.webview.html.replace("</script>", `api.postMessage(${JSON.stringify(capturedReview).replaceAll("<", "\\u003c")});api.postMessage({kind:'journey-stale-replayed'});</script>`);
+              return;
+            }
+            listener(message);
+          });
+          const value: unknown = Reflect.get(target, key);
+          return typeof value === "function" ? (...args: unknown[]) => Reflect.apply(value, target, args) as unknown : value;
+        } });
+        return new Proxy(panel, { get: (target, key) => {
+      if (key === "webview") return webview;
+      const value: unknown = Reflect.get(target, key);
+      return typeof value === "function" ? (...args: unknown[]) => Reflect.apply(value, target, args) as unknown : value;
+    } });
       }, undefined, undefined, undefined, { handle, renderDetails: runId => `<pre>${JSON.stringify(coordinator.inspection({ runId }).diff)}</pre>` });
       try {
         view.show(repository.read()); assert.ok(mainPanel);
@@ -145,7 +164,8 @@ suite("Agent workspace actual execution journey", () => {
         assert.equal(readFileSync(path.join(source, "private.txt"), "utf8"), "undisclosed\n");
         const run = repository.read().executionRuns[0]; assert.ok(run);
         assert.ok(calls.some(call => call.action === "prepare" && "id" in call && call.id === task.taskId));
-        assert.ok(calls.some(call => call.action === (scenario === "stop" ? "stop" : "apply-accept") && "id" in call && call.id === run.runId));
+        if (scenario === "stale") assert.ok(capturedReview);
+        else assert.ok(calls.some(call => call.action === (scenario === "stop" ? "stop" : "apply-accept") && "id" in call && call.id === run.runId));
         coordinator.dispose();
         const durable = repository.read();
         repository.close();
@@ -197,13 +217,13 @@ function mainScript(scenario: Scenario): string {
 })();`;
 }
 
-function reviewScript(scenario: Scenario): string {
+function reviewScript(): string {
   return `
 try {
   const text=document.body.textContent;
   for(const expected of ['Passed scoped checks','Acceptance: unreviewed','scoped refund check passed','refund.txt','SHA-256'])if(!text.includes(expected))throw new Error('Missing exact review evidence: '+expected);
   const apply=document.querySelector('[data-execution-action="apply-accept"]');
   if(!apply)throw new Error('Current passing result has no explicit acceptance action');
-  if(${JSON.stringify(scenario)}==='stale')api.postMessage({kind:'journey-stale'});else apply.click();
+  apply.click();
 }catch(error){api.postMessage({kind:'journey-result',ok:false,error:String(error)});}`;
 }
