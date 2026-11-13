@@ -10,6 +10,9 @@ export const host = {
   setupError: undefined as Error | undefined,
   watcherDisposals: 0,
   panel: undefined as vscode.WebviewPanel | undefined,
+  createdPanels: 0,
+  disposedPanels: 0,
+  lookup: undefined as ((html: string) => void) | undefined,
   stopVisible: false,
   rename: undefined as (() => Promise<string | undefined>) | undefined,
 };
@@ -47,14 +50,28 @@ export const window = {
   },
   createWebviewPanel: (...args: Parameters<typeof vscode.window.createWebviewPanel>) => {
     const panel = vscode.window.createWebviewPanel(...args);
-    if (args[0] === "piarre.work") host.panel = panel;
+    if (args[0] === "piarre.work") {
+      host.panel = panel;
+      host.createdPanels++;
+      panel.onDidDispose(() => {
+        host.disposedPanels++;
+        if (host.panel === panel) host.panel = undefined;
+      });
+      const post = panel.webview.postMessage.bind(panel.webview);
+      panel.webview.postMessage = (message: unknown) => {
+        if (host.panel === panel && message && typeof message === "object" && "html" in message && typeof message.html === "string" && message.html.includes('aria-label="Project lookup"')) host.lookup?.(message.html);
+        return post(message);
+      };
+    }
     return panel;
   },
   showWorkspaceFolderPick: vscode.window.showWorkspaceFolderPick,
   showWarningMessage: vscode.window.showWarningMessage,
   showInformationMessage: () => Promise.resolve(undefined),
-  showQuickPick: vscode.window.showQuickPick,
-  showInputBox: () => host.rename?.() ?? Promise.resolve(undefined),
+  showQuickPick: (choices: readonly string[], options: vscode.QuickPickOptions) => options.title === "Route lookup to its owning source"
+    ? Promise.resolve(choices[0]) : vscode.window.showQuickPick(choices, options),
+  showInputBox: (options: vscode.InputBoxOptions) => options.prompt?.startsWith("Look up exact identifiers")
+    ? Promise.resolve("replacementLookupMarker") : host.rename?.() ?? Promise.resolve(undefined),
   showTextDocument: vscode.window.showTextDocument,
   showSaveDialog: vscode.window.showSaveDialog,
   showErrorMessage: (message: string) => { host.errors.push(message); return Promise.resolve(undefined); },

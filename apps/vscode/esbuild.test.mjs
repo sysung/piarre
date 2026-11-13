@@ -12,7 +12,7 @@ await build({
     name: "lifetime-host-fixture",
     setup(builder) {
       builder.onResolve({ filter: /^vscode$/ }, ({ importer }) => {
-        if (!/[\\/](extension|diagnostic-commands)\.ts$/.test(importer)) return;
+        if (!/[\\/](extension|diagnostic-commands|knowledge-controller)\.ts$/.test(importer)) return;
         return { path: fileURLToPath(new URL("./test/suite/project-lifetime-vscode.ts", import.meta.url)) };
       });
     },

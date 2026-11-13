@@ -5,6 +5,7 @@ import { existsSync, mkdirSync, mkdtempSync, realpathSync, renameSync, rmSync, w
 import { tmpdir } from "node:os";
 import path from "node:path";
 import * as vscode from "vscode";
+import { DatabaseSync } from "node:sqlite";
 import { ownsExecutionLease, type ProjectCommand } from "../../../../packages/core/src/index.js";
 import { CandidateWorkspace } from "../../src/candidate-workspace.js";
 import { ExecutionCoordinator } from "../../src/execution-coordinator.js";
@@ -44,10 +45,17 @@ function createFixture() {
       finally {
         host.folders = []; host.errors.length = 0; host.setupError = undefined;
         host.watcherDisposals = 0; host.panel = undefined; host.stopVisible = false; host.rename = undefined;
+        host.createdPanels = 0; host.disposedPanels = 0; host.lookup = undefined;
         rmSync(directory, { recursive: true, force: true });
       }
     },
   };
+}
+
+function visitRevision(storage: string): number | string | bigint | Uint8Array | null | undefined {
+  const database = new DatabaseSync(path.join(storage, "project.sqlite"), { readOnly: true });
+  try { return database.prepare("SELECT revision FROM project_visit").get()?.revision; }
+  finally { database.close(); }
 }
 
 async function seedRun(folder: vscode.WorkspaceFolder, storage: string) {
@@ -91,7 +99,10 @@ suite("Project lifetime through VS Code and SQLite", () => {
       host.folders = [folder];
       fixture.start();
       await fixture.open();
-      const failedPanel = host.panel;
+      assert.equal(host.createdPanels, 1, "reconciliation failure should occur after Work appeared");
+      assert.equal(host.disposedPanels, 1, "failed opening should dispose Work before retry");
+      assert.equal(host.panel, undefined);
+      assert.equal(host.stopVisible, false, "failed opening should hide Stop");
       renameSync(missing, capture);
       await fixture.open();
       await fixture.propose("Proof that the retry selected the original project");
@@ -99,7 +110,7 @@ suite("Project lifetime through VS Code and SQLite", () => {
       try {
         const recovered = database.read();
         assert.equal(recovered.proposals.at(-1)?.goal, "Proof that the retry selected the original project");
-        assert.notEqual(host.panel, failedPanel, "retry should own a new Work panel");
+        assert.ok(host.panel, "retry should own a new Work panel");
         assert.equal(recovered.projectId, snapshot.projectId);
         assert.deepEqual(recovered.executionRuns, snapshot.executionRuns);
         assert.ok(recovered.executionRuns.some(ownsExecutionLease));
@@ -127,18 +138,56 @@ suite("Project lifetime through VS Code and SQLite", () => {
         host.folders = [a];
         const opening = fixture.open();
         await entered.promise;
+        const beforeVisits = visitRevision(fixture.storage(a));
+        const oldPanel = host.panel;
+        assert.ok(oldPanel);
+        let replacementPanel: vscode.WebviewPanel | undefined;
+        let replacementVisits: ReturnType<typeof visitRevision>;
+        let replacementStatus = false;
+        let replacementLookup: string | undefined;
         if (outcome === "dispose") fixture.dispose();
         else {
+          if (outcome === "failure") await seedRun(b, fixture.storage(b));
           host.folders = [b];
           host.changed.fire({ added: [b], removed: [a] });
           await fixture.open();
+          replacementPanel = host.panel;
+          assert.ok(replacementPanel);
+          assert.notEqual(replacementPanel, oldPanel);
+          assert.match(replacementPanel.webview.html, new RegExp(`<span class="project-name">${b.name}</span>`));
+          replacementStatus = host.stopVisible;
+          assert.equal(replacementStatus, outcome === "failure");
+          await fixture.propose("Only the replacement receives this proposal");
+          replacementVisits = visitRevision(fixture.storage(b));
+          if (outcome === "failure") {
+            const lookupPublished = deferred();
+            writeFileSync(path.join(b.uri.fsPath, "lookup.ts"), "export const replacementLookupMarker = true;\n");
+            host.lookup = html => { replacementLookup = html; lookupPublished.resolve(); };
+            replacementPanel.webview.html = replacementPanel.webview.html.replace("</script>", `document.querySelector('[data-knowledge-action="lookup-project"]').click();</script>`);
+            await lookupPublished.promise;
+            assert.match(replacementLookup ?? "", /export const replacementLookupMarker/);
+          }
         }
         if (outcome === "failure") release.reject(new Error("Retired reconciliation failed"));
         else release.resolve();
+        const lookupAtRelease = replacementLookup;
         await opening;
+        assert.equal(host.panel, replacementPanel);
+        assert.equal(host.stopVisible, replacementStatus);
+        assert.equal(replacementLookup, lookupAtRelease);
+        if (outcome === "failure") {
+          const afterRelease = deferred();
+          host.lookup = html => { replacementLookup = html; afterRelease.resolve(); };
+          await fixture.open();
+          await afterRelease.promise;
+          assert.match(replacementLookup ?? "", /export const replacementLookupMarker/);
+          assert.equal(host.panel, replacementPanel);
+          assert.equal(host.stopVisible, true);
+        }
         assert.deepEqual(host.errors, [], "a retired opening may not report over the current workspace");
         if (outcome !== "dispose") {
-          await fixture.propose("Only the replacement receives this proposal");
+          assert.equal(visitRevision(fixture.storage(b)), replacementVisits);
+          if (a !== b) assert.equal(visitRevision(fixture.storage(a)), beforeVisits);
           const selected = new SqliteProjectRepository(path.join(fixture.storage(b), "project.sqlite"));
           try { assert.equal(selected.read().proposals.at(-1)?.goal, "Only the replacement receives this proposal"); }
           finally { selected.close(); }
