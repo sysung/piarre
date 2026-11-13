@@ -154,7 +154,7 @@ suite("Canonical bounded read-only coordination", () => {
     const group = controller.prepare({ requestId: "deadline-message", parentTaskId: taskId, purpose: "Bound elapsed work", scope: "Supplied sources", model: "fixture-model", workers: 1, durationMs: 1_000, maxTokens: 100 });
     await controller.approveAndRun(group.groupId, group.preparedAtRevision, "deadline-explicit");
     const worker = readGroup().assignments[0]; assert.ok(worker); assert.equal(worker.state.kind, "terminal"); assert.equal(worker.state.outcome, "unknown");
-    assert.equal(clients[0]?.disposals, 2);
+    assert.equal(clients[0]?.disposals, 1);
     const next = prepare(1, "next-after-unknown");
     await assert.rejects(controller.approveAndRun(next.groupId, next.preparedAtRevision, "denied-pending-review"), /unconfirmed/);
     assert.equal(clients.length, 1);
