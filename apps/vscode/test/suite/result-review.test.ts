@@ -77,7 +77,7 @@ suite("Result acceptance through the actual Webview and native confirmation", ()
     };
     const ui = new ExecutionUi(control, () => repository.read(), id => { view.openExecutionResult(id); });
     const view = new WorkView((...args) => { const created = vscode.window.createWebviewPanel(...args); if (args[0] === "piarre.execution") panel = created; return created; }, undefined, undefined, undefined,
-      { handle: async message => { await ui.handle(message); handled(); }, renderDetails: id => ui.renderDetails(id) });
+      { handle: async (message, origin) => { await ui.handle(message, origin); handled(); }, renderDetails: id => ui.renderDetails(id) });
     try {
       view.show(repository.read()); view.openExecutionResult(runId); assert.ok(panel);
       assert.match(panel.webview.html, integrated ? /Accept current result/ : /Apply and accept/);

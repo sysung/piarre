@@ -32,16 +32,16 @@ The [design](design.md) owns the implementation shape and [canonical verificatio
 
 ## 5. Detail identity and document mechanics
 
-- [ ] 5.1 Add actual rendered-control regressions for identical-looking records, obsolete documents, wrong current-document targets/actions, and selection changes during confirmation; execute baseline failures for V10 before changing routing.
-- [ ] 5.2 Bind cache, messages and host-rendered control lookup to project instance, record and document identity. Carry origin checks through ExecutionUi/RecoveryUi and deletion confirmation. Verify V10 green and remove old unbound listeners/caches in the same change.
-- [ ] 5.3 Extract only shared detail-document mechanics, preserving pane-specific selection, disposal and state policies; verify V11 scroll/disclosure/focus, repeated controls, reduced motion, unsent Work text and responsive Stop in actual webviews.
-- [ ] 5.4 Update fixtures to use real rendered envelopes, record V10–V11 evidence and any changed user-facing guidance, and record the verified stage commit. Verify all prior positive proposal/review/recovery actions still work.
+- [x] 5.1 Add actual rendered-control regressions for identical-looking records, obsolete documents, wrong current-document targets/actions, and selection changes during confirmation; execute baseline failures for V10 before changing routing.
+- [x] 5.2 Bind cache, messages and host-rendered control lookup to project instance, record and document identity. Carry origin checks through ExecutionUi/RecoveryUi and deletion confirmation. Verify V10 green and remove old unbound listeners/caches in the same change.
+- [x] 5.3 Extract only shared detail-document mechanics, preserving pane-specific selection, disposal and state policies; verify V11 scroll/disclosure/focus, repeated controls, reduced motion, unsent Work text and responsive Stop in actual webviews.
+- [x] 5.4 Update fixtures to use real rendered envelopes, record V10–V11 evidence and any changed user-facing guidance, and record the verified stage commit. Verify all prior positive proposal/review/recovery actions still work.
 
 ## 6. Integrated verification and review
 
-- [ ] 6.1 Execute the canonical verification command set and V12 trusted/restricted Host, SQLite receipt/replay and package checks on the integrated revision; rerun V02 preservation. Record exact SHAs, environment, commands and outcomes; label environmental blockers rather than passing them.
-- [ ] 6.2 Independently review the final architecture and affected callers for stale authority, duplicate old/new paths, hidden documentation and recovery regressions. Resolve findings, rerun affected checks, and verify the V01–V12 evidence index is complete without claiming the retained pending product criteria passed.
-- [ ] 6.3 Update proposal History with implementation issue, PR, verified commits and evidence links; verify remote delivery state if publishing is requested and keep human acceptance distinct from automated checks.
+- [x] 6.1 Execute the canonical verification command set and V12 trusted/restricted Host, SQLite receipt/replay and package checks on the integrated revision; rerun V02 preservation. Record exact SHAs, environment, commands and outcomes; label environmental blockers rather than passing them.
+- [x] 6.2 Independently review the final architecture and affected callers for stale authority, duplicate old/new paths, hidden documentation and recovery regressions. Resolve findings, rerun affected checks, and verify the V01–V12 evidence index is complete without claiming the retained pending product criteria passed.
+- [x] 6.3 Update proposal History with implementation issue, PR, verified commits and evidence links; verify remote delivery state if publishing is requested and keep human acceptance distinct from automated checks.
 
 ## Workflow follow-up
 

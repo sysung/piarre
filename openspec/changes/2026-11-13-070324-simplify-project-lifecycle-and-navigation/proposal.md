@@ -33,10 +33,10 @@ Primary files are `apps/vscode/src/extension.ts`, `execution-coordinator.ts`, `e
 ## History
 
 - Created: 2026-11-13T07:03:24Z.
-- Outcome: proposed; implementation, runtime reproduction and acceptance pending.
+- Outcome: implemented as an unmerged four-PR stack. Local integrated verification, independent review, and hosted CI passed. Native keyboard-focus verification also passed after desktop access was restored; all 23 implementation tasks are complete. Human acceptance remains pending.
 - Origin: repository cleanup exploration and three-worker source review in this conversation.
 - Planning home: the original Piarre checkout resolved by OpenSpec. It is older than the audited implementation and contains unrelated untracked planning material.
 - Audited code baseline: `0119a55cccc2b4cc199222351e4cfb5e7bf5daf2`, branch `codex/121-archive-documentation`, following documentation migration PR #122 and archive PR #123.
-- Delivery: new issue, implementation branch and PR pending. Do not reuse migration issue #121 for the new feature work.
+- Delivery: [issue #124](https://github.com/sysung/piarre/issues/124) and stacked PRs [#125](https://github.com/sysung/piarre/pull/125), [#126](https://github.com/sysung/piarre/pull/126), [#127](https://github.com/sysung/piarre/pull/127), and [#128](https://github.com/sysung/piarre/pull/128). The [verification index](verification/index.md) records exact reviewed commits, CI, and V01–V12 outcomes. Migration issue #121 was not reused.
 - Prerequisite: apply against a clean checkout containing the consolidated documentation and archive; revalidate source findings if code has advanced.
-- Accepted, implemented, merged and archived times: pending.
+- Implementation commits published: 2026-11-13. Human acceptance, merge, and archive: pending. The 17 retained pending product criteria remain pending.
