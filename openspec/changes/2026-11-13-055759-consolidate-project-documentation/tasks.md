@@ -19,24 +19,24 @@ Use the canonical [verification plan](design.md#verification-plan). Evidence ide
 - [x] 3.2 Retain exact requirement/scenario identity and path-containment checks, migrate live catalog references, and verify missing headings, unrelated identities and escaping paths fail with the scenario ID; compare every unchanged acceptance field against the baseline (V04).
 - [x] 3.3 Integrate the same resolver into acceptance reporting and the contract suite; verify reports bind sources to the code revision, detect changes during collection and never promote preview to passed acceptance (V03, V04, V08).
 - [x] 3.4 Retain original principles and retrieval revision/path/hash tuples and missing-history diagnostics; verify both historical PRD hashes, all ten retrieval inputs and byte-identical fixture inventories (V05).
-- [ ] 3.5 Adapt CI and contributor instructions to one checkout with sufficient Git history; remove staged second-checkout, lock and deploy-key use, then verify a fresh clone can run the documented checks without external docs access (V02, V03, V05).
+- [x] 3.5 Adapt CI and contributor instructions to one checkout with sufficient Git history; remove staged second-checkout, lock and deploy-key use, then verify a fresh clone can run the documented checks without external docs access (V02, V03, V05).
 
 ## 4. Retain history and canonical verification
 
 - [x] 4.1 Integrate the staged UTC ID and lifecycle-history guidance into local docs; reuse and rerun chronology/collision fixtures as needed, verifying stable archived IDs and distinct creation, acceptance and archive order (V07, V08).
 - [x] 4.2 Integrate the byte-preserved legacy archive and abandoned-discovery procedure; verify archive skip-sync behavior retains main-spec bytes, snapshots, explicit outcomes and truthful unfinished tasks in the local layout (V01, V06).
-- [ ] 4.3 Link workflow guidance and issue #121 to the single canonical verification plan; verify task/decision traceability and that failed or unverified outcomes remain incomplete (V11).
+- [x] 4.3 Link workflow guidance and issue #121 to the single canonical verification plan; verify task/decision traceability and that failed or unverified outcomes remain incomplete (V11).
 
 ## 5. Finish local consumers and publication
 
 - [x] 5.1 Replace the exact-four-documents test with local entry-point and reference contracts using red/green tests; retire the legacy live index/PRD/design only after snapshots and replacement consumers pass, then verify all local links (V04, V09).
 - [x] 5.2 Keep repository-local OpenSpec configuration and supported generated integrations; verify root/child context/list/doctor identify Piarre and that no Store pointer or documentation lock remains in the delivered branch (V02).
-- [ ] 5.3 Publish one implementation PR referencing issue #121 and the change, record originating/implementation links and single-revision evidence, and verify remote readback while leaving unmerged/unknown events pending (V08).
+- [x] 5.3 Publish one implementation PR referencing issue #121 and the change, record originating/implementation links and single-revision evidence, and verify remote readback while leaving unmerged/unknown events pending (V08).
 
 ## 6. Verify the integrated migration
 
-- [ ] 6.1 Execute V01–V12 against the final Piarre revision, including contract tests, applicable project quality checks and strict selected OpenSpec validation; deliver outcomes, commands and evidence with any historical exceptions or accepted limitations explicitly identified.
-- [ ] 6.2 Exercise rollback in an isolated fixture and review navigation, authority and semantic coverage; verify the prior paths and source checks are restored, preserved history survives and failed criteria are not reported complete (V09–V12).
+- [x] 6.1 Execute V01–V12 against the final Piarre revision, including contract tests, applicable project quality checks and strict selected OpenSpec validation; deliver outcomes, commands and evidence with any historical exceptions or accepted limitations explicitly identified.
+- [x] 6.2 Exercise rollback in an isolated fixture and review navigation, authority and semantic coverage; verify the prior paths and source checks are restored, preserved history survives and failed criteria are not reported complete (V09–V12).
 
 ## Workflow follow-up
 
