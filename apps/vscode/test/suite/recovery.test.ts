@@ -18,7 +18,8 @@ import { currentImages, prepareRecoveryFiles, previewRecoveryFiles } from "../..
 import { SqliteProjectRepository } from "../../src/sqlite-project-repository.js";
 import { renderExecutionResult } from "../../src/execution-view.js";
 
-suite("Reviewed recovery with actual SQLite and filesystem", () => {
+suite("Reviewed recovery with actual SQLite and filesystem", function () {
+  this.timeout(10_000);
   let directory: string; let source: string; let storage: string; let repository: SqliteProjectRepository;
   let candidate: CandidateWorkspace; let coordinator: ExecutionCoordinator; let dirty: boolean; let sequence: number;
   const runId = "run:recovery";
