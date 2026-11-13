@@ -22,7 +22,7 @@ Publish documentation and tooling together in one implementation PR. Record its 
 
 ## Verify
 
-The migration's [canonical plan](../openspec/changes/2026-11-13-055759-consolidate-project-documentation/design.md#verification-plan) defines V01–V12. Future changes declare one canonical plan, with links from tasks and issues. Record passed, failed, blocked and unverified outcomes with commands and revision evidence. Human-readable checks remain alongside automated checks.
+The migration's [canonical plan](../openspec/changes/archive/2026-11-13-055759-consolidate-project-documentation/design.md#verification-plan) defines V01–V12. Future changes declare one canonical plan, with links from tasks and issues. Record passed, failed, blocked and unverified outcomes with commands and revision evidence. Human-readable checks remain alongside automated checks.
 
 `npm run test:contract` exercises reference resolution and provenance without launching the application. `npm run test:acceptance -- --preview` inspects draft references and produces an explicitly unverified report; it cannot satisfy acceptance. Strict acceptance requires a clean Piarre checkout at the recorded revision and the applicable behavioral checks. A failed or unverified check must remain incomplete unless the user explicitly accepts a recorded limitation.
 

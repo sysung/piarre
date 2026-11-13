@@ -29,7 +29,7 @@ Run the portable provenance check:
 python3 openspec/changes/archive/2026-11-13-legacy-documentation/capture-baseline.py --code . --documentation-root .
 ```
 
-Run the isolated CLI fixtures with `python3 openspec/changes/2026-11-13-055759-consolidate-project-documentation/verification/check-openspec.py`. Set OPENSPEC_BIN if the installed CLI is not on PATH. The script prints commands and outcomes and removes only its temporary fixtures.
+Run the isolated CLI fixtures with `python3 openspec/changes/archive/2026-11-13-055759-consolidate-project-documentation/verification/check-openspec.py`. Set OPENSPEC_BIN if the installed CLI is not on PATH. The script prints commands and outcomes and removes only its temporary fixtures.
 
 [Rollback evidence](rollback.json) records the isolated revert result. It restored a tree identical to the baseline; the original migration manifest remains retrievable from its commit. No real branch was rolled back.
 
