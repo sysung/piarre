@@ -4,6 +4,24 @@ These principles record the product owner's goals for how Piarre should support 
 
 The long-term vision is a product form of p-stack that evolves with the developer's workflows. The central aim is to reduce token costs, repeated corrections, unclear communication, misinformation, and AI fatigue while preserving human understanding and control. Specific interfaces and claimed benefits require experiments. These principles do not add features to the current release or defer requirements already accepted there.
 
+## Contents
+
+- [P01. Keep delegated work visible and individually steerable](#p01-keep-delegated-work-visible-and-individually-steerable)
+- [P02. Make visibility economical](#p02-make-visibility-economical)
+- [P03. Ground natural conversation in shared work](#p03-ground-natural-conversation-in-shared-work)
+- [P04. Preserve intent when execution is unavailable](#p04-preserve-intent-when-execution-is-unavailable)
+- [P05. Use focused skills that fit the repository](#p05-use-focused-skills-that-fit-the-repository)
+- [P06. Make adaptation optional and demonstrable](#p06-make-adaptation-optional-and-demonstrable)
+- [P07. Make planned steps and actual execution distinguishable](#p07-make-planned-steps-and-actual-execution-distinguishable)
+- [P08. Let memory evolve while preserving provenance and authority](#p08-let-memory-evolve-while-preserving-provenance-and-authority)
+- [P09. Turn requests into verifiable outcomes and repair misunderstandings](#p09-turn-requests-into-verifiable-outcomes-and-repair-misunderstandings)
+- [P10. Explain consequential actions with evidence](#p10-explain-consequential-actions-with-evidence)
+- [P11. Reduce review fatigue without encouraging rubber-stamping](#p11-reduce-review-fatigue-without-encouraging-rubber-stamping)
+- [P12. Preserve the developer's ability to own and maintain the result](#p12-preserve-the-developers-ability-to-own-and-maintain-the-result)
+- [P13. Preserve human authority without promoting inference into fact](#p13-preserve-human-authority-without-promoting-inference-into-fact)
+- [P14. Establish shared intent with as little back-and-forth as possible](#p14-establish-shared-intent-with-as-little-back-and-forth-as-possible)
+- [Inspirational Sources](#inspirational-sources)
+
 ## P01. Keep delegated work visible and individually steerable
 
 Developers should be able to identify each agent's task, activity, outputs, blockers, and pending decisions. Visibility should include agent-to-agent interactions, agreements, disagreements, and handoffs. A developer should be able to direct a specific agent and inspect whether that instruction was received and acted on.
