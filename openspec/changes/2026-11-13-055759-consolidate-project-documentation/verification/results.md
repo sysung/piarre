@@ -40,3 +40,9 @@ The local-root regression first failed because the prior resolver demanded a doc
 Strict candidate acceptance on the clean implementation clone intentionally returned nonzero: the existing 17 pending criteria remain pending, with productReady false. No full Host acceptance or human product evaluation was claimed locally. PR CI separately runs the repository's broader checks. The migration does not turn historical or structural evidence into current feature verification.
 
 Project 8 attachment remains unavailable with the current token's missing read:project scope. The issue and PR are linked directly. The superseded private documentation repository and credentials remain unused and untouched.
+
+## Guide cleanup and preservation recheck
+
+The guide-only follow-up to `0b72759e18dc2660cdb726554b79bccef8043458` keeps overview and workflow, shortens wording, clarifies that one PR can contain documentation and implementation, and links to preserved originals. A manual diff review found no removed substantive guide facts. Archived snapshots and requirements were not edited.
+
+Rechecked the working tree before committing this follow-up: 26 snapshot hashes, complete disposition coverage, 21 unchanged catalog requirement/owner/verification rows, and 12 historical Git source objects passed. All 31 contract tests and 10 strict OpenSpec items passed. Local link checks passed for 21 guide links and 147 OpenSpec links. These checks verify documentation preservation and structure, not runtime product acceptance.

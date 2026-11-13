@@ -14,9 +14,9 @@ The context must identify this Piarre checkout. No Store registration, documenta
 
 ## Make and review a change
 
-Create an issue-linked implementation branch from the desired Piarre baseline. Use `YYYY-MM-DD-HHMMSS-slug` with UTC time for new change IDs, preserving existing IDs. On collision, choose a distinct descriptive suffix. OpenSpec proposals and designs contain the decisions; tasks reference the canonical verification plan instead of repeating it.
+Create an issue-linked implementation branch from the desired Piarre baseline. Use `YYYY-MM-DD-HHMMSS-slug` with UTC time for new change IDs. Keep existing IDs. On collision, choose a distinct descriptive suffix. OpenSpec proposals and designs contain the decisions; tasks reference the canonical verification plan instead of repeating it.
 
-Each proposal has a History section: outcome, created/accepted/merged/archived times, originating issue, documentation PR and first commit, implementation PR and commit, verification evidence, dependencies and supersession. Unknown events remain pending. These Markdown fields are a project convention. Creation order comes from `openspec list --all --sort name`; acceptance and merge order come from their recorded events. Timestamps alone do not establish dependency.
+Each proposal has a History section recording its outcome, creation, acceptance, merge and archive times, originating issue, documentation PR and first commit, implementation PR and commit, verification evidence, dependencies and supersession. The documentation and implementation PR can be the same. Unknown events remain pending. These Markdown fields are a project convention. Creation order comes from `openspec list --all --sort name`; acceptance and merge order come from their recorded events. Timestamps alone do not establish dependency.
 
 Publish documentation and tooling together in one implementation PR. Record its originating issue, PR and implementation commit. Add final evidence in a later commit or durable result artifact so no commit must contain its own hash. Each verification result identifies the single Piarre revision it tested. Later edits do not rewrite the old result; changed criteria require new verification.
 
@@ -30,4 +30,4 @@ The migration's [canonical plan](../openspec/changes/2026-11-13-055759-consolida
 
 Archive completed changes through the OpenSpec archive workflow. Legacy snapshots and abandoned discoveries record their outcome and skip spec synchronization. Never check off unfinished tasks to make abandonment look complete. OpenSpec 1.16.1 fixtures verified `openspec archive <change> --skip-specs --yes --json`: date-prefixed IDs remain stable, obsolete deltas do not alter main specs, and unfinished tasks remain unfinished. Expected historical warnings remain visible.
 
-Restore the prior catalog, documentation and consumer files with an ordinary reviewed revert when rolling back the migration. Keep shared documentation history and snapshots. Rerun source validation against the restored revision; do not force-rewrite either repository.
+Restore the prior catalog, documentation and consumer files with an ordinary reviewed revert when rolling back the migration. Keep documentation history and the [original snapshots](../openspec/changes/archive/2026-11-13-legacy-documentation/disposition.md). Rerun source validation against the restored revision; do not force-rewrite repository history.

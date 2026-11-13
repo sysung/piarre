@@ -1,8 +1,8 @@
 # Project overview
 
-Piarre is a centralized AI orchestrator for seeing, directing and verifying agent work. Agent visibility is the primary product direction; typed discussion is a supporting tool and voice is deferred. The intended benefit is lower supervision effort, but that benefit requires evaluation rather than inference from a completed implementation.
+Piarre is a centralized AI orchestrator for seeing, directing and verifying agent work. Agent visibility is the primary product direction; typed discussion is a supporting tool and voice is deferred. Piarre aims to reduce supervision effort. Evaluation must establish whether it does.
 
-The initial audience is the developer using Piarre on their own projects. The self-use candidate should preserve continuity across sessions, business context and inspectable decisions while reducing repeated explanation and reading.
+Piarre initially serves developers working on their own projects. The self-use candidate should preserve continuity across sessions, business context and inspectable decisions while reducing repeated explanation and reading.
 
 ## Current direction and architecture
 
@@ -20,7 +20,7 @@ Code and tests describe actual implementation and observations at their recorded
 
 ## Using Piarre
 
-Installation, development, first-use, isolated candidate and diagnostic instructions remain in the [code README](../README.md). Use the README at the code revision you are running for exact instructions.
+Installation, development, first-use, isolated candidate and diagnostic instructions remain in the [code README](../README.md). Use the README from the revision you are running.
 
 ## Optional reflection
 
