@@ -100,7 +100,7 @@ Publication must be idempotent: keep a local draft-ID to issue-number map in the
 2. Generate the exact deletion list from tracked paths and show it with retained/revised paths. Untracked files, credentials, model caches, user databases, other worktrees, and remote issues/releases are not deletion targets.
 3. Obtain manifest approval, then remove the old application and dependent CI/release jobs in one reviewable change on an issue-linked `codex/` branch. Preserve unrelated edits and leave the default branch untouched until review.
 4. Retain `.agents/`, `AGENTS.md`, `docs/agents/`, OpenSpec config, archived history, and this proposal. Rewrite README and relevant navigation to describe the PoC. Update `.gitignore` for generated artifacts.
-5. Apply the explicit spec retirement/replacement deltas at the normal approved sync/archive boundary. Until then, describe legacy main specs as pending replacement, not current proof of PoC behavior. Empty retired capabilities need explicit retirement notes/purpose updates at sync, without reviving old requirements.
+5. Publish the five additive PoC specs at the approved sync and archive boundary. The [scope mapping](spec-scope.md) records the earlier legacy spec retirement.
 6. Restore old source only by checking out the recovery reference separately. Never restore an old binary onto newly altered user state; this PoC performs no state migration.
 
 ### Reset inventory boundary

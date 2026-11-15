@@ -20,20 +20,15 @@ Piarre needs a small experiment that establishes whether a local model can suppo
 - `isolated-local-inference`: explicit provisioning, restricted connectivity, pinned local model configuration, and measured serving limits.
 - `inference-evaluation`: reproducible runtime/model comparisons and evidence-bound conclusions.
 - `poc-delivery`: recovery-first reset, dependency-linked planning, milestone gates, and explicit PoC acceptance.
+- `typed-discussion`: tool-free terminal chat and session-local context.
+- `result-review`: revision-bound PoC evidence and human acceptance.
 
 ### Modified Capabilities
 
-- `typed-discussion`: replace VS Code/Codex-specific durable conversation with tool-free terminal chat and session-local context.
-- `approved-execution`: remove coding-run approval, ownership, and subscription forecasting requirements from this chat-only PoC.
-- `goal-proposals`: retire saved goal and proposal UI behavior.
-- `project-state`: retire VS Code project identity/storage and durable command replay requirements.
-- `project-knowledge`: defer durable knowledge and scoped corrections until a later proposal.
-- `result-review`: replace patch-review requirements with revision-bound PoC evidence and human acceptance.
-- `workspace-recovery`: retire patch publication and checkpoint restoration; the PoC cannot mutate user repositories.
-- `imported-acceptance-baseline`: retire legacy application acceptance contracts while preserving their historical source.
+None.
 
 ## Impact
 
-The reset affects `apps/`, `packages/`, legacy tests and scripts, Node configuration, and VS Code release workflows. New Rust and Compose implementation follows only after this plan is reviewed and apply is requested. Main specifications remain unchanged during proposal creation; the deltas describe their intended replacement or retirement.
+The reset affects `apps/`, `packages/`, legacy tests and scripts, Node configuration, and VS Code release workflows. New Rust and Compose implementation follows only after this plan is reviewed and apply is requested. The [scope mapping](spec-scope.md) records the separate legacy spec retirement. The five PoC deltas are additions to the empty main catalog.
 
 Model files, runtime installation, benchmark execution, GitHub publication, cleanup, and release are not performed by this proposal. No model training, OpenCode integration, autonomous coding, retrieval, cross-session memory, cloud fallback, or shared multi-user hosting is included. The earlier 90% ambition is not an acceptance threshold.

@@ -25,4 +25,4 @@ The [recovery branch](https://github.com/sysung/piarre/tree/archive/pre-local-mo
 
 ## Specification transition
 
-The [active change](openspec/changes/local-model-chat-poc/proposal.md) defines this PoC. Main specs still describe the legacy application pending normal OpenSpec synchronization. See the [scope mapping](openspec/changes/local-model-chat-poc/spec-scope.md) before implementing requirements.
+The [active change](openspec/changes/local-model-chat-poc/proposal.md) defines this PoC. The active change holds the proposed requirements until delivery and acceptance. See the [scope mapping](openspec/changes/local-model-chat-poc/spec-scope.md) before implementing requirements.
