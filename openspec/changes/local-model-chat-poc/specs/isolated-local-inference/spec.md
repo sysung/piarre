@@ -1,37 +1,32 @@
 ## Purpose
-Run pinned local models with explicit provisioning, restricted access, and measurable resource use on a developer machine.
+Run a real local model while keeping agent file operations inside a disposable Linux workspace.
 
 ## ADDED Requirements
 
-### Requirement: Separate provisioning from conversation
-The system SHALL use an explicitly provisioned local model and endpoint. Chat SHALL NOT download models, select a remote provider, or enable cloud fallback.
+### Requirement: Use an explicitly configured local model
+The application SHALL call the operator-configured local endpoint and model. It SHALL NOT silently download weights or fall back to a cloud provider.
 
-#### Scenario: Missing local model
-- **WHEN** the configured model is absent
-- **THEN** chat stops with a provisioning instruction without downloading or contacting a remote model
+#### Scenario: Model unavailable
+- **WHEN** the configured model cannot load or the endpoint cannot be reached
+- **THEN** the attempt reports the actual failure without substituting another provider
 
-### Requirement: Restrict harness access
-The harness SHALL expose no execution tools, inherit no personal files or credentials, and use only approved inference connectivity and dedicated session storage. Isolation acceptance SHALL precede use of personal input.
+### Requirement: Keep agent work in a disposable container
+The agent and its writable workspace SHALL run in the same disposable Linux container without personal host mounts, credentials, SSH agent, Docker socket or privileged mode. Only the designated workspace and bounded temporary storage SHALL be writable by the agent.
 
-#### Scenario: Model requests execution
-- **WHEN** a reply requests a command, file access, or tool call
-- **THEN** the reply remains inert text and no operation occurs
+#### Scenario: Start the default environment
+- **WHEN** the user launches the documented environment
+- **THEN** the agent has a temporary workspace and no mounted Mac project or home directory
 
-#### Scenario: Isolation is unverified
-- **WHEN** approved containment checks cannot establish the required access limits
-- **THEN** the environment remains unqualified and testing is restricted to synthetic data
+### Requirement: Check the actual environment
+The PoC SHALL use real model inference for end-to-end observations. Workspace and mount checks SHALL inspect the actual environment; a fake endpoint SHALL NOT be a prerequisite.
 
-### Requirement: Qualify total serving memory
-A qualifying configuration SHALL remain below 8 GB (decimal) of attributed peak serving memory, including model weights, caches, runtime buffers, and serving processes. Missing accounting SHALL produce an unknown result, not a pass. Build and test memory SHALL be separate.
+#### Scenario: Inspect the workspace
+- **WHEN** the operator checks the running container and performs a bounded file trial
+- **THEN** changes are visible inside its workspace and teardown discards them
 
-#### Scenario: Peak exceeds limit
-- **WHEN** a declared workload reaches or exceeds the limit
-- **THEN** the configuration is ineligible and its measurements remain in the report
+### Requirement: Permit model attempts without research admission
+The operator SHALL be able to select a configured local model without benchmark, memory-score or cohort eligibility checks. Actual load and request failures SHALL remain visible.
 
-
-### Requirement: Qualify the actual execution path
-A surrogate check SHALL qualify only its probe environment. Each actual runtime/client route SHALL pass containment checks before measurement, and the final harness image SHALL pass before personal chat. Configuration changes SHALL invalidate the affected qualification.
-
-#### Scenario: Runtime changes after preparation
-- **WHEN** a different native server or client route is selected
-- **THEN** prior surrogate evidence cannot qualify it and synthetic containment checks precede use
+#### Scenario: Model responds outside the former memory target
+- **WHEN** a configured model can respond but has unknown or greater than 8 GB serving memory
+- **THEN** the application does not reject it on that basis

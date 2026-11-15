@@ -24,3 +24,11 @@ The maintainer approved publication and the exact reset manifest with “yes you
 ## Cleanup and specification review
 
 Before removal, all 149 paths matched their bytes at the recovery revision and the worktree was clean. The deletion diff equals the approved manifest exactly. The old CI/VSIX workflow is removed. README, documentation workflow and ignore rules were rewritten separately as approved. All eight legacy capabilities and every existing requirement were matched against explicit deltas in [spec-scope.md](spec-scope.md). Main specs and archives were retained. Strict OpenSpec validation and `git diff --check` passed. These checks do not prove runtime behavior.
+
+## Approved real-model-first revision, 2026-11-15
+
+The maintainer approved real Qwen through Rig, chat before bounded file tools, one disposable Linux container, direct local inference without a proxy, and observations instead of model admission. Benchmarking and context retrieval are deferred. The exact launcher remains an implementation choice. These decisions complete revised task 0.6 and the direction record in 0.11; they do not claim working inference or a completed human chat trial.
+
+Task 0.9 publication readback checked all 20 revised active briefs for exact titles, milestone assignment, scope-PR links and native dependencies. Five new issues #173–#177 cover the chat trial and file tools. #145 is retired as not planned. #146 and #152–#155 remain deferred research outside PoC milestones under #136; #148 is parallel board work. The four milestone descriptions and all seven story descriptions were revised. PR #172 carries the delivery for #144, #147 and #149; they remain In review until merge.
+
+Read-only runtime inspection found the existing DMR llama.cpp backend running. Installed model names included a Qwen 9B entry; it is not the pinned Qwen 4B and was not substituted. No model was downloaded, invoked, unloaded or changed during this revision. The first provisioning issue #150 still depends on #149.

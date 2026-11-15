@@ -1,44 +1,25 @@
 ## Purpose
-Make runtime and small-model choices from reproducible local measurements without overstating their scope.
+Record useful observations from a few local model attempts without requiring a benchmark or model compliance pipeline.
 
 ## ADDED Requirements
 
-### Requirement: Freeze comparison conditions
-Each comparison SHALL record exact artifacts, runtime versions, quantization, templates, context, hardware, settings, workload, and measurement method before scoring. Runtime comparisons SHALL hold the model artifact fixed where supported; incompatible formats SHALL be labeled whole-stack comparisons.
+### Requirement: Record observed behavior
+PoC notes SHALL identify the model, runtime, application revision and observed result when available. Unknown values SHALL remain unknown. Recording MAY be manual; no metrics subsystem is required.
 
-#### Scenario: Different quantization formats
-- **WHEN** two runtimes require different quantized artifacts
-- **THEN** the report does not attribute the observed difference solely to runtime speed
+#### Scenario: Try another model
+- **WHEN** the operator tries a different configured model
+- **THEN** notes distinguish that attempt from the previous one
 
-### Requirement: Report complete outcomes
-Reports SHALL include first-token latency, generation rate, peak memory, repetitions, warm/cold conditions, errors, exclusions, and model-quality results where applicable. Failed or incomplete runs SHALL NOT silently disappear.
+### Requirement: Separate observations from admission
+Benchmark scores, memory measurements and compatibility research SHALL NOT be prerequisites for chat. A failed attempt SHALL NOT be represented as a successful demonstration.
 
-#### Scenario: Candidate fails to load
-- **WHEN** a candidate cannot complete the workload
-- **THEN** its failure and reason appear alongside successful candidates
+#### Scenario: Chat works but tools do not
+- **WHEN** a model responds to chat but fails a structured file operation
+- **THEN** chat remains usable and the file-operation limitation is recorded
 
-### Requirement: Bound evaluation claims
-The PoC SHALL use model-level coding evaluation separately from runtime timing and human usability. It SHALL NOT claim repository-agent performance, training improvements, closed-model parity, or a universal fastest runtime from this chat-only experiment.
+### Requirement: Limit conclusions to demonstrated behavior
+Reports SHALL distinguish chat, bounded file operations and user usefulness. They SHALL NOT infer general coding competence or closed-model parity from this PoC.
 
-#### Scenario: Chat passes UAT
-- **WHEN** the user accepts the chat PoC
-- **THEN** the report establishes chat feasibility only, without claiming autonomous coding competence
-
-
-### Requirement: Contain executable evaluation output
-Generated code SHALL execute only in a qualified disposable evaluator with no host mounts, credentials, network, or Docker socket. Total CPU, memory, process count, elapsed time and output SHALL be bounded, and teardown verified. The trusted launcher SHALL NOT execute generated programs.
-
-#### Scenario: Evaluator qualification fails
-- **WHEN** a safe synthetic limit or access check fails
-- **THEN** generated-code scoring remains blocked and the failure is recorded
-
-### Requirement: Compare published configurations first
-The initial model comparison SHALL use pinned published configurations and disclose known quantization layouts, conversion details and unknowns. Reports SHALL NOT attribute all observed differences to source-model quality. A common conversion pipeline SHALL require a separately reviewed follow-up tied to a concrete selection or comparison need.
-
-#### Scenario: Matching quantization labels
-- **WHEN** two artifacts share a Q4_K_M label but their precision layouts differ or remain unknown
-- **THEN** the report identifies that limitation and does not claim equivalent quantization
-
-#### Scenario: Conversion could resolve a selection problem
-- **WHEN** a suitable published artifact is unavailable, a suspected conversion defect affects selection, or controlled source-model comparison becomes necessary
-- **THEN** a separate conversion task is reviewed, beginning with one checkpoint before any cohort-wide expansion
+#### Scenario: File trial succeeds
+- **WHEN** a sample file is created and inspected
+- **THEN** the result establishes that observed workflow, not a general benchmark score

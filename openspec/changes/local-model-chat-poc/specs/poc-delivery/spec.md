@@ -1,40 +1,32 @@
 ## Purpose
-Deliver the local-model PoC through recoverable cleanup, reviewable work planning, and evidence-based milestone acceptance.
+Deliver a recoverable local-model experiment in small reviewable slices without research prerequisites blocking first use.
 
 ## ADDED Requirements
 
-### Requirement: Reset with verified recovery
-Legacy removal SHALL follow a verified recovery reference and human approval of an exact tracked-path deletion manifest. Git history, unrelated work, credentials, legacy user data, and retained planning infrastructure SHALL be preserved.
+### Requirement: Preserve recovery and completed work
+Completed reset approval, recovery references and delivery evidence SHALL remain available. New destructive cleanup SHALL NOT be inferred from this scope revision.
 
-#### Scenario: Manifest no longer matches
-- **WHEN** tracked files or unrelated work change after manifest review
-- **THEN** cleanup stops for a refreshed diff rather than expanding the approved deletion scope
+#### Scenario: Revise the PoC
+- **WHEN** the delivery sequence changes
+- **THEN** completed recovery and cleanup evidence remain intact
 
-### Requirement: Plan all milestones in preparation
-M0 SHALL provide tasks for M0–M3 with descriptions, user value, human verification, native blockers, milestone assignment, and user-story parentage. Provisional tasks SHALL identify unresolved inputs. GitHub publication SHALL require review of the proposed records.
+### Requirement: Keep a readable work map
+Each active task SHALL have a concise description, value, observable verification, parent and actual dependencies. Issues under implementation SHALL link to their PR and PRs SHALL link back. Deferred research SHALL NOT block active chat work.
 
-#### Scenario: Runtime choice changes
-- **WHEN** research invalidates a later task assumption
-- **THEN** its scope and dependencies are revised while affected work remains unready
+#### Scenario: Defer benchmarks
+- **WHEN** comparison work moves outside the PoC
+- **THEN** chat dependencies no longer require that research to finish
 
-### Requirement: Preserve milestone gates
-M0 SHALL require environment and plan agreement; M1 SHALL require qualified inference evidence; M2 SHALL require a working chat route; M3 SHALL require explicit user acceptance. Automation SHALL NOT substitute code completion for PoC acceptance.
+### Requirement: Stage real use before file changes
+Delivery SHALL establish real local inference, working containerized chat, a human chat trial and then scoped file tools. PoC acceptance SHALL remain a human decision.
 
-#### Scenario: Implementation is merged
-- **WHEN** chat implementation completes before human UAT
-- **THEN** the PoC acceptance item remains open and unapproved
+#### Scenario: Chat implementation is ready
+- **WHEN** the real model can converse through the container
+- **THEN** the user can try chat before any model-driven workspace file changes
 
+### Requirement: Distinguish outcome from issue closure
+Closing a task SHALL NOT imply that an unsuccessful model attempt worked or that the user accepted the PoC.
 
-### Requirement: Require positive evidence for progression
-Closing a prerequisite SHALL NOT substitute for a qualifying outcome. M2 SHALL require a positive selected-configuration record; M3 SHALL require a qualified harness build. A rejected experiment SHALL remain distinguishable from accepted UAT even when its issue is closed.
-
-#### Scenario: Selection ends with no qualifying model
-- **WHEN** M1 records no-go and closes its research ticket
-- **THEN** M2 remains blocked until a separately reviewed positive qualification exists
-
-### Requirement: Separate inventory from qualification
-Research completion SHALL require a traceable inventory of artifacts, documented support and unresolved prerequisites with assigned follow-up tasks. It SHALL NOT require successful installation, live qualification or benchmark results. Unresolved prerequisites SHALL block the operations that depend on them; inventory completion SHALL NOT waive provisioning approval or qualification gates.
-
-#### Scenario: Runtime compatibility remains unverified
-- **WHEN** the inventory documents available evidence and assigns live compatibility checks to the relevant delivery task
-- **THEN** the inventory can complete while the candidate remains unqualified
+#### Scenario: An attempted configuration fails
+- **WHEN** its investigation is closed
+- **THEN** its recorded outcome remains failure and another configuration may be tried

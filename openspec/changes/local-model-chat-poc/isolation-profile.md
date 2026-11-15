@@ -1,67 +1,25 @@
-# Isolation and provisioning profile
+# Disposable workspace and local inference profile
 
-Status: proposed for maintainer approval under task 0.6 / #144. No approval or qualification has been recorded. This profile permits a first baseline only; the remaining inventory stays available for separately reviewed additions.
+Status: direction approved by the maintainer on 2026-11-15. Replaces the earlier pending surrogate/proxy profile in PR #172. This records permission and design; it does not claim implementation or successful containment checks.
 
-## Approval scope
+## Initial setup
 
-1. Prepare a disposable synthetic environment for task 0.7 using the pinned image below. Use only generated fixture data.
-2. After M0 readiness approval in task 0.11, provision the pinned Qwen baseline for task 1.1. No automatic model download from chat or Compose startup.
-3. Keep the existing Docker Desktop installation and DMR backend. This approval does not cover backend upgrades, Ollama, direct llama.cpp, MLX, model conversion or benchmark execution.
+Use the existing Docker/Compose and DMR installation. Start with the published Qwen3.5-4B Q4_K_M artifact recorded in `quantization-inventory.json`: repository `ggml-org/Qwen3.5-4B-GGUF`, revision `8d43d974efc48399cb58957ad49c8b26bf5a109c`, file `Qwen3.5-4B-Q4_K_M.gguf`, 3.03 GB, SHA-256 `217002fa8008ef4fc6d548353a3aebef055a96e6ff8e0e2c0953ef8254a89c14`. Preserve its license/source metadata. An identity mismatch is investigated before describing the file as that artifact.
 
-## Permitted downloads
+Provision deliberately through the host operator using the runtime-managed cache. Chat never downloads models. No surrogate Python image, 10 GB approval ceiling or 8 GB serving-memory eligibility is required. Try the actual configuration and note its behavior. Other configured local models may be selected; installing a new runtime or downloading a new artifact remains an explicit operator action.
 
-| Artifact | Size (GB) | Purpose and earliest use |
-|---|---:|---|
-| Python official ARM64 image, pinned below | 0.02 compressed | Synthetic endpoint and client, task 0.7 |
-| Qwen3.5-4B Q4_K_M, pinned below | 3.03 | First local baseline, task 1.1 after 0.11 |
+## Agent environment
 
-The image size is compressed registry layers, not its installed size. Allow up to 10 GB of dedicated baseline storage for the downloaded file, any DMR copy, image and metadata. Exceeding that allocation requires review. No vision projector or original high-precision checkpoint is included.
+Rig and `/workspace` live in the same disposable Linux container. Use non-root execution, read-only application files, dropped capabilities, no privilege escalation and configurable bounds on writable scratch, processes, memory and tool steps. No personal Mac folder, repository, credential, SSH agent, Docker socket, privileged mode or host-network mount/access is granted. The default workspace is temporary and discarded on teardown; there is no host working-directory requirement.
 
-- Image: `docker.io/library/python@sha256:9cf2fdca7b3dd6082fd160ff5b8664f108c7441e200018a36554b2e8028f45df`.
-- Model repository: `ggml-org/Qwen3.5-4B-GGUF` at `8d43d974efc48399cb58957ad49c8b26bf5a109c`.
-- Model file: `Qwen3.5-4B-Q4_K_M.gguf`.
-- Model SHA-256: `217002fa8008ef4fc6d548353a3aebef055a96e6ff8e0e2c0953ef8254a89c14`.
+Rig calls the configured local inference endpoint directly. No proxy, account system, SSH keys or public listener is introduced. Trust the installed runtime and application image. This does not establish a network boundary against arbitrary compromised application code or prove native inference has no Mac filesystem access. Revisit that assumption before arbitrary execution or personal workspace integration.
 
-Keep the Qwen artifact's Apache-2.0 license and provenance with its metadata. Trusted provisioning may use Docker Hub and Hugging Face distribution endpoints, including their artifact CDN redirects, solely for these pinned downloads. Verify digests before use. No login credentials are passed into containers. All download/network activity is separate from conversation.
+## User sequence
 
-## Storage and permissions
+1. Obtain a real local model response and then a real Rig chat response.
+2. Let the maintainer try chat before enabling any model-driven file changes.
+3. Enable workspace-tool mode explicitly. Offer bounded list/read/create/edit/delete tools, without shell, HTTP tools or Python execution. Reject path escapes, symlinks outside the workspace, non-regular targets and root/recursive deletion.
+4. Inspect actual files after the real model's requests; report completed operations and errors. Cancellation does not undo completed changes.
+5. Stop/reset the container and confirm temporary workspace data is discarded.
 
-- Proposed host working directory: `/Users/sysung98/.piarre-poc/local-model-chat-poc/`, mode 0700, owned by the current user. Store only approved downloads, synthetic inputs and run metadata there. Create it only after approval.
-- DMR may use its existing Docker-managed model cache. Before import, record the resolved cache location and copies in task 1.1; do not relocate Docker data or mount that cache into the harness. Stop if cache ownership, persistence or storage allocation cannot be established.
-- The native inference engine may read its executable, required system/GPU libraries and the approved model cache, and write its dedicated runtime scratch/log files. Personal documents, repositories, credentials and unrelated home-directory paths are outside its permitted access. Verify the actual native process restrictions in task 1.2. Do not infer them from Docker branding.
-- Synthetic containers and the later harness run as non-root, with read-only root filesystems, all Linux capabilities dropped and no privilege escalation. No Docker socket, SSH agent, host networking, devices or personal home/repository mounts.
-- Give each synthetic container at most 0.25 GB memory, one CPU, 64 processes and 0.02 GB temporary storage. Stop synthetic runs after five minutes. No persistent prompt history or unrestricted restart policy.
-- Interactive chat receives no host mount. Fixed-input mode may mount only the dedicated synthetic-input directory read-only. Run metadata excludes prompts and replies by default.
-
-## Network and API boundary
-
-The client may reach only the inference mediation service on a dedicated internal network. Do not publish client or mediation ports to the LAN. The mediation service is trusted infrastructure, not a model-controlled tool.
-
-The mediation service accepts only chat requests for the pinned model and forwards to a fixed DMR inference destination. Allow only `POST /engines/llama.cpp/v1/chat/completions` upstream. Reject management, model pulling/deletion, embeddings, URL fetching, alternate model names and tool definitions. Do not forward arbitrary paths, hosts or redirects. Provisioning and health inspection are trusted host actions outside the chat route.
-
-Constrain the mediation service to the approved DMR destination. Test that the client cannot bypass mediation via Docker host aliases, direct gateway addresses, another container, LAN services or internet endpoints. An internal Compose network alone is not proof. If the chosen enforcement cannot establish these restrictions without relaxing the profile, stop and return for a revised design.
-
-The native inference process has no permitted external inference or download route during testing. DMR's management plane remains a trusted host facility, unavailable to the harness. Do not expose its unauthenticated API to the LAN or change global Docker networking without separate review.
-
-## Qualification and stop conditions
-
-Task 0.7 uses a synthetic endpoint and denied-resource fixtures. Its evidence qualifies only that environment. Task 1.2 rechecks the actual native process and DMR route before measurement. Task 2.6 rechecks the final harness image before personal input. Keep input synthetic until the relevant gates pass.
-
-Human verification:
-
-1. Inspect exact images, user, mounts, storage, allowed API route and resource limits. Expect only the resources declared above.
-2. Exercise permitted synthetic chat and denied management/network/file requests. Expect allowed chat to succeed and every denied operation to fail without a side effect.
-3. Inspect teardown. Expect only the dedicated metadata and approved cached artifacts to persist; unrelated Docker resources and files remain untouched.
-4. Record pass, fail or unknown with the exact configuration. Failure or uncertainty blocks qualification. Native-process containment failure requires a reviewed VM/dedicated-machine alternative, not weakened access limits.
-
-No standalone verifier or new automated test is authorized by profile approval. Any such authorship needs the separate authorization required by AGENTS.md. These are manual acceptance steps for the later implementation tasks.
-
-## Candidates outside this download approval
-
-FrogNano remains pending its source/conversion license discrepancy. Nemotron remains pending its FP8/BF16 provenance discrepancy and license review. Nanbeige and MiniCPM are still candidates, but adding downloads requires an artifact-specific extension to this profile. Failure of Qwen does not disqualify those candidates.
-
-## Approval record
-
-Pending. Approval of this profile does not complete M0 readiness, permit benchmarks, or qualify a model.
-
-Sources: [DMR execution and unauthenticated API](https://docs.docker.com/ai/model-runner/), [DMR API paths](https://docs.docker.com/ai/model-runner/api-reference/), [pinned model inventory](quantization-inventory.json). The image digest and compressed size were read from registry manifests without pulling it.
+Use harmless sample data. Inspect actual mounts/user/paths and check denied paths using harmless fixtures; no fake inference service is needed. The user chat trial and final acceptance remain pending. This approval does not authorize a personal Mac workspace mount or new automated test/verifier authorship.

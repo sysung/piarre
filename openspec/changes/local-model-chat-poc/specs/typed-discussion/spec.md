@@ -1,46 +1,39 @@
 ## Purpose
-
-Support tool-free terminal chat with a local model and keep conversation context scoped to the session.
+Let a user chat with a local model and then try scoped file operations in a disposable session workspace.
 
 ## ADDED Requirements
 
-### Requirement: Preserve submitted context
-The chat SHALL retain submitted messages in session memory, distinguish user input from model output, and grant no execution authority to either. It SHALL support editable terminal input and streamed textual responses without persisting conversation history by default.
+### Requirement: Preserve session conversation
+Chat SHALL keep user and assistant messages in session memory, support editable input and streamed replies, and avoid persisted conversation history by default.
 
-#### Scenario: Receive an inference claiming approval
-- **WHEN** a model claims permission to act
-- **THEN** its reply is displayed as text and cannot create tasks, approvals, or side effects
+#### Scenario: Continue a conversation
+- **WHEN** the user sends a related second message
+- **THEN** the model receives the session context; restarting begins a new session
 
-### Requirement: Represent uncertain turns
-The chat SHALL expose cancellation, transport failure, and truncated responses as incomplete. It SHALL NOT automatically retry or claim successful completion when the outcome is unknown. A new process SHALL start a fresh session.
+### Requirement: Show errors and interrupted outcomes
+Chat SHALL expose errors, cancellation and partial responses honestly without automatic retries. Cancellation SHALL stop further local tool dispatch and report completed changes rather than imply rollback.
 
-#### Scenario: Disconnect during streaming
-- **WHEN** the endpoint disconnects before a terminal response
-- **THEN** partial output is marked incomplete and no automatic retry starts
+#### Scenario: Cancel after a file operation
+- **WHEN** the user cancels after one tool operation completed
+- **THEN** the application reports that operation and does not claim it was undone
 
-#### Scenario: Restart with a pending turn
-- **WHEN** the chat process restarts before a terminal reply
-- **THEN** it starts a fresh session without retrying or claiming completion of the prior request
+### Requirement: Bound requests and render safe text
+The application SHALL use configurable output and request limits, show context errors without silently discarding history, and filter terminal control sequences from model and tool output. Exact tokenizer preflight SHALL NOT be an admission requirement.
 
+#### Scenario: Request fails or contains terminal controls
+- **WHEN** a runtime rejects context or returns terminal-control bytes
+- **THEN** the error is visible and displayed text cannot perform terminal actions
 
-### Requirement: Bound conversation requests
-Chat SHALL enforce configured context and output limits. Context overflow SHALL be explained before submission without silently discarding earlier messages. Cancellation SHALL stop local output promptly and report when server termination cannot be confirmed.
+### Requirement: Enable file tools after the chat trial
+File tools SHALL remain disabled until the user has tried chat and explicitly chooses workspace-tool mode. That mode SHALL offer list/read/create/edit/delete for regular files inside the disposable workspace, with bounded file sizes, output and tool-loop steps.
 
-#### Scenario: Conversation exceeds context
-- **WHEN** the next request exceeds the configured context allowance
-- **THEN** the user is asked to start a new session rather than receiving a silently shortened conversation
+#### Scenario: Request a sample file
+- **WHEN** the user enables workspace mode after the chat trial and asks the real model to create a Python file
+- **THEN** a registered tool writes the file and returns its actual result for independent inspection
 
-### Requirement: Render model output as text
-Chat SHALL filter terminal control sequences from untrusted output while preserving ordinary text and line breaks.
+### Requirement: Confine file operations
+Tools SHALL reject paths outside the workspace, traversal and symlink escapes, non-regular targets, deletion of the workspace root and recursive directory deletion. They SHALL NOT provide shell, arbitrary HTTP or generated-code execution. Model prose SHALL NOT grant additional authority.
 
-#### Scenario: Reply contains terminal escape sequences
-- **WHEN** a response contains terminal control bytes
-- **THEN** they cannot alter terminal state, clipboard content, or trigger terminal actions
-
-
-### Requirement: Enforce request deadlines
-Chat SHALL enforce configured connection, first-response, stream-idle and total-request deadlines. An expired or cancelled request SHALL be incomplete and excluded from future assistant context. New inference SHALL remain blocked while prior server activity is uncertain.
-
-#### Scenario: Endpoint stalls
-- **WHEN** a request exceeds a declared deadline
-- **THEN** chat returns an incomplete outcome without retrying, and waits for confirmed server termination or controlled serving-process restart before another request
+#### Scenario: Request an outside path
+- **WHEN** a tool request targets a path outside the workspace or follows a symlink outside it
+- **THEN** the operation fails without changing the target
