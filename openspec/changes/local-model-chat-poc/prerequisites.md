@@ -2,7 +2,7 @@
 
 Status: task 0.5 is in progress. No installation or model download is approved by this inventory.
 
-Sizes use decimal GB and are rounded to two decimal places. Exact sizes remain in the JSON metadata. The serving limit remains strictly below 8 GB.
+Parameter counts use billions (B), rounded to one decimal place. Sizes use decimal GB, rounded to two decimals. Exact values remain in the JSON metadata. The serving limit remains strictly below 8 GB.
 
 ## Machine and tools
 
@@ -16,11 +16,11 @@ Direct inspection found Apple M3 Pro, 38.65 GB of memory, macOS 26.6.2, Docker E
 
 | Candidate | Repository | Stored parameters | Source weights (GB) |
 |---|---|---:|---:|
-| Qwen | Qwen/Qwen3.5-4B | 4,659,865,088 | 9.32 |
-| FrogNano | microsoft/FrogNano-4B-2609 | 4,659,865,088 | 9.32 |
-| Nanbeige | Nanbeige/Nanbeige4.2-3B | 4,169,800,704 | 8.34 |
-| Nemotron | nvidia/NVIDIA-Nemotron-3-Nano-4B-BF16 | 3,973,556,832 | 7.95 |
-| MiniCPM | openbmb/MiniCPM5-2B | 2,516,756,480 | 5.03 |
+| Qwen | Qwen/Qwen3.5-4B | 4.7B | 9.32 |
+| FrogNano | microsoft/FrogNano-4B-2609 | 4.7B | 9.32 |
+| Nanbeige | Nanbeige/Nanbeige4.2-3B | 4.2B | 8.34 |
+| Nemotron | nvidia/NVIDIA-Nemotron-3-Nano-4B-BF16 | 4.0B | 7.95 |
+| MiniCPM | openbmb/MiniCPM5-2B | 2.5B | 5.03 |
 
 Stored parameter totals can include vision weights. Loaded text-only counts remain to be established. MiniCPM belongs in a smaller cohort. Source weight size does not qualify serving memory.
 
