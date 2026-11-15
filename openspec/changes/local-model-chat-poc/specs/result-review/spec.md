@@ -1,4 +1,8 @@
-## MODIFIED Requirements
+## Purpose
+
+Bind local-model PoC evidence to the configuration reviewed and record explicit human acceptance.
+
+## ADDED Requirements
 
 ### Requirement: Bind checks to reviewed results
 PoC evidence SHALL identify the evaluated source revision, model artifact, runtime, configuration, and verification steps. Configuration changes SHALL make prior evidence historical rather than current.

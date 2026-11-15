@@ -1,6 +1,6 @@
 # Documentation workflow
 
-Read the [active PoC change](../openspec/changes/local-model-chat-poc/proposal.md) and its [verification plan](../openspec/changes/local-model-chat-poc/design.md#verification-plan). Main specs retain legacy requirements until the approved sync boundary; the [scope mapping](../openspec/changes/local-model-chat-poc/spec-scope.md) identifies replacements and retirements.
+Read the [active PoC change](../openspec/changes/local-model-chat-poc/proposal.md) and its [verification plan](../openspec/changes/local-model-chat-poc/design.md#verification-plan). The [scope mapping](../openspec/changes/local-model-chat-poc/spec-scope.md) links to the retired requirements and explains the transition to the PoC.
 
 ## Make a change
 
@@ -25,4 +25,4 @@ Structural validation does not prove isolation, inference performance or usabili
 
 Retain archived changes and the [pre-reset recovery reference](https://github.com/sysung/piarre/tree/archive/pre-local-model-poc-3205f75). Restore old source in a separate checkout. Never infer human acceptance from issue closure, a merge or passing structural validation.
 
-Sync and archive only at the approved delivery boundary. Update retired capability purposes during that operation, without reviving their legacy requirements.
+Sync and archive only at the approved delivery boundary. Publish the five PoC capabilities at that boundary.

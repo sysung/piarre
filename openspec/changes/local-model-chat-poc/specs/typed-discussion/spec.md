@@ -1,4 +1,8 @@
-## MODIFIED Requirements
+## Purpose
+
+Support tool-free terminal chat with a local model and keep conversation context scoped to the session.
+
+## ADDED Requirements
 
 ### Requirement: Preserve submitted context
 The chat SHALL retain submitted messages in session memory, distinguish user input from model output, and grant no execution authority to either. It SHALL support editable terminal input and streamed textual responses without persisting conversation history by default.
@@ -18,7 +22,6 @@ The chat SHALL expose cancellation, transport failure, and truncated responses a
 - **WHEN** the chat process restarts before a terminal reply
 - **THEN** it starts a fresh session without retrying or claiming completion of the prior request
 
-## ADDED Requirements
 
 ### Requirement: Bound conversation requests
 Chat SHALL enforce configured context and output limits. Context overflow SHALL be explained before submission without silently discarding earlier messages. Cancellation SHALL stop local output promptly and report when server termination cannot be confirmed.

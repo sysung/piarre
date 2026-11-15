@@ -319,4 +319,4 @@ Every child uses enhancement and exactly one triage label. Provisional work star
 - Review planning and explicitly request apply before implementation.
 - Prefix published triage issues/comments with the AI-generated disclaimer. Link briefs to published OpenSpec artifacts, and preserve native blockers separately from parentage.
 - Review reset paths, provisioning operations and GitHub mutations within their stated scopes.
-- Sync/archive after delivery and human gates; update legacy Purpose text and check historical links.
+- Sync/archive after delivery and human gates; publish the five PoC specs and check historical links.
