@@ -1,10 +1,8 @@
 .artifacts/
-node_modules
-dist/
-dist-test/
-dist-package/
-.vscode-test/
-*.vsix
-*.tsbuildinfo
-
+target/
+models/
+results/
+.env
+.env.*
+!.env.example
 .DS_Store
