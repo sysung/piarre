@@ -18,7 +18,7 @@ Every child uses enhancement and exactly one triage label. Provisional work star
 
 ## 0. M0 Preparation and isolation
 
-- [ ] 0.0 Bootstrap the reviewed issue map. Verify using the steps below.
+- [x] 0.0 Bootstrap the reviewed issue map. Verify using the steps below.
   - Description: Create reviewed tracking records before implementation.
   - Value: Give implementation an issue before edits.
   - Parent: S2. Blocked by: none.
@@ -38,7 +38,7 @@ Every child uses enhancement and exactly one triage label. Provisional work star
   - Excludes: model scoring and chat implementation; only this task's approved preparation scope.
   - Contract: [poc-delivery](specs/poc-delivery/spec.md); [verification](design.md#verification-plan).
 
-- [ ] 0.2 Approve the exact reset manifest. Verify using the steps below.
+- [x] 0.2 Approve the exact reset manifest. Verify using the steps below.
   - Description: List tracked deletions and retained paths for approval.
   - Value: Remove legacy work without losing unrelated files.
   - Parent: S0. Blocked by: 0.0, 0.1.
