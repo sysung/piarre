@@ -1,0 +1,64 @@
+[
+  {
+    "model": "Qwen/Qwen3.5-4B-GGUF",
+    "status": "HTTP Error 401: Unauthorized"
+  },
+  {
+    "model": "microsoft/FrogNano-4B-2609-GGUF",
+    "status": "HTTP Error 401: Unauthorized"
+  },
+  {
+    "model": "Nanbeige/Nanbeige4.2-3B-GGUF",
+    "status": "HTTP Error 401: Unauthorized"
+  },
+  {
+    "model": "nvidia/NVIDIA-Nemotron-3-Nano-4B-GGUF",
+    "revision": "ba223d14e45525f7fae81db77ea8cabeb2fc6c25",
+    "license": "other",
+    "files": [
+      {
+        "path": "NVIDIA-Nemotron3-Nano-4B-Q4_K_M.gguf",
+        "bytes": 2837072864,
+        "lfs": {
+          "sha256": "be5d9a656a51922f24f1f09a759cebb694e1f5d9728bf0ef9f8c972c5a0b5ef2",
+          "size": 2837072864,
+          "pointerSize": 135
+        }
+      }
+    ]
+  },
+  {
+    "model": "openbmb/MiniCPM5-2B-GGUF",
+    "revision": "8ad02b786ab81e33d465e1c80562640c55ab2877",
+    "license": "apache-2.0",
+    "files": [
+      {
+        "path": "MiniCPM5-2B-F16.gguf",
+        "bytes": 5039006688,
+        "lfs": {
+          "sha256": "0ffba3682a853295566b98bc38c0ab755d6b2d91b994bc031ed727a08cfcdf25",
+          "size": 5039006688,
+          "pointerSize": 135
+        }
+      },
+      {
+        "path": "MiniCPM5-2B-Q4_K_M.gguf",
+        "bytes": 1561318368,
+        "lfs": {
+          "sha256": "ec2d5801640099e97d8d7e8003ad4d81f336e757811f03a26173dddf386602fd",
+          "size": 1561318368,
+          "pointerSize": 135
+        }
+      },
+      {
+        "path": "MiniCPM5-2B-Q8_0.gguf",
+        "bytes": 2679710688,
+        "lfs": {
+          "sha256": "c5415f8989bf88a8288f1b55a3cc371af53c07b0faa220a63bd7a990cfaba078",
+          "size": 2679710688,
+          "pointerSize": 135
+        }
+      }
+    ]
+  }
+]
