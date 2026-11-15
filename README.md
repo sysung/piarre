@@ -2,7 +2,18 @@
 
 Piarre is a local-model experiment: can a small model support useful conversation through a Rust Rig harness?
 
-The project is starting local inference. The previous VS Code application has been removed from this branch. The new chat executable is not implemented yet.
+The project is starting local inference. The previous VS Code application has been removed from this branch. A first containerized Rig executable now sends one prompt and prints the response. Interactive chat and workspace tools are still planned.
+
+## Try the first Rig request
+
+With the local model installed, run:
+
+```sh
+docker compose build harness
+docker compose run --rm harness "What is 2 + 2? Reply with only the number."
+```
+
+See [Rig request setup](docs/rig-request.md) for configuration and limits.
 
 ## Planned experience
 
