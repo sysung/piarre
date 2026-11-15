@@ -2,145 +2,86 @@
 
 ## Context
 
-See [proposal](proposal.md) for the purpose and scope. The inspected baseline is master `3205f75e82ac7f1d82d9db961638252881cf7e88`: a TypeScript core, VS Code extension, Node tests, and a workflow that publishes VSIX releases. No Rust implementation exists. OpenSpec currently holds eight legacy capabilities. Project 8 is accessible, empty of active items, and already has the five agreed status options.
-
-The target machine is Apple Silicon M3 Pro. Docker Desktop, Compose, and Model Runner were reachable during discovery; this proves installation only. No models, performance, containment, or PoC behavior have been validated.
+The recovery and legacy cleanup are complete. The user approved the smaller real-model-first scope on 2026-11-15. See [proposal](proposal.md). Research is reference material; no model or agent behavior is claimed by these documents.
 
 ## Goals / Non-Goals
 
-**Goals:** isolate the experiment from daily work; make a reproducible local request; compare qualified configurations; offer minimal terminal chat; obtain human acceptance.
+**Goals:** real Qwen requests, a small Rust/Rig chat application, a user chat trial, and observable file operations inside one disposable Linux container.
 
-**Non-Goals:** tools, shell execution, repository editing, code-agent benchmarks, retrieval, persistent memory, model training, shared serving, installer product, OpenCode adapters, or legacy state migration. Individual testers run their own instance.
+**Non-Goals:** benchmarks, strict memory admission, retrieval, model compliance, shell or Python execution, persistent memory, default personal workspace access, public multi-user hosting, authentication infrastructure and a custom model-management service.
 
 ## Decisions
 
-### D1. Four milestones with planning in M0
+### D1. Four milestones with a short delivery path
 
-| Milestone | User value | Exit evidence |
+| Milestone | Value | Observable result |
 |---|---|---|
-| M0 Preparation and isolation | Start from a recoverable clean baseline and understand the next work | Approved reset, accepted environment boundaries, prerequisites, and all M1–M3 tickets with blockers |
-| M1 Running a local model | Choose from measured local configurations | Repeatable request, memory qualification, performance and model-quality reports |
-| M2 Creating the agent harness | Talk to the chosen model through a small Rust program | Rustyline input, Rig session routing, streaming, cancellation, errors, Compose launch |
-| M3 User Acceptance Testing | Decide whether the PoC is useful enough to continue | Human checklist, linked defects, retest evidence, explicit approval or rejection |
+| M0 Preparation and isolation | Agree the experiment and preserve recovery | Updated scope, profile and issue map |
+| M1 Running a local model | Establish one working local route | Real model response and actual configuration recorded |
+| M2 Creating the agent harness | Try chat and then sample file tasks | Compose Rig chat, human chat trial, bounded file operations |
+| M3 User Acceptance Testing | Decide whether to iterate | Human observations, scoped fixes and explicit decision |
 
-M0 is a pairing checkpoint with the maintainer. Future tickets are placeholders with bounded outcomes, not permission to skip research dependencies. No old 20-ticket roadmap is imported.
+Board views and later benchmark work remain tracked independently. No benchmark, evaluator, board automation or 8 GB qualification blocks M1/M2. Completed task IDs remain historical; removed work is recorded as deferred rather than falsely checked off.
 
-### D2. Keep inference separate from the harness
-
-Compose manages the harness container and declared model dependency. For Docker Model Runner on macOS, the inference engine executes natively under its documented sandbox, not inside the Linux container. Start with its llama.cpp backend only if the exact model and isolation checks pass. Keep the harness endpoint configurable so native Ollama, direct llama.cpp, or MLX can be evaluated without rewriting chat. DMR already supplies an inference backend; a separate llama.cpp installation is not required for the initial setup. Task 1.4 retains runtime comparison. Adding standalone llama.cpp requires a concrete compatibility, configuration or performance question and an approved comparison profile.
+### D2. One agent container and a local inference service
 
 ```mermaid
 flowchart LR
-  U[User terminal] --> C[Compose launch]
-  C --> H[Rustyline input and Rig chat container]
-  H <-->|restricted local API| R[Native inference server]
-  R --> W[Pinned local weights]
-  H --> O[Dedicated run metadata]
-  B[Fixed synthetic prompts] --> R
-  R --> E[Performance and quality evidence]
+  U[User terminal] --> H[Rustyline and Rig in Linux container]
+  H --> R[Configured local inference server]
+  R --> Q[Real Qwen or another selected local model]
+  H --> W[Temporary /workspace in the same container]
 ```
 
-No Docker socket, host home, Git credentials, SSH agent, privileged mode, or host networking enters the harness. Start non-root with a read-only root filesystem and bounded temporary storage. Permit only the inference destination during chat. Ordinary Compose networks alone do not prove egress restriction. M0 demonstrates the proposed policy only on a surrogate container and synthetic endpoint. M1 qualifies the actual native server and client route before measurement, and M2 rechecks the final Compose harness before personal input. Requalify each changed runtime, route, or image. If native inference cannot meet the approved boundary, stop and bring a VM/dedicated-machine fallback to the maintainer before installation or measurement.
+Rig is a Rust application, not the inference runtime. Start with existing DMR and its llama.cpp backend. Use a fixed operator-configured local endpoint directly; no mediation proxy initially. The application/image and native inference runtime are trusted local software. This is not a claim that arbitrary compromised container code cannot reach other host APIs or that native inference cannot access Mac files.
 
-DMR's reachable API permits model management without authentication. Do not treat a Compose model binding as access authorization. Qualification must establish whether management routes and other host services are reachable; an inference-only mediation layer or an authenticated restricted server is required if the selected endpoint exceeds the approved permissions. Provisioning is a separate trusted operator action, with model hashes and download sizes reviewed first.
+No default host mounts, Docker socket, credentials, SSH agent, privileged mode or host networking. Use non-root execution, dropped capabilities, no privilege escalation, read-only application files and bounded writable workspace/temp storage. Inspect the actual mounts and user. Model weights stay in the runtime-managed cache outside the agent. Do not add a LAN listener. Container restrictions do not establish perfect machine isolation.
 
-### D3. Rustyline input, plain streamed output, no tool loop
+### D3. Build chat first, then bounded tools
 
-Use Rustyline for editable input and in-memory input history, and Rig for model requests plus session-local messages. Do not use a prebuilt coding-agent CLI whose default tools exceed this PoC. Build one small Rust binary with interactive and fixed-input modes. Do not build a full-screen Ratatui UI unless UAT identifies a concrete need.
+Use one compiled Rust binary, Rig and Rustyline with plain streaming. Compose participates in the first Rig slice. Choose the exact documented launch command during implementation; no Python wrapper is required. Preserve roles and in-session conversation; do not persist prompts by default. Use one active turn, practical connection/overall limits, explicit errors, safe terminal text and prompt cancellation. Report unknown backend cancellation honestly; do not build a universal server-idle protocol. Do not overlap unresolved local file mutations.
 
-Proposed interfaces are task input (message or messages, endpoint/model selection, bounded request settings), stream events (text, completion, incomplete, error), and run metadata (identity, timings, outcome). Keep prompt/response capture opt-in; fixed public benchmark prompts may be captured in their dedicated results directory. Never persist personal chat by default.
+After the user tries chat, add explicit workspace-tool mode with list/read/create/edit/delete. The real model proposes structured calls and Rust handlers execute them. File operations resolve beneath `/workspace`, reject traversal/symlink escapes and non-regular targets, and have file/output/step bounds. No shell, arbitrary HTTP, generated-code execution, workspace-root deletion or recursive directory deletion. Verify files independently of the model's narration. On cancellation, preserve a truthful record of completed operations.
 
-Only one in-flight request per session. Buffer/stream output while input editing is inactive; return control for the next prompt after completion or cancellation. Filter untrusted terminal escape sequences. Ctrl-C cancels the current response; Ctrl-D at the prompt exits. If the server cannot confirm cancellation, show that uncertainty and prevent overlapping inference in that session until reliable server-idle evidence or a controlled stop/restart of the serving process. Restarting only chat does not resolve server uncertainty. Freeze connection, first-response, stream-idle, and total-request deadlines in seconds. On deadline expiry, mark the response incomplete and apply the same cancellation/uncertainty rule. Only completed assistant replies enter later context; cancelled partial replies remain visibly incomplete and are excluded. No automatic retry. On context overflow, ask for a new session instead of silently truncating.
+The workspace is container-owned temporary storage, discarded on teardown. A future personal workspace mount or export is a separate opt-in feature. No second client container is necessary for the initial PoC.
 
-Illustrative invocation, implemented only in M2:
-```sh
-docker compose run --rm harness
-docker compose run --rm harness --task /tasks/example.json
-```
-The fixed-input file must be explicitly mounted read-only from a dedicated input folder, not the repository or home. Use the Compose boundary for the first fixed-input Rig request, before adding Rustyline. Docker/TTY exit and cancellation behavior must be exercised using these actual launch paths. Output sanitization must handle escape sequences split across stream chunks. Context preflight must count the selected tokenizer/template, system messages and reserved output, or establish a conservative bound. Unsupported preflight makes the configuration ineligible for M2 until resolved.
+### D4. Observe a few models, do not certify them
 
-### D4. Qualification before ranking
+Start with the published Qwen artifact in [prerequisites](prerequisites.md). Record runtime/model identities and observations manually. Verify an expected download identity before calling it the pinned artifact. Let operators select other installed local models without a whitelist, quality score, exact tokenizer or memory gate. Unsupported format, load failure and tool-call failure are observed technical limits; they do not require a compliance subsystem. Chat may remain useful when tools fail.
 
-M0 inventories exact checkpoints for Qwen3.5-4B, FrogNano, Nanbeige, Nemotron Nano 4B, and MiniCPM. Names are research candidates, not verified compatibility promises. Record published parameter counts, known vision components, licenses, artifact provenance, quantization and documented compatibility. Mark unknowns explicitly and assign each to the task that needs the answer. Task 0.5 completes with a traceable inventory and assigned follow-ups, not successful installation or live qualification. Resolve artifact identity, license and download uncertainties in 0.6 before provisioning approval; establish actual backend identity and execution compatibility in 1.1/1.2, then loaded components and memory accounting in 1.3 before ranking. Smaller parameter classes are separate cohorts. Additional candidates require evidence and a bounded update to the inventory.
+Benchmarks, cohorts, context retrieval, exact serving-memory attribution, runtime rankings, common conversion and closed-model comparison are later work. Preserve the existing research without making it a prerequisite. New downloads are deliberate operator actions rather than model-generated instructions.
 
-Use pinned published configurations for the initial model comparison. Disclose known precision layouts, converter/calibration details and unknowns. Matching Q4_K_M labels do not establish equivalent layouts. Results compare complete published configurations; do not attribute all differences to source-model quality.
+### D5. GitHub follows the approved scope
 
-A common conversion pipeline is not an initial prerequisite. Add a separately reviewed conversion task only when no suitable published artifact exists, a suspected conversion defect affects selection, or controlled source-model comparison becomes necessary. Start with a published-versus-rebuilt comparison of one checkpoint. A common recipe still requires architecture-specific handling and does not guarantee equal accuracy loss.
+Update existing issues and native dependencies without duplicates. Keep milestone/user-story grouping, description, value, short human checks and source links. Each worked issue links to its PR; a PR uses closing references only for completed issue scope. Keep Project status current and human acceptance distinct from merge. Deferred research has no PoC milestone and no dependency path into active delivery. Board configuration remains optional parallel work.
 
-Proposed initial measurement defaults: concurrency one, 4-bit cohort where supported, 4K and 8K context workloads, fixed synthetic prompts, one cold start and five warm repetitions, and a 256-token output ceiling for timing only. Quality evaluation has a separately frozen output/reasoning budget and timeout sufficient for its tasks; never reuse the timing cap by accident. Freeze actual settings and task IDs before timed runs; report prompt token counts, cache state, first-token latency, generation tokens/sec, wall time, p50/range, and errors. Five runs are a pilot signal, not a statistical superiority claim. Record thermals/power mode and background activity. Define first-token and generation timing boundaries, cache reset, reasoning-token accounting, and exact input/output reservation for each context tier. A 4K qualification does not establish 8K support. Freeze candidate count and total experiment budget in M0. Fast is a measured comparison in M1; personal responsiveness is judged in M3, without an invented latency target.
+## Verification plan
 
-Use strict decimal 8 GB as a proposed conservative interpretation. Measure peak physical serving allocations across model load, prefill, and generation, including GPU/unified memory without double-counting shared pages. RSS alone or weight file size is insufficient. Document swap and pressure; uncertain attribution cannot qualify a candidate. Use a documented conservative upper bound and error margin when exact attribution is unavailable; that upper bound must remain strictly below the limit. Build/evaluation resources are reported separately.
+1. Inspect the actual container user, mounts and writable paths. Expect no personal paths, credentials or Docker control access.
+2. Ask the real local model a simple question directly, then through containerized Rig. Record the actual model/runtime and outcome.
+3. Try two chat turns, cancellation, an unavailable endpoint and restart. Expect visible errors, readable text and fresh session state after restart.
+4. Have the user try chat before enabling file tools.
+5. With real model tool calls, create, inspect, edit, inspect, delete and verify a sample Python file. Check a harmless outside-workspace request is refused and teardown discards the workspace. No Python execution is implied.
+6. Record user observations and acceptance separately from code completion. Recheck only behavior affected by fixes.
 
-Compare the same GGUF artifact across compatible runtime configurations. MLX versus GGUF is a whole-stack comparison unless equivalence is established. Runtime selection includes a fixed-output sanity check: identical source weights do not ensure equal results across templates, precision, or decoding.
-
-For model quality, use a pinned LiveCodeBench code-generation slice, with version/date range, prompts, output parsing, pass@1 policy, and predeclared execution limits. Execute generated code only in a disposable evaluator with no host mounts, credentials, network, or Docker socket. Bound total CPU, memory, process count, wall time, and output. The trusted launcher never executes generated code; dependencies are provisioned before the offline evaluator starts. Benchmark-generated code is not executed by the chat harness. Qualification of that evaluator is required before running model outputs. Public tasks do not establish absence of training contamination.
-
-Qualify each candidate independently. Failure of the first baseline does not exclude the remaining approved inventory, and an incompatible runtime does not block model-quality evaluation on eligible configurations. Reports with one candidate are baselines, not comparative winners. If the bounded inventory is exhausted and no model qualifies, M1 records the failure and stops; it does not silently expand memory or change cohorts. No paid API reference is required for this PoC. A later reference run needs exact access, budget, data scope, and its own reviewed task. Closing a research issue after failure does not unlock M2: readiness requires a positive selection record and passing runtime/memory/evaluator evidence. M3 requires a qualified exact harness build. Rejection is a valid recorded outcome, not acceptance.
-
-### D5. GitHub records follow OpenSpec
-
-OpenSpec owns requirements and rationale; GitHub owns assignments, dependencies, and delivery status. Each issue brief contains description, value, short human verification steps with expected results, blockers, exclusions, and an OpenSpec link. Every triage issue/comment begins `> *This was generated by AI during triage.*`.
-
-Four milestones group outcomes. User-story parents express features; child issues are single reviewable slices. Use native sub-issues and native blocked-by edges, never infer blockers from hierarchy. States: Backlog, Ready, In progress, In review, Done. Category is enhancement plus exactly one triage-state label. A ready label alone does not mean unblocked.
-
-Draft views: milestone table, status board, and parent-issue table. Inspect existing automations before edits. Auto-add only the new PoC scope; archive history stays untouched. Auto-set new work to Backlog and closed work to Done. Reopened work returns to Backlog. Ready requires explicit blocker and brief checks. Review and UAT remain distinct. Avoid board-to-issue auto-close and parent completion inferred from a merged child PR.
-
-After publication approval, bootstrap M0 tickets and provisional M1–M3 placeholders before cleanup or other implementation. Task 0.9 finalizes their content after research; it does not create its own prerequisite. Every implementation slice requires its real issue and an issue-linked branch.
-
-Publication must be idempotent: keep a local draft-ID to issue-number map in the planning artifact after publication, inspect partial prior publication before retrying, and read back all records, relationships, and automation behavior. No token enters the PoC environment. This proposal authorizes no GitHub mutations.
+Real inference is required for end-to-end evidence; no mocked endpoint is planned. Harmless path/permission checks do not need model-generated malicious output. New automated tests or standalone verifiers still require explicit authorization under AGENTS.md; direct command execution and manual observation are sufficient for routine checks.
 
 ## Risks / Trade-offs
 
-- Native GPU process shares the Mac: require documented containment and negative access checks; containerization is not complete machine isolation.
-- Benchmark code is executable: qualify an independent disposable evaluator before quality runs.
-- Tool-free chat does not demonstrate coding agency: defer SWE-bench and agent improvements.
-- Model/runtime compatibility can invalidate downstream details: preserve placeholders and revise their blockers rather than forcing a preferred stack.
-- A cleanout can remove needed planning context: preserve a recovery ref and the current change; delete only an approved tracked manifest.
-- Long model output can exceed context or alter a terminal: explicit bounds and inert rendering are required.
+- Native runtime is trusted local software; no-host-mount tools do not prove native-process filesystem isolation.
+- Open model selection does not promise format or tool-protocol compatibility. Try the selected configuration and report what happened.
+- File operations can delete disposable sample files. Start with a chat trial, explicit tool mode, visible operations and resettable storage.
+- If arbitrary execution or personal workspace access is requested later, revisit the boundary before adding it.
 
-## Migration Plan
+## Migration and approval
 
-1. Verify clean state and a durable remote recovery reference at the exact pre-reset master SHA; verify that it can be checked out separately. Preserve existing archive refs too.
-2. Generate the exact deletion list from tracked paths and show it with retained/revised paths. Untracked files, credentials, model caches, user databases, other worktrees, and remote issues/releases are not deletion targets.
-3. Obtain manifest approval, then remove the old application and dependent CI/release jobs in one reviewable change on an issue-linked `codex/` branch. Preserve unrelated edits and leave the default branch untouched until review.
-4. Retain `.agents/`, `AGENTS.md`, `docs/agents/`, OpenSpec config, archived history, and this proposal. Rewrite README and relevant navigation to describe the PoC. Update `.gitignore` for generated artifacts.
-5. Publish the five additive PoC specs at the approved sync and archive boundary. The [scope mapping](spec-scope.md) records the earlier legacy spec retirement.
-6. Restore old source only by checking out the recovery reference separately. Never restore an old binary onto newly altered user state; this PoC performs no state migration.
+The user approved this revised direction and requested Update followed by Apply on 2026-11-15. It supersedes the earlier research-first Arena decisions and pending profile. Keep the completed reset and inventory evidence; do not repeat deletion. Publish revisions through PR #172, reconcile GitHub and continue implementation. The initial user chat trial is still pending and cannot be performed by the assistant.
 
-### Reset inventory boundary
+## Historical reset manifest
 
-Candidate deletion groups: `apps/**`, `packages/**`, `test/**`, `scripts/**`, `config/**`, `.vscode/**`, `.nvmrc`, `package.json`, `package-lock.json`, `eslint.config.mjs`, `tsconfig*.json`, and obsolete files under `.audit/`. Review each `.github/` file separately; old VSIX build/release jobs must go, while useful generic metadata may remain. Review old product docs individually. These groups are a planning inventory, not permission to execute recursive deletion.
+The following manifest is retained as historical context. Completion and approval evidence are in [m0-evidence](m0-evidence.md); it is not a new deletion request.
 
-## Verification Plan
-
-| Gate | Human action | Expected evidence |
-|---|---|---|
-| Research inventory | Inspect pinned sources, known limits and follow-up owners | Unknowns are explicit and assigned; inventory completion does not qualify any candidate |
-| Recovery | Open the recovery revision in a separate checkout | Old tracked source is recoverable without altering personal state |
-| Reset | Compare approved manifest with diff; inspect workflows | Only approved legacy paths removed; no VSIX publishing path remains |
-| Isolation | Inspect mounts/user/network; probe synthetic denied paths and endpoints | Personal resources and unauthorized routes unavailable; failures block qualification |
-| Inference | Start pinned model and repeat fixed prompts | Model identity, timings, complete failures, and memory accounting recorded |
-| Quality | Run declared public cases in qualified evaluator | Pass/fail results with task IDs and bounded execution; no host side effects |
-| Chat | Start Compose; send two turns; cancel; disconnect server; exceed context | Readable output, session context, explicit incomplete/error states, no silent retries |
-| UAT | Repeat documented user checklist on pinned configuration | Findings linked to issues; acceptance recorded separately from measurements |
-| GitHub | Open views and traverse parents/blockers; exercise approved transitions | Correct relationships and statuses without premature acceptance |
-
-New automated tests or standalone verifiers require explicit authorization under project instructions. The plan specifies observable checks; routine command failures use their own exit status. Identify the incorrect outcome each proposed behavioral test would catch before requesting authorship scope.
-
-## Arena synthesis
-
-Two independent revisions reviewed all artifacts. The parent and independent cross-judge selected B as the base for staged isolation qualification, per-candidate eligibility, explicit deadlines, and complete issue briefs. The judge scored A 21.5/25 and B 23/25 across scope, safety, evaluation, issue structure, and verifiability; these are review judgments, not product measurements.
-
-Grafts from A: require positive evidence before advancing milestones, qualify the first Rig request inside Compose, and separate timing from quality budgets. Both candidates found the publication-order flaw; bootstrap records now precede implementation. Rejected A's suggestion to weaken board views/automation because the user explicitly requested them. Neither candidate dropped out. Detailed scratch reviews were kept outside the repository; this section is the durable synthesis.
-
-No unresolved reviewer disagreement requires changing the agreed PoC scope. M0 still owns research choices and paired approval. If containment fails, proposing a VM/dedicated machine or changing limits requires a new maintainer decision. This review does not establish runtime compatibility, security, speed, or usability.
-
-## Open Questions
-
-Exact runtime/checkpoint versions, feasible shared quantization, benchmark case IDs, and measurement commands are M0 research outputs. They may change adapter details but cannot relax isolation, memory eligibility, local-only behavior, or human acceptance. Any required relaxation returns to the maintainer.
-
-
-## Draft deletion manifest
+### Original deletion manifest
 
 This manifest contains 149 tracked paths at the inspected baseline. It is for review, not approved deletion. Refresh it against the current base and unrelated work before cleanup. Retain Git history, archived OpenSpec records, agent configuration and this change. Rewrite README, docs/workflow.md and .gitignore separately; do not delete the whole checkout. Historical design prose remains recoverable from the verified source reference.
 

@@ -1,20 +1,6 @@
 # Tasks
 
-All checkboxes are future delivery, not completed planning. Each is a draft GitHub child issue. Publication needs review; implementation needs its real issue and an issue-linked branch.
-
-## Story map
-
-| Parent | Milestone | User story |
-|---|---|---|
-| S0 | M0 | I can start clean and recover the old version. |
-| S1 | M0 | I can isolate testing from daily work. |
-| S2 | M0 | I can see future work and its blockers. |
-| S3 | M1 | I can run a local model and inspect speed and memory. |
-| S4 | M1 | I can choose a model using comparable quality results. |
-| S5 | M2 | I can chat with the selected model through Rig. |
-| S6 | M3 | I can explicitly accept or reject the PoC. |
-
-Every child uses enhancement and exactly one triage label. Provisional work starts needs-triage with missing inputs linked to their producing task. Human gates become ready-for-human when inputs exist. Research briefs may become ready-for-agent after review; blockers and positive evidence predicates still apply. Parents are navigation, not execution dependencies.
+Approved revision: 2026-11-15. Real model first; user chat trial before workspace tools. Deferred work below is not counted as completed delivery.
 
 ## 0. M0 Preparation and isolation
 
@@ -78,245 +64,165 @@ Every child uses enhancement and exactly one triage label. Provisional work star
   - Excludes: model scoring and chat implementation; only this task's approved preparation scope.
   - Contract: [poc-delivery](specs/poc-delivery/spec.md); [verification](design.md#verification-plan).
 
-- [ ] 0.6 Approve the isolation and provisioning profile. Verify using the steps below.
-  - Description: Specify permitted native-server, storage and network access.
-  - Value: Keep the experiment separate from daily work.
+- [x] 0.6 Record the approved disposable workspace profile. Verify using the human steps below.
+  - Description: Record the approved disposable workspace profile.
+  - Value: Keep the experiment separate from personal work.
   - Parent: S1. Blocked by: 0.5.
-  - Human verification:
-    1. Review mounts, user, native-server permissions, management routes, egress, cache paths, and permitted downloads. Resolve artifact/license uncertainties and pin installation assets before approval.
-    2. Record approval.
-  - Excludes: model scoring and chat implementation; only this task's approved preparation scope.
-  - Contract: [poc-delivery](specs/poc-delivery/spec.md); [verification](design.md#verification-plan).
+  - Human verification: Read the approved profile: one container, no personal mounts, direct local inference, chat trial before tools.
+  - Contract: [design and verification](design.md#verification-plan).
 
-- [ ] 0.7 Check the surrogate isolation environment. Verify using the steps below.
-  - Description: Probe the proposed policy using a synthetic endpoint.
-  - Value: Prove access limits before model use.
-  - Parent: S1. Blocked by: 0.0, 0.6.
-  - Human verification:
-    1. Probe synthetic denied paths and endpoints in the empty environment.
-    2. Label evidence surrogate-only and preserve live-runtime gates.
-  - Excludes: model scoring and chat implementation; only this task's approved preparation scope.
-  - Contract: [poc-delivery](specs/poc-delivery/spec.md); [verification](design.md#verification-plan).
+- [x] 0.9 Reconcile the approved PoC backlog. Verify using the human steps below.
+  - Description: Reconcile the approved PoC backlog.
+  - Value: Show the next useful work without research blockers.
+  - Parent: S2. Blocked by: 0.0, 0.4, 0.6.
+  - Human verification: Read back milestones, parents, PR links and native blockers; deferred research has no path into chat.
+  - Contract: [design and verification](design.md#verification-plan).
 
-- [ ] 0.8 Freeze measurement and evaluation protocol. Verify using the steps below.
-  - Description: Pin workloads, limits, scoring and measurement methods for published configurations; disclose precision-layout differences and unknowns.
-  - Value: Make comparisons explainable and repeatable.
-  - Parent: S2. Blocked by: 0.5, 0.6.
-  - Human verification:
-    1. Review workload IDs, cohort rules, memory accounting, repetitions, quality scoring, evaluator containment, and failure reporting.
-    2. Read back the evidence and confirm the expected outcome stated above.
-  - Excludes: model scoring and chat implementation; only this task's approved preparation scope.
-  - Contract: [poc-delivery](specs/poc-delivery/spec.md); [verification](design.md#verification-plan).
-
-- [ ] 0.9 Finalize the complete backlog after research. Verify using the steps below.
-  - Description: Update existing placeholders after research without duplicates.
-  - Value: Make future work visible before implementation.
-  - Parent: S2. Blocked by: 0.0, 0.4, 0.8.
-  - Human verification:
-    1. Update existing issue briefs and blockers without duplication.
-    2. Read back all M0–M3 relationships and unresolved inputs.
-  - Excludes: code changes, model installation and scoring.
-  - Contract: [poc-delivery](specs/poc-delivery/spec.md); [verification](design.md#verification-plan).
-
-- [ ] 0.10 Configure Project views and transitions. Verify using the steps below.
-  - Description: Configure three agreed views and their transition rules.
-  - Value: Show progress without claiming premature acceptance.
-  - Parent: S2. Blocked by: 0.9.
-  - Human verification:
-    1. Inspect three agreed views.
-    2. Exercise new, closed, reopened, blocked, and UAT cases on approved disposable items; read back automations.
-  - Excludes: code changes, model installation and scoring.
-  - Contract: [poc-delivery](specs/poc-delivery/spec.md); [verification](design.md#verification-plan).
-
-- [ ] 0.11 Review M0 readiness with the maintainer. Verify using the steps below.
-  - Description: Present M0 evidence for a human proceed or revise decision.
-  - Value: Agree the environment and backlog before running models.
-  - Parent: S2. Blocked by: 0.7, 0.10.
-  - Human verification:
-    1. Review recovery, cleanout, isolation evidence, research, complete backlog and protocol.
-    2. Record a human proceed or revise decision.
-  - Excludes: model scoring and chat implementation; only this task's approved preparation scope.
-  - Contract: [poc-delivery](specs/poc-delivery/spec.md); [verification](design.md#verification-plan).
+- [x] 0.11 Record the approved M0 direction. Verify using the human steps below.
+  - Description: Record the approved M0 direction.
+  - Value: Begin real integration using the agreed scope.
+  - Parent: S2. Blocked by: 0.6, 0.9.
+  - Human verification: Record the user approval of real Qwen, direct Rig, disposable workspace and later file tools; distinguish approval from execution.
+  - Contract: [design and verification](design.md#verification-plan).
 
 ## 1. M1 Running a local model
 
-- [ ] 1.1 Provision one approved baseline model. Verify using the steps below.
-  - Description: Provision an approved artifact in its dedicated location.
-  - Value: Establish the smallest working local route.
+- [ ] 1.1 Provision the first real local model. Verify using the human steps below.
+  - Description: Provision the first real local model.
+  - Value: Make actual inference available.
   - Parent: S3. Blocked by: 0.11.
-  - Human verification:
-    1. Verify approved artifact identity, storage and startup/stop procedure; record the actual runtime/backend identity.
-    2. Use synthetic data only until the live-route gate passes.
-  - Excludes: Rig chat features, harness tools and unapproved experiment expansion.
-  - Contract: [isolated-local-inference](specs/isolated-local-inference/spec.md); [verification](design.md#verification-plan).
+  - Human verification: Use or download the pinned Qwen artifact, record identity and runtime, and document start/stop. No fake model or cloud fallback.
+  - Contract: [design and verification](design.md#verification-plan).
 
-- [ ] 1.2 Qualify the live inference route. Verify using the steps below.
-  - Description: Probe the actual server and client access path.
-  - Value: Prevent measurements on an unapproved access path.
+- [ ] 1.2 Observe the real local inference route. Verify using the human steps below.
+  - Description: Observe the real local inference route.
+  - Value: Know that the model responds before adding Rig.
   - Parent: S3. Blocked by: 1.1.
-  - Human verification:
-    1. Check actual server permissions, listening routes, model execution compatibility and denied management/network operations.
-    2. Record pass/fail/unknown before timing.
-  - Excludes: Rig chat features, harness tools and unapproved experiment expansion.
-  - Contract: [isolated-local-inference](specs/isolated-local-inference/spec.md); [verification](design.md#verification-plan).
+  - Human verification: Send a simple real prompt; record response or exact failure and endpoint/model settings. No score or memory admission check.
+  - Contract: [design and verification](design.md#verification-plan).
 
-- [ ] 1.3 Qualify candidate memory and timing. Verify using the steps below.
-  - Description: Measure each candidate's attributed memory and latency.
-  - Value: Determine whether the baseline fits the local budget.
+- [ ] 1.7 Record the working local configuration. Verify using the human steps below.
+  - Description: Record the working local configuration.
+  - Value: Give Rig a reproducible starting configuration.
   - Parent: S3. Blocked by: 1.2.
-  - Human verification:
-    1. Repeat the frozen workload for each approved configuration after live-route qualification.
-    2. Record loaded text-only components and memory accounting; mark eligible, excluded or unknown per context tier.
-  - Excludes: Rig chat features, harness tools and unapproved experiment expansion.
-  - Contract: [isolated-local-inference](specs/isolated-local-inference/spec.md); [verification](design.md#verification-plan).
-
-- [ ] 1.4 Compare compatible runtime configurations. Verify using the steps below.
-  - Description: Measure compatible runtimes using a common artifact.
-  - Value: Choose the local serving configuration from measurements.
-  - Parent: S3. Blocked by: 1.3.
-  - Human verification:
-    1. Compare eligible common-artifact runtime profiles. Start with DMR’s llama.cpp backend; a standalone llama.cpp profile must answer a concrete compatibility, configuration or performance question.
-    2. Record unsupported configurations without blocking other eligible candidates.
-  - Excludes: Rig chat features, harness tools and unapproved experiment expansion.
-  - Contract: [inference-evaluation](specs/inference-evaluation/spec.md); [verification](design.md#verification-plan).
-
-- [ ] 1.5 Qualify the model-quality evaluator. Verify using the steps below.
-  - Description: Prepare a disposable evaluator with bounded resources.
-  - Value: Contain generated benchmark code.
-  - Parent: S4. Blocked by: 0.11.
-  - Human verification:
-    1. Demonstrate timeout, memory/output limits, denied network/host access and disposable cleanup on known synthetic cases before model outputs.
-    2. Read back the evidence and confirm the expected outcome stated above.
-  - Excludes: Rig chat features, harness tools and unapproved experiment expansion.
-  - Contract: [inference-evaluation](specs/inference-evaluation/spec.md); [verification](design.md#verification-plan).
-
-- [ ] 1.6 Evaluate the eligible small-model cohort. Verify using the steps below.
-  - Description: Score eligible published model configurations on the frozen public task slice; do not attribute all differences to source-model quality.
-  - Value: Choose a model from quality and speed evidence.
-  - Parent: S4. Blocked by: 1.4, 1.5.
-  - Human verification:
-    1. Score eligible candidates with frozen quality budgets in the qualified evaluator.
-    2. Retain all exclusions, failed attempts and known or unknown quantization-layout differences; matching labels do not prove equivalent precision.
-  - Excludes: Rig chat features, harness tools and unapproved experiment expansion.
-  - Contract: [inference-evaluation](specs/inference-evaluation/spec.md); [verification](design.md#verification-plan).
-
-- [ ] 1.7 Record the selected configuration or stop decision. Verify using the steps below.
-  - Description: Pin a qualified selection or record a stop decision.
-  - Value: Give M2 a supported baseline.
-  - Parent: S4. Blocked by: 1.6.
-  - Human verification:
-    1. Review all evidence and record a qualified selection ID or no-go.
-    2. A no-go must leave M2 blocked.
-  - Excludes: Rig chat features, harness tools and unapproved experiment expansion.
-  - Contract: [inference-evaluation](specs/inference-evaluation/spec.md); [verification](design.md#verification-plan).
+  - Human verification: Record the actual endpoint, model, runtime and observed response; failures remain failures and another model may be tried.
+  - Contract: [design and verification](design.md#verification-plan).
 
 ## 2. M2 Creating the agent harness
 
-- [ ] 2.1 Route a fixed input through containerized Rig. Verify using the steps below.
-  - Description: Add a minimal Rust request path inside Compose.
-  - Value: Prove integration inside the intended boundary.
+- [ ] 2.1 Route a real request through containerized Rig. Verify using the human steps below.
+  - Description: Route a real request through containerized Rig.
+  - Value: Prove the integration using the intended environment.
   - Parent: S5. Blocked by: 1.7.
-  - Human verification:
-    1. Launch a minimal Compose image against the qualified route and confirm model identity.
-    2. Unavailable endpoint yields an error without fallback.
-  - Excludes: execution tools, persistent history, full-screen UI and remote fallback.
-  - Contract: [typed-discussion](specs/typed-discussion/spec.md); [verification](design.md#verification-plan).
+  - Human verification: Build and launch Rig with Compose against real Qwen; inspect mounts/user and observe the reply. An unavailable endpoint reports an error.
+  - Contract: [design and verification](design.md#verification-plan).
 
-- [ ] 2.2 Add Rustyline conversation input. Verify using the steps below.
-  - Description: Add editable input and session-local conversation context.
-  - Value: Let a user exchange messages without a full-screen UI.
+- [ ] 2.2 Add Rustyline conversation input. Verify using the human steps below.
+  - Description: Add Rustyline conversation input.
+  - Value: Let the user hold a conversation.
   - Parent: S5. Blocked by: 2.1.
-  - Human verification:
-    1. Edit input and send two related turns.
-    2. Verify in-session context and fresh history after restart; document usage.
-  - Excludes: execution tools, persistent history, full-screen UI and remote fallback.
-  - Contract: [typed-discussion](specs/typed-discussion/spec.md); [verification](design.md#verification-plan).
+  - Human verification: Edit input and send two related turns; restart and observe fresh session history.
+  - Contract: [design and verification](design.md#verification-plan).
 
-- [ ] 2.3 Stream and safely render model text. Verify using the steps below.
-  - Description: Render streamed replies without terminal side effects.
-  - Value: Make replies readable without terminal side effects.
+- [ ] 2.3 Stream and safely render responses. Verify using the human steps below.
+  - Description: Stream and safely render responses.
+  - Value: Show replies as they arrive without terminal side effects.
   - Parent: S5. Blocked by: 2.2.
-  - Human verification:
-    1. Observe incremental output and synthetic split escape sequences.
-    2. Verify control sequences cannot alter clipboard or terminal state.
-  - Excludes: execution tools, persistent history, full-screen UI and remote fallback.
-  - Contract: [typed-discussion](specs/typed-discussion/spec.md); [verification](design.md#verification-plan).
+  - Human verification: Observe incremental real-model output; inspect filtering of terminal-control sequences, including split chunks.
+  - Contract: [design and verification](design.md#verification-plan).
 
-- [ ] 2.4 Enforce context and request limits. Verify using the steps below.
-  - Description: Implement validated context accounting and request deadlines.
-  - Value: Prevent silent truncation and stalled sessions.
+- [ ] 2.4 Bound requests and show context errors. Verify using the human steps below.
+  - Description: Bound requests and show context errors.
+  - Value: Keep requests manageable without excluding models by tokenizer support.
   - Parent: S5. Blocked by: 2.3.
-  - Human verification:
-    1. Exercise context overflow plus each frozen deadline with synthetic input.
-    2. Observe explicit incomplete/error outcomes and no silent history loss.
-  - Excludes: execution tools, persistent history, full-screen UI and remote fallback.
-  - Contract: [typed-discussion](specs/typed-discussion/spec.md); [verification](design.md#verification-plan).
+  - Human verification: Exercise configured output/time limits and an oversized input; observe a visible failure instead of silent history loss.
+  - Contract: [design and verification](design.md#verification-plan).
 
-- [ ] 2.5 Cancel and reconcile interrupted requests. Verify using the steps below.
-  - Description: Expose interrupted outcomes and reconcile server activity.
-  - Value: Stop local output without hiding remaining server work.
+- [ ] 2.5 Handle cancellation and partial outcomes. Verify using the human steps below.
+  - Description: Handle cancellation and partial outcomes.
+  - Value: Let the user stop a request without confusing partial output with completion.
   - Parent: S5. Blocked by: 2.4.
-  - Human verification:
-    1. Cancel and disconnect a stream.
-    2. Verify no retry or overlapping request until idle confirmation or serving-process restart.
-  - Excludes: execution tools, persistent history, full-screen UI and remote fallback.
-  - Contract: [typed-discussion](specs/typed-discussion/spec.md); [verification](design.md#verification-plan).
+  - Human verification: Cancel a live response; observe prompt return, no automatic retry and honest backend uncertainty.
+  - Contract: [design and verification](design.md#verification-plan).
 
-- [ ] 2.6 Package the chat launch in Compose. Verify using the steps below.
-  - Description: Verify packaged launch paths and finish setup instructions.
-  - Value: Make the same chat setup repeatable for another tester.
-  - Parent: S5. Blocked by: 2.5, 0.7.
-  - Human verification:
-    1. Use both documented launch paths and recheck the actual image, mounts, route and terminal exits.
-    2. Confirm no model download or personal-data persistence.
-  - Excludes: execution tools, persistent history, full-screen UI and remote fallback.
-  - Contract: [typed-discussion](specs/typed-discussion/spec.md); [verification](design.md#verification-plan).
+- [ ] 2.6 Document launch and disposable teardown. Verify using the human steps below.
+  - Description: Document launch and disposable teardown.
+  - Value: Make the same environment usable by the maintainer.
+  - Parent: S5. Blocked by: 2.5.
+  - Human verification: Follow launch/stop/reset instructions; inspect no personal mounts, writable scratch only, no persisted chat and discarded workspace.
+  - Contract: [design and verification](design.md#verification-plan).
+
+- [ ] 2.7 Try real chat before enabling file tools. Verify using the human steps below.
+  - Description: Try real chat before enabling file tools.
+  - Value: Let the user assess chat before model-driven changes.
+  - Parent: S5. Blocked by: 2.6.
+  - Human verification: The maintainer tries real chat and explicitly records readiness to try workspace tools. Tools remain disabled until that choice.
+  - Contract: [design and verification](design.md#verification-plan).
+
+- [ ] 2.8 Add workspace listing and reading tools. Verify using the human steps below.
+  - Description: Add workspace listing and reading tools.
+  - Value: Let the agent inspect disposable sample files.
+  - Parent: S5. Blocked by: 2.7.
+  - Human verification: Real model calls list/read; operator checks results. Reject traversal, symlink escapes and non-regular files; bound output and tool steps.
+  - Contract: [design and verification](design.md#verification-plan).
+
+- [ ] 2.9 Create sample files through the real model. Verify using the human steps below.
+  - Description: Create sample files through the real model.
+  - Value: Prove that an agent request makes an observable file.
+  - Parent: S5. Blocked by: 2.8.
+  - Human verification: Request a Python file in workspace-tool mode and inspect its bytes in the container. Reject existing-file overwrite and outside-workspace writes.
+  - Contract: [design and verification](design.md#verification-plan).
+
+- [ ] 2.10 Edit sample files through the real model. Verify using the human steps below.
+  - Description: Edit sample files through the real model.
+  - Value: Iterate on a sample file through conversation.
+  - Parent: S5. Blocked by: 2.9.
+  - Human verification: Request a specific edit, inspect the resulting contents and observe visible failures. No shell or Python execution.
+  - Contract: [design and verification](design.md#verification-plan).
+
+- [ ] 2.11 Delete sample files and report completed changes. Verify using the human steps below.
+  - Description: Delete sample files and report completed changes.
+  - Value: Try reversible disposable-workspace operations with honest results.
+  - Parent: S5. Blocked by: 2.10.
+  - Human verification: Request deletion and verify absence; reject root/recursive deletion. Cancel a multi-operation turn and inspect which completed changes remain.
+  - Contract: [design and verification](design.md#verification-plan).
 
 ## 3. M3 User Acceptance Testing
 
-- [ ] 3.1 Run the human acceptance session. Verify using the steps below.
-  - Description: Have the maintainer exercise and assess the PoC.
-  - Value: Learn whether the PoC is usable and separated from daily work.
-  - Parent: S6. Blocked by: 2.6.
-  - Human verification:
-    1. Maintainer follows setup/chat/cancel/restart/error/isolation checklist on the pinned build.
-    2. Record observed results and linked defects.
-  - Excludes: new features and acceptance inferred from issue closure.
-  - Contract: [result-review](specs/result-review/spec.md); [verification](design.md#verification-plan).
+- [ ] 3.1 Run the workspace agent acceptance session. Verify using the human steps below.
+  - Description: Run the workspace agent acceptance session.
+  - Value: Decide whether the small agent workflow is useful.
+  - Parent: S6. Blocked by: 2.11.
+  - Human verification: Maintainer creates, inspects, edits and deletes a sample file through the real model, resets the environment and records observations.
+  - Contract: [design and verification](design.md#verification-plan).
 
-- [ ] 3.2 Retest accepted UAT fixes. Verify using the steps below.
-  - Description: Recheck accepted fixes or record that none need retesting.
-  - Value: Resolve demonstrated blockers without unplanned expansion.
+- [ ] 3.2 Retest accepted UAT fixes. Verify using the human steps below.
+  - Description: Retest accepted UAT fixes.
+  - Value: Resolve demonstrated problems without expanding scope.
   - Parent: S6. Blocked by: 3.1.
-  - Human verification:
-    1. Retest scoped linked defects against the exact build, or record no retest needed when no accepted fixes exist.
-    2. Preserve unresolved blockers.
-  - Excludes: new features and acceptance inferred from issue closure.
-  - Contract: [result-review](specs/result-review/spec.md); [verification](design.md#verification-plan).
+  - Human verification: Recheck accepted fixes against the current build, or record no fixes need retesting.
+  - Contract: [design and verification](design.md#verification-plan).
 
-- [ ] 3.3 Record PoC acceptance and next questions. Verify using the steps below.
-  - Description: Record explicit acceptance or rejection and future questions.
-  - Value: End the experiment with an explicit decision.
+- [ ] 3.3 Record PoC acceptance and next questions. Verify using the human steps below.
+  - Description: Record PoC acceptance and next questions.
+  - Value: Decide what to improve next.
   - Parent: S6. Blocked by: 3.2.
-  - Human verification:
-    1. Read the maintainer's accepted or rejected disposition with build and evidence IDs.
-    2. Closing a rejected experiment must not mark it accepted.
-  - Excludes: new features and acceptance inferred from issue closure.
-  - Contract: [result-review](specs/result-review/spec.md); [verification](design.md#verification-plan).
+  - Human verification: Record the maintainer acceptance or rejection with configuration and observed evidence; closure alone never means acceptance.
+  - Contract: [design and verification](design.md#verification-plan).
 
-## Readiness and publication predicates
+## Deferred and superseded work
 
-- 0.0 publishes reviewed M0 records and provisional M1–M3 placeholders before implementation. Keep a draft-to-issue map; preserve unrelated records. 0.9 finalizes the existing records after research.
-- 0.3 requires verified recovery and fresh manifest approval. Include spec retirement/navigation in the reset review; 0.4 completes the mapping without prematurely syncing unimplemented chat requirements.
-- 0.7 qualifies only its surrogate. Each actual runtime/client-route pair must satisfy 1.2 before measurement, including alternatives in 1.4/1.6. Each candidate must satisfy 1.3 memory eligibility before ranking. Exclusion is a research outcome, not qualification.
-- Failure of the baseline does not prevent trying other entries in the bounded approved inventory. If none qualify, 1.7 records no-go and 2.1 remains blocked despite the closed native dependency.
-- 2.1 requires a positive selection ID from 1.7 with qualified route, memory and evaluator evidence. 3.1 requires passing final Compose qualification from 2.6. Put these predicates in the issue briefs and Ready transition review.
-- 3.2 can complete with evidence that no retest is needed. 3.3 may close accepted or rejected; the decision must be explicit. Closure alone does not mean acceptance.
-- 0.5 records pinned candidates, documented support and assigned unknowns. Artifact/license/download prerequisites belong to 0.6 before provisioning approval; actual backend identity and live compatibility belong to 1.1/1.2, and loaded-component/memory evidence to 1.3. 0.8 freezes commands, budgets and the published-configuration comparison policy. Inventory completion does not qualify a candidate. Conversion requires a separately reviewed follow-up, starting with one checkpoint. Downstream briefs stay provisional until these inputs exist. New tests/verifiers need the authorship authorization described in design.
+- 0.7 / #145: Retired: surrogate isolation check. No active delivery task depends on it.
+- 0.8 / #146: Deferred: comparison protocol. No active delivery task depends on it.
+- 0.10 / #148: Parallel: Project views and transitions. No active delivery task depends on it.
+- 1.3 / #152: Deferred: memory and timing observations. No active delivery task depends on it.
+- 1.4 / #153: Deferred: runtime comparison. No active delivery task depends on it.
+- 1.5 / #154: Deferred: benchmark evaluator. No active delivery task depends on it.
+- 1.6 / #155: Deferred: model comparison. No active delivery task depends on it.
 
 ## Workflow follow-up
 
-- Review planning and explicitly request apply before implementation.
-- Prefix published triage issues/comments with the AI-generated disclaimer. Link briefs to published OpenSpec artifacts, and preserve native blockers separately from parentage.
-- Review reset paths, provisioning operations and GitHub mutations within their stated scopes.
-- Sync/archive after delivery and human gates; publish the five PoC specs and check historical links.
+- Preserve completed recovery and research evidence. Update native GitHub dependencies alongside task briefs.
+- Each worked issue links to its PR; future issues have no invented implementation evidence.
+- Human chat trial and final UAT remain human actions. New automated tests/verifiers require explicit authorization.
+- Sync/archive only after actual delivery and acceptance.

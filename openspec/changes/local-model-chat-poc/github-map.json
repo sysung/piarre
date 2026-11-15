@@ -180,6 +180,31 @@
       "number": 165,
       "id": 6400925123,
       "url": "https://github.com/sysung/piarre/issues/165"
+    },
+    "2.7": {
+      "number": 173,
+      "id": 6409933528,
+      "url": "https://github.com/sysung/piarre/issues/173"
+    },
+    "2.8": {
+      "number": 174,
+      "id": 6409933827,
+      "url": "https://github.com/sysung/piarre/issues/174"
+    },
+    "2.9": {
+      "number": 175,
+      "id": 6409934186,
+      "url": "https://github.com/sysung/piarre/issues/175"
+    },
+    "2.10": {
+      "number": 176,
+      "id": 6409934531,
+      "url": "https://github.com/sysung/piarre/issues/176"
+    },
+    "2.11": {
+      "number": 177,
+      "id": 6409934845,
+      "url": "https://github.com/sysung/piarre/issues/177"
     }
   },
   "items": {
@@ -217,6 +242,11 @@
     "2.6": "PVTI_lAHOAPOzcc4BpCmDzhI14fg",
     "3.1": "PVTI_lAHOAPOzcc4BpCmDzhI14fs",
     "3.2": "PVTI_lAHOAPOzcc4BpCmDzhI14gU",
-    "3.3": "PVTI_lAHOAPOzcc4BpCmDzhI14gY"
+    "3.3": "PVTI_lAHOAPOzcc4BpCmDzhI14gY",
+    "2.7": "PVTI_lAHOAPOzcc4BpCmDzhI-eNY",
+    "2.8": "PVTI_lAHOAPOzcc4BpCmDzhI-ePU",
+    "2.9": "PVTI_lAHOAPOzcc4BpCmDzhI-eRE",
+    "2.10": "PVTI_lAHOAPOzcc4BpCmDzhI-eSk",
+    "2.11": "PVTI_lAHOAPOzcc4BpCmDzhI-eUg"
   }
 }

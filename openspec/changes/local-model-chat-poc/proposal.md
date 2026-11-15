@@ -2,27 +2,26 @@
 
 ## Why
 
-Piarre needs a small experiment that establishes whether a local model can support a usable conversation through a Rust agent harness. The existing VS Code application and its delivery requirements obscure that question and increase setup work.
+Establish whether a real local model can support useful chat and simple file tasks through Rig. Start with a disposable Linux workspace so the user can experiment without exposing personal projects.
 
 ## What Changes
 
-- **BREAKING**: remove the old application, its build/test/release machinery, and obsolete product documentation after verifying a recovery reference and obtaining approval of an exact deletion manifest. Preserve Git history, project agent instructions, OpenSpec tooling, and historical records.
-- Deliver M0 preparation and isolation, M1 local inference evaluation, M2 minimal Rig chat, and M3 human acceptance. M0 includes drafting and publishing the complete M1–M3 backlog after review.
-- Use Rustyline for terminal input, Rig for session-local conversation routing, and a container for the harness. Model output is inert text; this PoC has no execution tools.
-- Qualify a native Apple Silicon inference endpoint. Docker Model Runner with llama.cpp is the initial hypothesis; Ollama, direct llama.cpp, and MLX remain alternatives to evaluate, not promised integrations.
-- Evaluate pinned published model configurations first. A common conversion pipeline is outside the initial PoC unless a reviewed follow-up establishes its need.
-- Measure runtime performance separately from model quality. Require less than 8 GB of total serving memory for qualifying local configurations.
-- Organize approved GitHub work by milestone, user-story parent, small sub-issues, and native dependencies in Project 8. Keep implementation completion separate from user acceptance.
+- Preserve the completed recovery and approved legacy reset. No further cleanup is requested.
+- Deliver M0 scope and setup, M1 one working local model, M2 Rig chat followed by a user chat trial and scoped file tools, and M3 human acceptance.
+- Run Rig and its temporary `/workspace` in the same Linux container. Start with real Qwen through the existing local inference runtime; do not build a mocked model service or mediation proxy.
+- After the user tries chat, add list/read/create/edit/delete operations confined to that workspace. No shell, generated-code execution, default Mac mounts or retrieval.
+- Let operators try configured local models. Record observed behavior; benchmarks, an 8 GB target, exact memory accounting and tokenizer support do not control model admission.
+- Keep concise issues, parent stories, native dependencies and PR evidence links. Project views remain useful parallel work, not an inference prerequisite.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `isolated-local-inference`: explicit provisioning, restricted connectivity, pinned local model configuration, and measured serving limits.
-- `inference-evaluation`: reproducible runtime/model comparisons and evidence-bound conclusions.
-- `poc-delivery`: recovery-first reset, dependency-linked planning, milestone gates, and explicit PoC acceptance.
-- `typed-discussion`: tool-free terminal chat and session-local context.
-- `result-review`: revision-bound PoC evidence and human acceptance.
+- `isolated-local-inference`: explicit local setup and disposable workspace access.
+- `inference-evaluation`: lightweight observations of real model attempts without admission scoring.
+- `poc-delivery`: recoverable preparation, small delivery slices and human checkpoints.
+- `typed-discussion`: session chat and bounded file operations after the initial user trial.
+- `result-review`: configuration-linked observations and explicit user acceptance.
 
 ### Modified Capabilities
 
@@ -30,6 +29,4 @@ None.
 
 ## Impact
 
-The reset affects `apps/`, `packages/`, legacy tests and scripts, Node configuration, and VS Code release workflows. New Rust and Compose implementation follows only after this plan is reviewed and apply is requested. The [scope mapping](spec-scope.md) records the separate legacy spec retirement. The five PoC deltas are additions to the empty main catalog.
-
-Model files, runtime installation, benchmark execution, GitHub publication, cleanup, and release are not performed by this proposal. No model training, OpenCode integration, autonomous coding, retrieval, cross-session memory, cloud fallback, or shared multi-user hosting is included. The earlier 90% ambition is not an acceptance threshold.
+Revises the existing local-model PoC and its GitHub backlog. It supersedes the research-first sequence, surrogate endpoint, proxy and blanket no-tools requirement. Existing research and recovery evidence remain available. Benchmarks, runtime comparisons, conversion, model compliance, context retrieval, persistent memory, public multi-user hosting and personal workspace access are later work. Application code follows in Apply; this proposal does not claim a working model or agent.
