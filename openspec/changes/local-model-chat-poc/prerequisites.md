@@ -2,9 +2,11 @@
 
 Status: task 0.5 is in progress. No installation or model download is approved by this inventory.
 
+Sizes use decimal GB and are rounded to two decimal places. Exact sizes remain in the JSON metadata. The serving limit remains strictly below 8 GB.
+
 ## Machine and tools
 
-Direct inspection found Apple M3 Pro, 38,654,705,664 bytes of memory, macOS 26.6.2, Docker Engine 29.9.2, Compose 5.6.1 and Model Runner client/server 1.2.9. Model Runner was reachable with host inspection permissions. The restricted agent environment could not access it; that is not evidence that the service is down.
+Direct inspection found Apple M3 Pro, 38.65 GB of memory, macOS 26.6.2, Docker Engine 29.9.3, Compose 5.7.0 and Model Runner client/server 1.2.9. Model Runner was reachable with host inspection permissions. The restricted agent environment could not access it; that is not evidence that the service is down.
 
 `rustc`, `cargo`, `ollama` and `llama-server` were not on the current PATH. This does not establish that they are absent everywhere. A container build can supply Rust later without installing it on the host.
 
@@ -12,13 +14,13 @@ Direct inspection found Apple M3 Pro, 38,654,705,664 bytes of memory, macOS 26.6
 
 [Source metadata](model-inventory.json) records exact repository revisions, licenses, parameter counts, file sizes and weight hashes from the public Hugging Face API. These are metadata observations, not successful load or memory measurements.
 
-| Candidate | Repository | Stored parameters | Source weight bytes |
+| Candidate | Repository | Stored parameters | Source weights (GB) |
 |---|---|---:|---:|
-| Qwen | Qwen/Qwen3.5-4B | 4,659,865,088 | 9,319,828,096 |
-| FrogNano | microsoft/FrogNano-4B-2609 | 4,659,865,088 | 9,319,820,920 |
-| Nanbeige | Nanbeige/Nanbeige4.2-3B | 4,169,800,704 | 8,339,624,720 |
-| Nemotron | nvidia/NVIDIA-Nemotron-3-Nano-4B-BF16 | 3,973,556,832 | 7,947,142,640 |
-| MiniCPM | openbmb/MiniCPM5-2B | 2,516,756,480 | 5,033,557,096 |
+| Qwen | Qwen/Qwen3.5-4B | 4,659,865,088 | 9.32 |
+| FrogNano | microsoft/FrogNano-4B-2609 | 4,659,865,088 | 9.32 |
+| Nanbeige | Nanbeige/Nanbeige4.2-3B | 4,169,800,704 | 8.34 |
+| Nemotron | nvidia/NVIDIA-Nemotron-3-Nano-4B-BF16 | 3,973,556,832 | 7.95 |
+| MiniCPM | openbmb/MiniCPM5-2B | 2,516,756,480 | 5.03 |
 
 Stored parameter totals can include vision weights. Loaded text-only counts remain to be established. MiniCPM belongs in a smaller cohort. Source weight size does not qualify serving memory.
 
@@ -26,15 +28,15 @@ Stored parameter totals can include vision weights. Loaded text-only counts rema
 
 These are candidates for review, not approved downloads or qualified configurations. Each link fixes the repository revision. The JSON records exact filenames and SHA-256 hashes.
 
-| Candidate artifact | Q4_K_M bytes | Provenance and limits |
+| Candidate artifact | Q4_K_M size (GB) | Provenance and limits |
 |---|---:|---|
-| [ggml-org/Qwen3.5-4B-GGUF](https://huggingface.co/ggml-org/Qwen3.5-4B-GGUF/tree/8d43d974efc48399cb58957ad49c8b26bf5a109c) | 3,032,091,584 | llama.cpp organization conversion; exact conversion build not stated in the inspected card. |
-| [bartowski/FrogNano-4B-2609-GGUF](https://huggingface.co/bartowski/FrogNano-4B-2609-GGUF/tree/dfbb801e04ddf045ffd245b9f1a546ed0c7d960f) | 2,797,526,816 | Community conversion using llama.cpp b11279; model-specific precision layout. Source metadata says Apache-2.0, conversion card says MIT. Resolve before provisioning. |
-| [bartowski/Nanbeige_Nanbeige4.2-3B-GGUF](https://huggingface.co/bartowski/Nanbeige_Nanbeige4.2-3B-GGUF/tree/17562eefe9752007209148d5f7a6e275fc8d8077) | 2,684,023,968 | Community conversion using llama.cpp b10159; source model linked by publisher. |
-| [nvidia/NVIDIA-Nemotron-3-Nano-4B-GGUF](https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-4B-GGUF/tree/ba223d14e45525f7fae81db77ea8cabeb2fc6c25) | 2,837,072,864 | Official NVIDIA conversion; custom NVIDIA Nemotron Open Model License. |
-| [openbmb/MiniCPM5-2B-GGUF](https://huggingface.co/openbmb/MiniCPM5-2B-GGUF/tree/8ad02b786ab81e33d465e1c80562640c55ab2877) | 1,561,318,368 | Official OpenBMB conversion; smaller parameter cohort. |
+| [ggml-org/Qwen3.5-4B-GGUF](https://huggingface.co/ggml-org/Qwen3.5-4B-GGUF/tree/8d43d974efc48399cb58957ad49c8b26bf5a109c) | 3.03 | llama.cpp organization conversion; exact conversion build not stated in the inspected card. |
+| [bartowski/FrogNano-4B-2609-GGUF](https://huggingface.co/bartowski/FrogNano-4B-2609-GGUF/tree/dfbb801e04ddf045ffd245b9f1a546ed0c7d960f) | 2.80 | Community conversion using llama.cpp b11279; model-specific precision layout. Source metadata says Apache-2.0, conversion card says MIT. Resolve before provisioning. |
+| [bartowski/Nanbeige_Nanbeige4.2-3B-GGUF](https://huggingface.co/bartowski/Nanbeige_Nanbeige4.2-3B-GGUF/tree/17562eefe9752007209148d5f7a6e275fc8d8077) | 2.68 | Community conversion using llama.cpp b10159; source model linked by publisher. |
+| [nvidia/NVIDIA-Nemotron-3-Nano-4B-GGUF](https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-4B-GGUF/tree/ba223d14e45525f7fae81db77ea8cabeb2fc6c25) | 2.84 | Official NVIDIA conversion; custom NVIDIA Nemotron Open Model License. |
+| [openbmb/MiniCPM5-2B-GGUF](https://huggingface.co/openbmb/MiniCPM5-2B-GGUF/tree/8ad02b786ab81e33d465e1c80562640c55ab2877) | 1.56 | Official OpenBMB conversion; smaller parameter cohort. |
 
-The five selected weight files total 12,912,033,600 bytes. This excludes caches, containers, source weights and intermediate conversions. Load only one candidate at a time. Weight size is not peak serving memory.
+The five selected weight files total 12.91 GB. This excludes caches, containers, source weights and intermediate conversions. Load only one candidate at a time. Weight size is not peak serving memory.
 
 FrogNano's converter explicitly describes a model-specific layout. A shared Q4_K_M label therefore does not establish identical precision allocation. Pin each artifact and compare runtimes with the exact same file. Model comparisons need a declared choice between published configurations and a common conversion recipe. Do not describe published configurations as a controlled quantization experiment.
 

@@ -22,7 +22,7 @@ The harness SHALL expose no execution tools, inherit no personal files or creden
 - **THEN** the environment remains unqualified and testing is restricted to synthetic data
 
 ### Requirement: Qualify total serving memory
-A qualifying configuration SHALL remain below 8,000,000,000 bytes of attributed peak serving memory, including model weights, caches, runtime buffers, and serving processes. Missing accounting SHALL produce an unknown result, not a pass. Build and test memory SHALL be separate.
+A qualifying configuration SHALL remain below 8 GB (decimal) of attributed peak serving memory, including model weights, caches, runtime buffers, and serving processes. Missing accounting SHALL produce an unknown result, not a pass. Build and test memory SHALL be separate.
 
 #### Scenario: Peak exceeds limit
 - **WHEN** a declared workload reaches or exceeds the limit
