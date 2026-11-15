@@ -94,7 +94,7 @@ Approved revision: 2026-11-15. Real model first; user chat trial before workspac
   - Human verification: Use or download the pinned Qwen artifact, record identity and runtime, and document start/stop. No fake model or cloud fallback.
   - Contract: [design and verification](design.md#verification-plan).
 
-- [ ] 1.2 Observe the real local inference route. Verify using the human steps below.
+- [x] 1.2 Observe the real local inference route. Verify using the human steps below.
   - Description: Observe the real local inference route.
   - Value: Know that the model responds before adding Rig.
   - Parent: S3. Blocked by: 1.1.
