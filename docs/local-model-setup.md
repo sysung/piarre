@@ -56,8 +56,26 @@ docker model ps
 
 Expect the named model to appear after loading and disappear from the running list after unloading. Unloading frees its serving resources while keeping the installed artifact. It does not stop Docker Desktop or unload other models.
 
-If loading fails, record the error rather than substituting a different model. [Issue #151](https://github.com/sysung/piarre/issues/151) covers the next step: sending a real prompt and recording its response.
+If loading fails, record the error rather than substituting a different model. [Issue #151](https://github.com/sysung/piarre/issues/151) records the first real prompt and response, reproduced below.
 
 ## Observed provisioning
 
 See [the provisioning record](../openspec/changes/local-model-chat-poc/provisioning.md) for artifact identity, runtime version and the actual lifecycle result. Download identity and successful loading do not establish response quality, tool-call support or Rig integration.
+
+## Ask the local API a question
+
+With Docker Model Runner running and the model installed, send a request:
+
+```sh
+curl --fail-with-body --show-error --silent \
+  --connect-timeout 5 --max-time 120 \
+  http://localhost:12434/engines/llama.cpp/v1/chat/completions \
+  --header 'Content-Type: application/json' \
+  --data '{"model":"piarre/qwen3.5:4b-q4_k_m","messages":[{"role":"user","content":"What is 2 + 2? Reply with only the number."}],"max_tokens":128,"temperature":0,"stream":false,"chat_template_kwargs":{"enable_thinking":false}}'
+```
+
+Inspect `choices[0].message.content` for the answer and `choices[0].finish_reason` for how the response ended. The observed answer was `4` with `stop`. Other prompts or settings may give different results. The template option requests a direct answer without a thinking section for this smoke request.
+
+This endpoint is reachable from the Mac in the observed setup. If connection fails, check `docker model status` and the local API setting rather than substituting a cloud endpoint. Do not use this host `localhost` address inside a container; the container route will be established with Rig.
+
+Unload after use with `docker model unload piarre/qwen3.5:4b-q4_k_m`. See the [actual request record](../openspec/changes/local-model-chat-poc/local-inference.md) for settings, evidence and limits.
