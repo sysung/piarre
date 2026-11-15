@@ -1,0 +1,17 @@
+{
+  "ggml-org/llama.cpp": {
+    "tag": "v1.0.0",
+    "url": "https://github.com/ggml-org/llama.cpp/releases/tag/v1.0.0",
+    "published_at": "2026-11-13T10:20:19Z"
+  },
+  "ollama/ollama": {
+    "tag": "v0.40.16",
+    "url": "https://github.com/ollama/ollama/releases/tag/v0.40.16",
+    "published_at": "2026-11-09T18:21:19Z"
+  },
+  "ml-explore/mlx-lm": {
+    "tag": "v0.32.2",
+    "url": "https://github.com/ml-explore/mlx-lm/releases/tag/v0.32.2",
+    "published_at": "2026-10-16T02:49:02Z"
+  }
+}
