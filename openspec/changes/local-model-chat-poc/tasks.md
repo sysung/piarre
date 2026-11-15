@@ -69,12 +69,12 @@ Every child uses enhancement and exactly one triage label. Provisional work star
   - Contract: [poc-delivery](specs/poc-delivery/spec.md); [verification](design.md#verification-plan).
 
 - [ ] 0.5 Inventory runtime and model prerequisites. Verify using the steps below.
-  - Description: Record exact artifacts, licenses, formats and compatibility.
+  - Description: Inventory pinned artifacts, licenses, formats, documented compatibility and unresolved prerequisites.
   - Value: Avoid spending implementation effort on unsupported artifacts.
   - Parent: S1. Blocked by: none.
   - Human verification:
-    1. Read exact versions, licenses, formats, sizes, parameter counts, and compatibility evidence.
-    2. List missing prerequisites without installing.
+    1. Trace artifact identities, versions, licenses, formats, sizes, published parameter counts and documented support to sources; mark unknowns explicitly.
+    2. Assign every unresolved prerequisite to its consuming task. Inventory completion requires no installation, live qualification or benchmark results.
   - Excludes: model scoring and chat implementation; only this task's approved preparation scope.
   - Contract: [poc-delivery](specs/poc-delivery/spec.md); [verification](design.md#verification-plan).
 
@@ -83,7 +83,7 @@ Every child uses enhancement and exactly one triage label. Provisional work star
   - Value: Keep the experiment separate from daily work.
   - Parent: S1. Blocked by: 0.5.
   - Human verification:
-    1. Review mounts, user, native-server permissions, management routes, egress, cache paths, and permitted downloads.
+    1. Review mounts, user, native-server permissions, management routes, egress, cache paths, and permitted downloads. Resolve artifact/license uncertainties and pin installation assets before approval.
     2. Record approval.
   - Excludes: model scoring and chat implementation; only this task's approved preparation scope.
   - Contract: [poc-delivery](specs/poc-delivery/spec.md); [verification](design.md#verification-plan).
@@ -99,7 +99,7 @@ Every child uses enhancement and exactly one triage label. Provisional work star
   - Contract: [poc-delivery](specs/poc-delivery/spec.md); [verification](design.md#verification-plan).
 
 - [ ] 0.8 Freeze measurement and evaluation protocol. Verify using the steps below.
-  - Description: Pin workloads, limits, scoring and measurement methods.
+  - Description: Pin workloads, limits, scoring and measurement methods for published configurations; disclose precision-layout differences and unknowns.
   - Value: Make comparisons explainable and repeatable.
   - Parent: S2. Blocked by: 0.5, 0.6.
   - Human verification:
@@ -145,7 +145,7 @@ Every child uses enhancement and exactly one triage label. Provisional work star
   - Value: Establish the smallest working local route.
   - Parent: S3. Blocked by: 0.11.
   - Human verification:
-    1. Verify approved artifact identity, storage and startup/stop procedure.
+    1. Verify approved artifact identity, storage and startup/stop procedure; record the actual runtime/backend identity.
     2. Use synthetic data only until the live-route gate passes.
   - Excludes: Rig chat features, harness tools and unapproved experiment expansion.
   - Contract: [isolated-local-inference](specs/isolated-local-inference/spec.md); [verification](design.md#verification-plan).
@@ -155,7 +155,7 @@ Every child uses enhancement and exactly one triage label. Provisional work star
   - Value: Prevent measurements on an unapproved access path.
   - Parent: S3. Blocked by: 1.1.
   - Human verification:
-    1. Check actual server permissions, listening routes and denied management/network operations.
+    1. Check actual server permissions, listening routes, model execution compatibility and denied management/network operations.
     2. Record pass/fail/unknown before timing.
   - Excludes: Rig chat features, harness tools and unapproved experiment expansion.
   - Contract: [isolated-local-inference](specs/isolated-local-inference/spec.md); [verification](design.md#verification-plan).
@@ -166,7 +166,7 @@ Every child uses enhancement and exactly one triage label. Provisional work star
   - Parent: S3. Blocked by: 1.2.
   - Human verification:
     1. Repeat the frozen workload for each approved configuration after live-route qualification.
-    2. Record eligible, excluded or unknown per context tier.
+    2. Record loaded text-only components and memory accounting; mark eligible, excluded or unknown per context tier.
   - Excludes: Rig chat features, harness tools and unapproved experiment expansion.
   - Contract: [isolated-local-inference](specs/isolated-local-inference/spec.md); [verification](design.md#verification-plan).
 
@@ -175,7 +175,7 @@ Every child uses enhancement and exactly one triage label. Provisional work star
   - Value: Choose the local serving configuration from measurements.
   - Parent: S3. Blocked by: 1.3.
   - Human verification:
-    1. Compare eligible common-artifact runtime profiles.
+    1. Compare eligible common-artifact runtime profiles. Start with DMR’s llama.cpp backend; a standalone llama.cpp profile must answer a concrete compatibility, configuration or performance question.
     2. Record unsupported configurations without blocking other eligible candidates.
   - Excludes: Rig chat features, harness tools and unapproved experiment expansion.
   - Contract: [inference-evaluation](specs/inference-evaluation/spec.md); [verification](design.md#verification-plan).
@@ -191,12 +191,12 @@ Every child uses enhancement and exactly one triage label. Provisional work star
   - Contract: [inference-evaluation](specs/inference-evaluation/spec.md); [verification](design.md#verification-plan).
 
 - [ ] 1.6 Evaluate the eligible small-model cohort. Verify using the steps below.
-  - Description: Score eligible models on the frozen public task slice.
+  - Description: Score eligible published model configurations on the frozen public task slice; do not attribute all differences to source-model quality.
   - Value: Choose a model from quality and speed evidence.
   - Parent: S4. Blocked by: 1.4, 1.5.
   - Human verification:
     1. Score eligible candidates with frozen quality budgets in the qualified evaluator.
-    2. Retain all exclusions and failed attempts.
+    2. Retain all exclusions, failed attempts and known or unknown quantization-layout differences; matching labels do not prove equivalent precision.
   - Excludes: Rig chat features, harness tools and unapproved experiment expansion.
   - Contract: [inference-evaluation](specs/inference-evaluation/spec.md); [verification](design.md#verification-plan).
 
@@ -312,7 +312,7 @@ Every child uses enhancement and exactly one triage label. Provisional work star
 - Failure of the baseline does not prevent trying other entries in the bounded approved inventory. If none qualify, 1.7 records no-go and 2.1 remains blocked despite the closed native dependency.
 - 2.1 requires a positive selection ID from 1.7 with qualified route, memory and evaluator evidence. 3.1 requires passing final Compose qualification from 2.6. Put these predicates in the issue briefs and Ready transition review.
 - 3.2 can complete with evidence that no retest is needed. 3.3 may close accepted or rejected; the decision must be explicit. Closure alone does not mean acceptance.
-- 0.5 and 0.8 provide exact versions, candidates, commands and budgets. Downstream briefs stay provisional until these inputs exist. New tests/verifiers need the authorship authorization described in design.
+- 0.5 records pinned candidates, documented support and assigned unknowns. Artifact/license/download prerequisites belong to 0.6 before provisioning approval; actual backend identity and live compatibility belong to 1.1/1.2, and loaded-component/memory evidence to 1.3. 0.8 freezes commands, budgets and the published-configuration comparison policy. Inventory completion does not qualify a candidate. Conversion requires a separately reviewed follow-up, starting with one checkpoint. Downstream briefs stay provisional until these inputs exist. New tests/verifiers need the authorship authorization described in design.
 
 ## Workflow follow-up
 

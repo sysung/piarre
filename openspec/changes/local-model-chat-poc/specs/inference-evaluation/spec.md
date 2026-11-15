@@ -31,3 +31,14 @@ Generated code SHALL execute only in a qualified disposable evaluator with no ho
 #### Scenario: Evaluator qualification fails
 - **WHEN** a safe synthetic limit or access check fails
 - **THEN** generated-code scoring remains blocked and the failure is recorded
+
+### Requirement: Compare published configurations first
+The initial model comparison SHALL use pinned published configurations and disclose known quantization layouts, conversion details and unknowns. Reports SHALL NOT attribute all observed differences to source-model quality. A common conversion pipeline SHALL require a separately reviewed follow-up tied to a concrete selection or comparison need.
+
+#### Scenario: Matching quantization labels
+- **WHEN** two artifacts share a Q4_K_M label but their precision layouts differ or remain unknown
+- **THEN** the report identifies that limitation and does not claim equivalent quantization
+
+#### Scenario: Conversion could resolve a selection problem
+- **WHEN** a suitable published artifact is unavailable, a suspected conversion defect affects selection, or controlled source-model comparison becomes necessary
+- **THEN** a separate conversion task is reviewed, beginning with one checkpoint before any cohort-wide expansion

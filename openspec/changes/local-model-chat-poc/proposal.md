@@ -10,6 +10,7 @@ Piarre needs a small experiment that establishes whether a local model can suppo
 - Deliver M0 preparation and isolation, M1 local inference evaluation, M2 minimal Rig chat, and M3 human acceptance. M0 includes drafting and publishing the complete M1–M3 backlog after review.
 - Use Rustyline for terminal input, Rig for session-local conversation routing, and a container for the harness. Model output is inert text; this PoC has no execution tools.
 - Qualify a native Apple Silicon inference endpoint. Docker Model Runner with llama.cpp is the initial hypothesis; Ollama, direct llama.cpp, and MLX remain alternatives to evaluate, not promised integrations.
+- Evaluate pinned published model configurations first. A common conversion pipeline is outside the initial PoC unless a reviewed follow-up establishes its need.
 - Measure runtime performance separately from model quality. Require less than 8 GB of total serving memory for qualifying local configurations.
 - Organize approved GitHub work by milestone, user-story parent, small sub-issues, and native dependencies in Project 8. Keep implementation completion separate from user acceptance.
 

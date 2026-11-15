@@ -27,7 +27,7 @@ M0 is a pairing checkpoint with the maintainer. Future tickets are placeholders 
 
 ### D2. Keep inference separate from the harness
 
-Compose manages the harness container and declared model dependency. For Docker Model Runner on macOS, the inference engine executes natively under its documented sandbox, not inside the Linux container. Start with its llama.cpp backend only if the exact model and isolation checks pass. Keep the harness endpoint configurable so native Ollama, direct llama.cpp, or MLX can be evaluated without rewriting chat.
+Compose manages the harness container and declared model dependency. For Docker Model Runner on macOS, the inference engine executes natively under its documented sandbox, not inside the Linux container. Start with its llama.cpp backend only if the exact model and isolation checks pass. Keep the harness endpoint configurable so native Ollama, direct llama.cpp, or MLX can be evaluated without rewriting chat. DMR already supplies an inference backend; a separate llama.cpp installation is not required for the initial setup. Task 1.4 retains runtime comparison. Adding standalone llama.cpp requires a concrete compatibility, configuration or performance question and an approved comparison profile.
 
 ```mermaid
 flowchart LR
@@ -61,7 +61,11 @@ The fixed-input file must be explicitly mounted read-only from a dedicated input
 
 ### D4. Qualification before ranking
 
-M0 inventories exact checkpoints for Qwen3.5-4B, FrogNano, Nanbeige, Nemotron Nano 4B, and MiniCPM. Names are research candidates, not verified compatibility promises. Record total loaded parameters, excluded vision weights, licenses, artifact provenance, and quantization. Smaller parameter classes are separate cohorts. Additional candidates require evidence and a bounded update to the inventory.
+M0 inventories exact checkpoints for Qwen3.5-4B, FrogNano, Nanbeige, Nemotron Nano 4B, and MiniCPM. Names are research candidates, not verified compatibility promises. Record published parameter counts, known vision components, licenses, artifact provenance, quantization and documented compatibility. Mark unknowns explicitly and assign each to the task that needs the answer. Task 0.5 completes with a traceable inventory and assigned follow-ups, not successful installation or live qualification. Resolve artifact identity, license and download uncertainties in 0.6 before provisioning approval; establish actual backend identity and execution compatibility in 1.1/1.2, then loaded components and memory accounting in 1.3 before ranking. Smaller parameter classes are separate cohorts. Additional candidates require evidence and a bounded update to the inventory.
+
+Use pinned published configurations for the initial model comparison. Disclose known precision layouts, converter/calibration details and unknowns. Matching Q4_K_M labels do not establish equivalent layouts. Results compare complete published configurations; do not attribute all differences to source-model quality.
+
+A common conversion pipeline is not an initial prerequisite. Add a separately reviewed conversion task only when no suitable published artifact exists, a suspected conversion defect affects selection, or controlled source-model comparison becomes necessary. Start with a published-versus-rebuilt comparison of one checkpoint. A common recipe still requires architecture-specific handling and does not guarantee equal accuracy loss.
 
 Proposed initial measurement defaults: concurrency one, 4-bit cohort where supported, 4K and 8K context workloads, fixed synthetic prompts, one cold start and five warm repetitions, and a 256-token output ceiling for timing only. Quality evaluation has a separately frozen output/reasoning budget and timeout sufficient for its tasks; never reuse the timing cap by accident. Freeze actual settings and task IDs before timed runs; report prompt token counts, cache state, first-token latency, generation tokens/sec, wall time, p50/range, and errors. Five runs are a pilot signal, not a statistical superiority claim. Record thermals/power mode and background activity. Define first-token and generation timing boundaries, cache reset, reasoning-token accounting, and exact input/output reservation for each context tier. A 4K qualification does not establish 8K support. Freeze candidate count and total experiment budget in M0. Fast is a measured comparison in M1; personal responsiveness is judged in M3, without an invented latency target.
 
@@ -111,6 +115,7 @@ Candidate deletion groups: `apps/**`, `packages/**`, `test/**`, `scripts/**`, `c
 
 | Gate | Human action | Expected evidence |
 |---|---|---|
+| Research inventory | Inspect pinned sources, known limits and follow-up owners | Unknowns are explicit and assigned; inventory completion does not qualify any candidate |
 | Recovery | Open the recovery revision in a separate checkout | Old tracked source is recoverable without altering personal state |
 | Reset | Compare approved manifest with diff; inspect workflows | Only approved legacy paths removed; no VSIX publishing path remains |
 | Isolation | Inspect mounts/user/network; probe synthetic denied paths and endpoints | Personal resources and unauthorized routes unavailable; failures block qualification |
