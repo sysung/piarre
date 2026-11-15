@@ -31,3 +31,10 @@ Closing a prerequisite SHALL NOT substitute for a qualifying outcome. M2 SHALL r
 #### Scenario: Selection ends with no qualifying model
 - **WHEN** M1 records no-go and closes its research ticket
 - **THEN** M2 remains blocked until a separately reviewed positive qualification exists
+
+### Requirement: Separate inventory from qualification
+Research completion SHALL require a traceable inventory of artifacts, documented support and unresolved prerequisites with assigned follow-up tasks. It SHALL NOT require successful installation, live qualification or benchmark results. Unresolved prerequisites SHALL block the operations that depend on them; inventory completion SHALL NOT waive provisioning approval or qualification gates.
+
+#### Scenario: Runtime compatibility remains unverified
+- **WHEN** the inventory documents available evidence and assigns live compatibility checks to the relevant delivery task
+- **THEN** the inventory can complete while the candidate remains unqualified
