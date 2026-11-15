@@ -68,7 +68,7 @@ Every child uses enhancement and exactly one triage label. Provisional work star
   - Excludes: model scoring and chat implementation; only this task's approved preparation scope.
   - Contract: [poc-delivery](specs/poc-delivery/spec.md); [verification](design.md#verification-plan).
 
-- [ ] 0.5 Inventory runtime and model prerequisites. Verify using the steps below.
+- [x] 0.5 Inventory runtime and model prerequisites. Verify using the steps below.
   - Description: Inventory pinned artifacts, licenses, formats, documented compatibility and unresolved prerequisites.
   - Value: Avoid spending implementation effort on unsupported artifacts.
   - Parent: S1. Blocked by: none.

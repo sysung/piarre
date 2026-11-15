@@ -1,6 +1,6 @@
 # Prerequisite inventory
 
-Status: task 0.5 is in progress. No installation or model download is approved by this inventory.
+Status: task 0.5 inventory complete; delivery review is in PR #169. No installation or model download is approved by this inventory.
 
 Parameter counts use billions (B), rounded to one decimal place. Sizes use decimal GB, rounded to two decimals. Exact values remain in the JSON metadata. The serving limit remains strictly below 8 GB.
 
@@ -48,7 +48,7 @@ For text-only runs, do not download or load vision projectors. Qwen and FrogNano
 
 | Runtime | Candidate version | Benefit | Prerequisites and limitations |
 |---|---|---|---|
-| Docker Model Runner | Installed 1.2.9 | Existing installation and Compose integration; native Apple Silicon inference | Identify its exact embedded llama.cpp build. Its unauthenticated API includes management operations; restrict the harness to inference routes and qualify native process access. |
+| Docker Model Runner | Installed 1.2.9 | Existing installation and Compose integration; native Apple Silicon inference | Observed backend: b9879-metal, commit 72874f5; recheck before execution. Its unauthenticated API includes management operations; restrict the harness to inference routes and qualify native process access. |
 | Direct llama.cpp | v1.0.0 | Direct GGUF control and explicit backend settings; useful same-file reference | Obtain a pinned arm64 binary or build with CMake and an Apple toolchain. Requires an approved native-process confinement profile. |
 | Ollama | v0.40.16 | Convenient local lifecycle and GGUF import | Additional installation; imported artifact, template and decoding settings must match. Model management routes require restriction. No cloud fallback. |
 | MLX-LM | v0.32.2 | Apple-oriented alternative worth a separate experiment | Python environment and MLX-format artifact. This is a whole-stack comparison, not a same-GGUF runtime comparison. No MLX artifact is selected for download yet. |
@@ -63,7 +63,7 @@ Sources: [DMR architecture and access](https://docs.docker.com/ai/model-runner/)
 
 The [NVIDIA license](https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-nemotron-open-model-license/) permits use and derivatives subject to its conditions. Redistribution requires the license and applicable notices; trademark permission is limited. It also includes compliance, warranty and liability provisions. Keep the license with the pinned artifact. This PoC proposes local evaluation, not redistribution. Maintainer review of the actual license remains part of provisioning approval.
 
-FrogNano's source/conversion metadata disagree. Keep both recorded and do not replace upstream obligations with the conversion card's MIT label. The other inspected source metadata uses Apache-2.0. No licensing uncertainty is treated as approval.
+FrogNano's source/conversion metadata disagree. Keep both recorded and do not replace upstream obligations with the conversion card's MIT label. Nemotron GGUF metadata names an FP8 base while the source inventory records BF16. Treat their exact derivation as unresolved in task 0.6; do not assume conversion directly from the inventoried BF16 checkpoint. The other inspected source metadata uses Apache-2.0. No licensing uncertainty is treated as approval.
 
 ## Approved comparison policy
 
@@ -73,9 +73,15 @@ Start with pinned published configurations. Compare practical results and disclo
 
 | Open prerequisite | Owning task | Must resolve before |
 |---|---|---|
-| FrogNano license discrepancy, artifact provenance and approved download identities/sizes; installation asset pins | 0.6 / #144 | Provisioning approval |
-| Actual DMR backend identity and model execution compatibility | 1.1 / #150 and 1.2 / #151 | Live-route qualification and measurement |
+| FrogNano license discrepancy, Nemotron FP8/BF16 provenance discrepancy, artifact provenance and approved download identities/sizes; installation asset pins | 0.6 / #144 | Provisioning approval |
+| Recheck recorded DMR backend identity and establish model execution compatibility | 1.1 / #150 and 1.2 / #151 | Live-route qualification and measurement |
 | Loaded text-only components and total memory accounting | 1.3 / #152 | Candidate eligibility and ranking |
 | Comparison settings, cohort rules, precision-layout disclosures and unknowns | 0.8 / #146 | Timed or scored runs |
 
 Task 0.5 checks that findings are traceable and unresolved prerequisites have owners. It does not perform these later operations or require their successful results. Unresolved prerequisites still block their dependent operations. No model execution or benchmark has occurred.
+
+## Inventory verification
+
+All five quantized entries have fixed repository revisions, artifact paths, exact sizes and SHA-256 hashes; metadata sizes agree with the recorded LFS sizes. Sources and documented compatibility limits are linked above. Every open prerequisite has a consuming task. These checks complete inventory acceptance only.
+
+Read-only `docker model status` reported llama.cpp `b9879-metal`, commit `72874f5`, backend digest `sha256:b70706f473b4043ca3e0c32704a7fda3412b83bceef0564684187b8011230de8`. Other listed backends were not installed. A running backend does not establish compatibility with any shortlisted model.
