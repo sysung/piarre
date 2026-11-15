@@ -2,13 +2,13 @@
 
 Piarre is a local-model experiment: can a small model support useful conversation through a Rust Rig harness?
 
-The project is in preparation. The previous VS Code application has been removed from this branch. The new chat executable is not implemented yet.
+The project is starting local inference. The previous VS Code application has been removed from this branch. The new chat executable is not implemented yet.
 
 ## Planned experience
 
 Use Rustyline to type messages into a containerized Rig harness. The harness calls a separately provisioned local inference server and streams plain text back. It has no shell tools, repository access or persistent chat history by default.
 
-Runtime and model choices remain subject to compatibility, isolation, memory and performance checks on an M3 Pro Mac. No model is qualified yet.
+Start with [local model setup](docs/local-model-setup.md). Try real configurations and record their behavior; benchmark scores and memory targets do not control admission. After the user tries chat, scoped file tools will operate inside a disposable Linux workspace.
 
 ## Follow the work
 
@@ -17,7 +17,7 @@ Runtime and model choices remain subject to compatibility, isolation, memory and
 - [GitHub Project](https://github.com/users/sysung/projects/8)
 - [Documentation workflow](docs/workflow.md)
 
-M0 prepares the environment and backlog. M1 evaluates local inference. M2 builds minimal chat. M3 records human acceptance or rejection.
+M0 prepares the environment and backlog. M1 establishes a real local response. M2 builds minimal chat. M3 records human acceptance or rejection.
 
 ## Recover the old version
 

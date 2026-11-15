@@ -87,7 +87,7 @@ Approved revision: 2026-11-15. Real model first; user chat trial before workspac
 
 ## 1. M1 Running a local model
 
-- [ ] 1.1 Provision the first real local model. Verify using the human steps below.
+- [x] 1.1 Provision the first real local model. Verify using the human steps below.
   - Description: Provision the first real local model.
   - Value: Make actual inference available.
   - Parent: S3. Blocked by: 0.11.
