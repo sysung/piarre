@@ -1,8 +1,10 @@
 ## Agent skills
 
+Reusable Matt Pocock skills come from the globally installed plugin. The documents below configure those skills for this project.
+
 ### Issue tracker
 
-Track work in GitHub Issues for `sysung/piarre`. See [Issue tracker](docs/agents/issue-tracker.md).
+Before reading, publishing, or implementing tickets, read [Issue tracker](docs/agents/issue-tracker.md) for `sysung/piarre`.
 
 ### Triage labels
 
@@ -10,4 +12,4 @@ Use the default Matt Pocock triage labels. See [Triage labels](docs/agents/triag
 
 ### Domain docs
 
-Use OpenSpec for requirements and design decisions. See [Domain docs](docs/agents/domain.md).
+Before changing requirements, terminology, or design decisions, read [Domain docs](docs/agents/domain.md) for the OpenSpec mapping.
