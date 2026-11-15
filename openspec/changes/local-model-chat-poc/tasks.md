@@ -48,7 +48,7 @@ Every child uses enhancement and exactly one triage label. Provisional work star
   - Excludes: model scoring and chat implementation; only this task's approved preparation scope.
   - Contract: [poc-delivery](specs/poc-delivery/spec.md); [verification](design.md#verification-plan).
 
-- [ ] 0.3 Remove approved legacy code and release machinery. Verify using the steps below.
+- [x] 0.3 Remove approved legacy code and release machinery. Verify using the steps below.
   - Description: Delete only approved paths and retire their release jobs.
   - Value: Give the PoC a clean starting point.
   - Parent: S0. Blocked by: 0.2.
@@ -58,7 +58,7 @@ Every child uses enhancement and exactly one triage label. Provisional work star
   - Excludes: model scoring and chat implementation; only this task's approved preparation scope.
   - Contract: [poc-delivery](specs/poc-delivery/spec.md); [verification](design.md#verification-plan).
 
-- [ ] 0.4 Record retained and retired specification scope. Verify using the steps below.
+- [x] 0.4 Record retained and retired specification scope. Verify using the steps below.
   - Description: Document which legacy contracts are retired or replaced.
   - Value: Prevent agents from following obsolete product requirements.
   - Parent: S0. Blocked by: 0.3.
