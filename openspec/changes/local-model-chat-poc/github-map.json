@@ -205,6 +205,11 @@
       "number": 177,
       "id": 6409934845,
       "url": "https://github.com/sysung/piarre/issues/177"
+    },
+    "2.12": {
+      "number": 182,
+      "url": "https://github.com/sysung/piarre/issues/182",
+      "id": 6412244009
     }
   },
   "items": {
@@ -247,6 +252,7 @@
     "2.8": "PVTI_lAHOAPOzcc4BpCmDzhI-ePU",
     "2.9": "PVTI_lAHOAPOzcc4BpCmDzhI-eRE",
     "2.10": "PVTI_lAHOAPOzcc4BpCmDzhI-eSk",
-    "2.11": "PVTI_lAHOAPOzcc4BpCmDzhI-eUg"
+    "2.11": "PVTI_lAHOAPOzcc4BpCmDzhI-eUg",
+    "2.12": "PVTI_lAHOAPOzcc4BpCmDzhJA0BA"
   }
 }
