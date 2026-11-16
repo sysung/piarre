@@ -6,3 +6,11 @@ results/
 .env.*
 !.env.example
 .DS_Store
+node_modules/
+dist/
+dist-test/
+dist-package/
+.vscode-test/
+*.tsbuildinfo
+*.vsix
+coverage/
