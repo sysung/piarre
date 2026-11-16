@@ -35,6 +35,6 @@ Weights are stored by DMR, outside the Git repository and the future agent works
 
 ## Human verification and next step
 
-Follow [local model setup](../../../docs/local-model-setup.md) to inspect, load and unload the model. Expect it to appear only while loaded, while remaining installed afterward.
+Follow the [README](../../../README.md) to install and use the model. Unloading releases serving memory while keeping the model installed.
 
 This verifies provisioning and model load/unload only. No prompt was submitted, no response quality or performance was measured, and no Rig application or agent workspace exists yet. [Issue #151](https://github.com/sysung/piarre/issues/151) records the next real prompt and API observation. Task 1.1 does not imply tasks 1.2 or 1.7 are complete.
