@@ -124,7 +124,7 @@ Approved revision: 2026-11-15. Real model first; user chat trial before workspac
   - Human verification: Edit input and send two related turns; restart and observe fresh session history.
   - Contract: [design and verification](design.md#verification-plan).
 
-- [ ] 2.3 Stream and safely render responses. Verify using the human steps below.
+- [x] 2.3 Stream and safely render responses. Verify using the human steps below.
   - Description: Stream and safely render responses.
   - Value: Show replies as they arrive without terminal side effects.
   - Parent: S5. Blocked by: 2.2.

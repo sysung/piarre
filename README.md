@@ -36,7 +36,7 @@ For an interactive conversation:
 docker compose run --rm harness
 ```
 
-Edit your message and press Enter. Use Up/Down to recall input, Ctrl-C to clear input at the prompt, and Ctrl-D on an empty prompt to exit. Follow-up messages include earlier successful turns. History stays in memory; restarting begins a fresh conversation. Replies appear after completion; streaming comes next.
+Edit your message and press Enter. Use Up/Down to recall input, Ctrl-C to clear input at the prompt, and Ctrl-D on an empty prompt to exit. Follow-up messages include earlier successful turns. History stays in memory; restarting begins a fresh conversation. Replies stream as they arrive. Terminal control characters are shown as visible escapes instead of being executed; normal text, tabs, and line breaks are preserved. Thinking display is planned separately.
 
  Rig runs inside Docker; Docker Model Runner serves Qwen separately. No personal folders are mounted into the harness.
 
