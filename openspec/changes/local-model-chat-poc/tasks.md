@@ -117,7 +117,7 @@ Approved revision: 2026-11-15. Real model first; user chat trial before workspac
   - Human verification: Build and launch Rig with Compose against real Qwen; inspect mounts/user and observe the reply. An unavailable endpoint reports an error.
   - Contract: [design and verification](design.md#verification-plan).
 
-- [ ] 2.2 Add Rustyline conversation input. Verify using the human steps below.
+- [x] 2.2 Add Rustyline conversation input. Verify using the human steps below.
   - Description: Add Rustyline conversation input.
   - Value: Let the user hold a conversation.
   - Parent: S5. Blocked by: 2.1.

@@ -1,6 +1,6 @@
 # Piarre
 
-A local-model PoC using a Rust Rig harness. Send one prompt to Qwen and print its response. Interactive chat and file tools are planned.
+A local-model PoC using a Rust Rig harness. Chat with Qwen in a disposable container. File tools are planned.
 
 ## Prerequisites
 
@@ -28,7 +28,17 @@ docker compose build harness
 docker compose run --rm harness "What is 2 + 2? Reply with only the number."
 ```
 
-The verified response is `4`. Each run sends one prompt and exits. Rig runs inside Docker; Docker Model Runner serves Qwen separately. No personal folders are mounted into the harness.
+The verified response is `4`. With a prompt argument, the command answers once and exits.
+
+For an interactive conversation:
+
+```sh
+docker compose run --rm harness
+```
+
+Edit your message and press Enter. Use Up/Down to recall input, Ctrl-C to clear input at the prompt, and Ctrl-D on an empty prompt to exit. Follow-up messages include earlier successful turns. History stays in memory; restarting begins a fresh conversation. Replies appear after completion; streaming comes next.
+
+ Rig runs inside Docker; Docker Model Runner serves Qwen separately. No personal folders are mounted into the harness.
 
 To release model memory after use:
 

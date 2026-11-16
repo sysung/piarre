@@ -2,6 +2,8 @@ services:
   harness:
     build: .
     image: piarre-harness:local
+    stdin_open: true
+    tty: true
     environment:
       PIARRE_ENDPOINT: ${PIARRE_ENDPOINT:-http://model-runner.docker.internal/engines/llama.cpp/v1}
       PIARRE_MODEL: ${PIARRE_MODEL:-piarre/qwen3.5:4b-q4_k_m}
