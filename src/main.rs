@@ -1,17 +1,28 @@
+mod terminal;
+
+use futures_util::StreamExt;
 use rig_core::{
     completion::{CompletionRequest, Message},
     providers::openai::OpenAIConfig,
+    streaming::{Item, StreamEvent},
 };
 use rustyline::{DefaultEditor, error::ReadlineError};
 use serde_json::json;
-use std::{env, error::Error, process::ExitCode, time::Duration};
+use std::{
+    env,
+    error::Error,
+    io::{self, Write},
+    process::ExitCode,
+    time::Duration,
+};
+use terminal::safe_text;
 
 #[tokio::main]
 async fn main() -> ExitCode {
     match run().await {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
-            eprintln!("Request failed: {error}");
+            eprintln!("Request failed: {}", safe_text(&error.to_string()));
             ExitCode::FAILURE
         }
     }
@@ -28,7 +39,11 @@ async fn run() -> Result<(), Box<dyn Error>> {
         .with_base_url(&endpoint)
         .client()
         .chat(&model_name);
-    eprintln!("Model: {model_name}\nEndpoint: {endpoint}");
+    eprintln!(
+        "Model: {}\nEndpoint: {}",
+        safe_text(&model_name),
+        safe_text(&endpoint)
+    );
     let interactive = env::args().len() == 1;
     let mut editor = if interactive {
         Some(DefaultEditor::new()?)
@@ -64,24 +79,53 @@ async fn run() -> Result<(), Box<dyn Error>> {
             .temperature(0.0)
             .max_tokens(128)
             .additional_params(json!({"chat_template_kwargs": {"enable_thinking": false}}));
-        let result: Result<String, Box<dyn Error>> = async {
-            let response = tokio::time::timeout(Duration::from_secs(120), model.call(request))
+        let mut displayed = false;
+        let mut result: Result<String, Box<dyn Error>> = async {
+            let read = async {
+                let mut stream = model.stream(request)?;
+                while let Some(item) = stream.next().await {
+                    if let Item::Event(StreamEvent::Text { text, .. }) = item? {
+                        let safe = safe_text(&text);
+                        if !safe.is_empty() {
+                            let mut stdout = io::stdout().lock();
+                            stdout.write_all(safe.as_bytes())?;
+                            displayed = true;
+                            stdout.flush()?;
+                        }
+                    }
+                }
+                let response = stream.finish().await?;
+                let text = response.text();
+                if text.trim().is_empty() {
+                    return Err("the model returned no text".into());
+                }
+                Ok::<String, Box<dyn Error>>(text)
+            };
+            tokio::time::timeout(Duration::from_secs(120), read)
                 .await
-                .map_err(|_| "local request timed out after 120 seconds; backend work may still be running")??;
-            let text = response.text();
-            if text.trim().is_empty() {
-                return Err("the model returned no text".into());
-            }
-            Ok(text)
+                .map_err(|_| "local request timed out after 120 seconds; backend work may still be running")?
         }
         .await;
+        if displayed {
+            let mut stdout = io::stdout().lock();
+            let separator = stdout.write_all(b"\n").and_then(|_| stdout.flush());
+            if let Err(error) = separator {
+                if result.is_ok() {
+                    result = Err(error.into());
+                }
+            }
+        }
+        if result.is_err() && displayed {
+            eprintln!("Response incomplete; displayed text was not added to conversation history.");
+        }
         match result {
             Ok(text) => {
-                println!("{text}");
                 history.push(Message::user(input));
                 history.push(Message::assistant(text));
             }
-            Err(error) if interactive => eprintln!("Request failed: {error}"),
+            Err(error) if interactive => {
+                eprintln!("Request failed: {}", safe_text(&error.to_string()));
+            }
             Err(error) => return Err(error),
         }
         if !interactive {
