@@ -80,16 +80,16 @@ async fn run() -> Result<(), Box<dyn Error>> {
             .max_tokens(128)
             .additional_params(json!({"chat_template_kwargs": {"enable_thinking": false}}));
         let mut displayed = false;
-        let result: Result<String, Box<dyn Error>> = async {
+        let mut result: Result<String, Box<dyn Error>> = async {
             let read = async {
                 let mut stream = model.stream(request)?;
                 while let Some(item) = stream.next().await {
                     if let Item::Event(StreamEvent::Text { text, .. }) = item? {
                         let safe = safe_text(&text);
                         if !safe.is_empty() {
-                            displayed = true;
                             let mut stdout = io::stdout().lock();
                             stdout.write_all(safe.as_bytes())?;
+                            displayed = true;
                             stdout.flush()?;
                         }
                     }
@@ -107,7 +107,13 @@ async fn run() -> Result<(), Box<dyn Error>> {
         }
         .await;
         if displayed {
-            println!();
+            let mut stdout = io::stdout().lock();
+            let separator = stdout.write_all(b"\n").and_then(|_| stdout.flush());
+            if let Err(error) = separator {
+                if result.is_ok() {
+                    result = Err(error.into());
+                }
+            }
         }
         if result.is_err() && displayed {
             eprintln!("Response incomplete; displayed text was not added to conversation history.");
