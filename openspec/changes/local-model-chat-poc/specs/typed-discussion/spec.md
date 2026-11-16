@@ -37,3 +37,18 @@ Tools SHALL reject paths outside the workspace, traversal and symlink escapes, n
 #### Scenario: Request an outside path
 - **WHEN** a tool request targets a path outside the workspace or follows a symlink outside it
 - **THEN** the operation fails without changing the target
+
+### Requirement: Show optional model-provided reasoning
+Chat SHALL offer a live Thinking section separate from the Answer when the configured local model/runtime exposes reasoning. The user SHALL be able to hide the Thinking display. Hiding text SHALL be distinguished from disabling model reasoning. The application SHALL NOT fabricate reasoning or describe emitted reasoning as a guaranteed account of internal computation. Both streams SHALL use the same safe terminal rendering and honest interrupted/limited-output reporting.
+
+#### Scenario: Observe reasoning before an answer
+- **WHEN** reasoning is enabled on a supported real configuration and the user shows thinking
+- **THEN** emitted reasoning appears incrementally under Thinking before the separately labeled Answer
+
+#### Scenario: Hide reasoning output
+- **WHEN** the user hides thinking
+- **THEN** the answer remains usable and the interface explains that hiding output does not itself disable model reasoning
+
+#### Scenario: Reasoning is unavailable
+- **WHEN** the configured model/runtime does not expose reasoning
+- **THEN** the application reports that limitation and preserves ordinary chat without inventing a thinking stream
