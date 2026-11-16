@@ -1,6 +1,6 @@
 # Conversation input — issue #158
 
-Implemented from master `b0f158d`, after PR #180. Rustyline 19.0.0 provides editable input with in-memory history; file-history support is disabled. Rig 0.46.0 receives earlier successful user/assistant messages in order. A failed turn reports its error without replacing prior conversation. Prompt arguments retain one-shot behavior. Compose enables stdin and a TTY.
+Implemented from master `b0f158d`, after PR #180. Rustyline 19.0.0 provides editable input with in-memory history; file-history support is disabled. Rig 0.46.0 receives earlier successful user/assistant messages in order. A failed turn reports its error without replacing prior conversation. Prompt arguments retain one-shot behavior. The documented `docker compose run` command supplies interactive stdin and terminal allocation without service-level overrides.
 
 ## Observed verification
 
