@@ -101,7 +101,7 @@ Approved revision: 2026-11-15. Real model first; user chat trial before workspac
   - Human verification: Send a simple real prompt; record response or exact failure and endpoint/model settings. No score or memory admission check.
   - Contract: [design and verification](design.md#verification-plan).
 
-- [ ] 1.7 Record the working local configuration. Verify using the human steps below.
+- [x] 1.7 Record the working local configuration. Verify using the human steps below.
   - Description: Record the working local configuration.
   - Value: Give Rig a reproducible starting configuration.
   - Parent: S3. Blocked by: 1.2.
@@ -110,7 +110,7 @@ Approved revision: 2026-11-15. Real model first; user chat trial before workspac
 
 ## 2. M2 Creating the agent harness
 
-- [ ] 2.1 Route a real request through containerized Rig. Verify using the human steps below.
+- [x] 2.1 Route a real request through containerized Rig. Verify using the human steps below.
   - Description: Route a real request through containerized Rig.
   - Value: Prove the integration using the intended environment.
   - Parent: S5. Blocked by: 1.7.

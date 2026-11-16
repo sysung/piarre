@@ -1,28 +1,41 @@
 # Piarre
 
-Piarre is a local-model experiment: can a small model support useful conversation through a Rust Rig harness?
+A local-model PoC using a Rust Rig harness. Send one prompt to Qwen and print its response. Interactive chat and file tools are planned.
 
-The project is starting local inference. The previous VS Code application has been removed from this branch. The new chat executable is not implemented yet.
+## Prerequisites
 
-## Planned experience
+Start Docker Desktop with Model Runner enabled. The current setup is verified on an Apple Silicon Mac. No local Rust installation is needed.
 
-Use Rustyline to type messages into a containerized Rig harness. The harness calls a separately provisioned local inference server and streams plain text back. It has no shell tools, repository access or persistent chat history by default.
+Clone the repository and enter it:
 
-Start with [local model setup](docs/local-model-setup.md). Try real configurations and record their behavior; benchmark scores and memory targets do not control admission. After the user tries chat, scoped file tools will operate inside a disposable Linux workspace.
+```sh
+git clone https://github.com/sysung/piarre.git
+cd piarre
+```
 
-## Follow the work
+Install the model once (about 3.03 GB, plus temporary staging space):
 
-- [Milestones, tasks and verification](openspec/changes/local-model-chat-poc/tasks.md)
-- [Architecture and verification plan](openspec/changes/local-model-chat-poc/design.md)
-- [GitHub Project](https://github.com/users/sysung/projects/8)
-- [Documentation workflow](docs/workflow.md)
+```sh
+sh scripts/install-model.sh
+```
 
-M0 prepares the environment and backlog. M1 establishes a real local response. M2 builds minimal chat. M3 records human acceptance or rejection.
+Skip installation if `piarre/qwen3.5:4b-q4_k_m` is already installed. The installer removes its temporary downloads after success, failure, or interruption. The imported model stays in Docker Model Runner.
 
-## Recover the old version
+## Run
 
-The [recovery branch](https://github.com/sysung/piarre/tree/archive/pre-local-model-poc-3205f75) preserves the old tracked source at `3205f75e82ac7f1d82d9db961638252881cf7e88`. Check it out separately if needed. Cleanup does not migrate or remove legacy user data.
+```sh
+docker compose build harness
+docker compose run --rm harness "What is 2 + 2? Reply with only the number."
+```
 
-## Specification transition
+The verified response is `4`. Each run sends one prompt and exits. Rig runs inside Docker; Docker Model Runner serves Qwen separately. No personal folders are mounted into the harness.
 
-The [active change](openspec/changes/local-model-chat-poc/proposal.md) defines this PoC. The active change holds the proposed requirements until delivery and acceptance. See the [scope mapping](openspec/changes/local-model-chat-poc/spec-scope.md) before implementing requirements.
+To release model memory after use:
+
+```sh
+docker model unload piarre/qwen3.5:4b-q4_k_m
+```
+
+## Project work
+
+[Tasks and verification](openspec/changes/local-model-chat-poc/tasks.md) · [GitHub Project](https://github.com/users/sysung/projects/8)
