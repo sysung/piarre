@@ -1,6 +1,6 @@
 # Set up the first local model
 
-This installs the PoC's Qwen3.5-4B Q4_K_M in Docker Model Runner (DMR). Rig is not built yet. DMR owns model loading and inference; Rig will call it in a later task.
+This installs the PoC's Qwen3.5-4B Q4_K_M in Docker Model Runner (DMR). DMR owns model loading and inference. After setup, [send a request through containerized Rig](rig-request.md).
 
 ## Prerequisite
 
@@ -76,6 +76,6 @@ curl --fail-with-body --show-error --silent \
 
 Inspect `choices[0].message.content` for the answer and `choices[0].finish_reason` for how the response ended. The observed answer was `4` with `stop`. Other prompts or settings may give different results. The template option requests a direct answer without a thinking section for this smoke request.
 
-This endpoint is reachable from the Mac in the observed setup. If connection fails, check `docker model status` and the local API setting rather than substituting a cloud endpoint. Do not use this host `localhost` address inside a container; the container route will be established with Rig.
+This endpoint is reachable from the Mac in the observed setup. If connection fails, check `docker model status` and the local API setting rather than substituting a cloud endpoint. Inside the Rig container, use the Docker Model Runner hostname configured in the [Rig request guide](rig-request.md), since `localhost` refers to the container itself.
 
 Unload after use with `docker model unload piarre/qwen3.5:4b-q4_k_m`. See the [actual request record](../openspec/changes/local-model-chat-poc/local-inference.md) for settings, evidence and limits.
