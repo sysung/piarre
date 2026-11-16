@@ -2,7 +2,12 @@
 # Install the pinned Qwen model into Docker Model Runner.
 (
   set -eu
+  docker model status
   staging=$(mktemp -d "${TMPDIR:-/tmp}/piarre-qwen.XXXXXX")
+  trap 'rm -rf -- "$staging"' 0
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+  trap 'exit 129' HUP
   printf 'Staging: %s\n' "$staging"
   curl --fail --location --retry 2 \
     'https://huggingface.co/ggml-org/Qwen3.5-4B-GGUF/resolve/8d43d974efc48399cb58957ad49c8b26bf5a109c/Qwen3.5-4B-Q4_K_M.gguf' \
@@ -19,5 +24,5 @@
     --license "$staging/LICENSE" \
     --context-size 4096 \
     piarre/qwen3.5:4b-q4_k_m
-  printf 'Import finished. Temporary source files remain in %s\n' "$staging"
+  printf 'Import finished. Temporary downloads will be removed.\n'
 )

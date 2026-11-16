@@ -19,7 +19,7 @@ Install the model once (about 3.03 GB, plus temporary staging space):
 sh scripts/install-model.sh
 ```
 
-Skip installation if `piarre/qwen3.5:4b-q4_k_m` is already installed. The installer prints its temporary download directory; you can remove that directory after a successful import.
+Skip installation if `piarre/qwen3.5:4b-q4_k_m` is already installed. The installer removes its temporary downloads after success, failure, or interruption. The imported model stays in Docker Model Runner.
 
 ## Run
 
