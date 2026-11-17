@@ -131,11 +131,12 @@ Approved revision: 2026-11-15. Real model first; user chat trial before workspac
   - Human verification: Observe incremental real-model output; inspect filtering of terminal-control sequences, including split chunks.
   - Contract: [design and verification](design.md#verification-plan).
 
-- [ ] 2.5 Handle cancellation and partial outcomes. Verify using the human steps below.
+- [x] 2.5 Handle cancellation and partial outcomes. Verify using the human steps below.
   - Description: Handle cancellation and partial outcomes.
   - Value: Let the user stop a request without confusing partial output with completion.
   - Parent: S5. Blocked by: 2.13.
   - Human verification: Cancel a live response; observe prompt return, no automatic retry and honest backend uncertainty.
+  - Evidence: [Real Qwen cancellation checks](cancellation.md).
   - Contract: [design and verification](design.md#verification-plan).
 
 - [ ] 2.6 Document launch and disposable teardown. Verify using the human steps below.
