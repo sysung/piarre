@@ -4,7 +4,7 @@ Run a real local model while keeping agent file operations inside a disposable L
 ## ADDED Requirements
 
 ### Requirement: Use an explicitly configured local model
-The application SHALL call the operator-configured local endpoint and model. It SHALL NOT silently download weights or fall back to a cloud provider.
+The application SHALL call the operator-configured local endpoint and model. The default Compose configuration and installer SHALL select MiniCPM5-2B; operators MAY override the model. It SHALL NOT silently download weights or fall back to a cloud provider.
 
 #### Scenario: Model unavailable
 - **WHEN** the configured model cannot load or the endpoint cannot be reached

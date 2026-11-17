@@ -186,7 +186,7 @@ Approved revision: 2026-11-15. Real model first; user chat trial before workspac
   - Description: Offer optional live model-provided reasoning with separate Thinking and Answer sections; distinguish hidden output from disabled reasoning.
   - Value: Let the user inspect emitted reasoning and see progress while waiting for an answer.
   - Parent: S5. Blocked by: 2.3. Issue: [#182](https://github.com/sysung/piarre/issues/182).
-  - Human verification: Use real supported Qwen to observe thinking before the answer; hide thinking and retain the answer; report unavailable reasoning while keeping ordinary chat usable. Check filtering across chunks and honest interrupted/limited output. Document controls and observed time/output-limit effects in README.
+  - Human verification: Use the real supported configured model to observe thinking before the answer; hide thinking and retain the answer; report unavailable reasoning while keeping ordinary chat usable. Check filtering across chunks and honest interrupted/limited output. Document controls and observed time/output-limit effects in README.
   - Contract: [typed discussion](specs/typed-discussion/spec.md#requirement-show-optional-model-provided-reasoning); [design and verification](design.md#verification-plan).
 
 - [x] 2.13 Remove harness output caps and request timeout. Verify using the human steps below.

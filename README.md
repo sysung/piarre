@@ -1,10 +1,10 @@
 # Piarre
 
-A local-model PoC using a Rust Rig harness. Chat with Qwen in a disposable container. File tools are planned.
+Piarre is a local-model proof of concept for chatting with MiniCPM5-2B in a disposable Docker container. It uses a Rust Rig harness. File tools and thinking display are planned.
 
-## Prerequisites
+## Set up
 
-Start Docker Desktop with Model Runner enabled. The current setup is verified on an Apple Silicon Mac. No local Rust installation is needed.
+Start Docker Desktop with Model Runner enabled. The current setup has been verified on an Apple Silicon Mac. You do not need a local Rust installation.
 
 Clone the repository and enter it:
 
@@ -13,52 +13,69 @@ git clone https://github.com/sysung/piarre.git
 cd piarre
 ```
 
-Install the model once (about 3.03 GB, plus temporary staging space):
+Install the model once. Allow about 1.56 GB for the model, plus temporary staging space:
 
 ```sh
 sh scripts/install-model.sh
 ```
 
-Skip installation if `piarre/qwen3.5:4b-q4_k_m` is already installed. The installer removes its temporary downloads after success, failure, or interruption. The imported model stays in Docker Model Runner.
+Skip this step if `piarre/minicpm5:2b-q4_k_m` is already installed. The installer removes temporary downloads after success, failure, or interruption. The imported model stays in Docker Model Runner.
 
-## Run
+## Build and try a prompt
 
 ```sh
 docker compose build harness
 docker compose run --rm harness "What is 2 + 2? Reply with only the number."
 ```
 
-The verified response is `4`. With a prompt argument, the command answers once and exits.
+The documented verified response is `4`. When you pass a prompt argument, the command answers once and exits.
 
-For an interactive conversation:
+## Chat interactively
 
 ```sh
 docker compose run --rm harness
 ```
 
-Edit your message and press Enter. Use Up/Down to recall input, Ctrl-C to clear input at the prompt, and Ctrl-D on an empty prompt to exit. Follow-up messages include earlier successful turns. History stays in memory; restarting begins a fresh conversation. Replies stream as they arrive. Terminal control characters are shown as visible escapes instead of being executed; normal text, tabs, and line breaks are preserved. Thinking display is planned separately.
+Type your message and press Enter. Replies stream as they arrive.
 
-Rig runs inside Docker; Docker Model Runner serves Qwen separately. No personal folders are mounted into the harness.
+| Key | Action |
+| --- | --- |
+| Up or Down | Recall earlier input. |
+| Ctrl-C at the prompt | Clear the current input. |
+| Ctrl-C during a response | Cancel the local response and return to the prompt. |
+| Ctrl-D at an empty prompt | Exit chat. |
+
+Follow-up messages include earlier successful turns. Conversation history stays in memory. Restarting begins a fresh conversation.
+
+Cancelling a response leaves the cancelled turn out of history and keeps earlier completed turns. The model server may continue generating after local cancellation. In one-shot mode, cancellation exits with failure.
 
 ## Stop or start fresh
 
-At an empty `You>` prompt, press Ctrl-D to exit. If a response is running, press Ctrl-C first to cancel it, then Ctrl-D at the prompt.
+At an empty `You>` prompt, press Ctrl-D to exit. If a response is running, press Ctrl-C first, then Ctrl-D at the prompt.
 
-The `--rm` option removes the chat container after it exits. Its conversation history and temporary files in `/workspace` and `/tmp` are discarded. To start fresh, run the same command again:
+The `--rm` option removes the chat container after it exits. Conversation history and temporary files in `/workspace` and `/tmp` are discarded. Start a fresh session with:
 
 ```sh
 docker compose run --rm harness
 ```
 
-You do not need to rebuild unless the application or build configuration changed. Exiting chat does not unload Qwen or delete the installed model.
+Rebuild only when the application or build configuration changes. Exiting chat does not unload MiniCPM5-2B or delete the installed model.
 
-Optionally release model memory after use:
+## Release model memory
+
+To release model memory after use:
 
 ```sh
-docker model unload piarre/qwen3.5:4b-q4_k_m
+docker model unload piarre/minicpm5:2b-q4_k_m
 ```
 
-The harness does not set an output-token cap or generation deadline. It uses the configured model/runtime defaults; runtime context and output limits still apply. A runtime-reported cutoff is shown as incomplete. Press Ctrl-C during a response to stop receiving it and return to the chat prompt (or exit with failure in one-shot mode). The cancelled turn is not saved in conversation history; earlier completed turns remain. The model server may still be generating after local cancellation.
+## Runtime behavior and limits
+
+Rig runs inside Docker, while Docker Model Runner serves MiniCPM5-2B separately. No personal folders are mounted into the harness.
+
+The harness does not set an output-token cap or generation deadline. It uses the configured model and runtime defaults. Runtime context and output limits still apply. A runtime-reported cutoff is shown as incomplete.
+
+Terminal control characters appear as visible escapes instead of being executed. Normal text, tabs, and line breaks are preserved.
 
 ## Project work
 
