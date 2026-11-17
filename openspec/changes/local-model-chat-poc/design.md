@@ -6,7 +6,7 @@ The recovery and legacy cleanup are complete. The user approved the smaller real
 
 ## Goals / Non-Goals
 
-**Goals:** real Qwen requests, a small Rust/Rig chat application, a user chat trial, and observable file operations inside one disposable Linux container.
+**Goals:** real local-model requests, a small Rust/Rig chat application, a user chat trial, and observable file operations inside one disposable Linux container.
 
 **Non-Goals:** benchmarks, strict memory admission, retrieval, model compliance, shell or Python execution, persistent memory, default personal workspace access, public multi-user hosting, authentication infrastructure and a custom model-management service.
 
@@ -29,7 +29,7 @@ Board views and later benchmark work remain tracked independently. No benchmark,
 flowchart LR
   U[User terminal] --> H[Rustyline and Rig in Linux container]
   H --> R[Configured local inference server]
-  R --> Q[Real Qwen or another selected local model]
+  R --> Q[MiniCPM5-2B or another selected local model]
   H --> W[Temporary /workspace in the same container]
 ```
 
@@ -41,7 +41,7 @@ No default host mounts, Docker socket, credentials, SSH agent, privileged mode o
 
 Use one compiled Rust binary, Rig and Rustyline with plain streaming. Compose participates in the first Rig slice. Choose the exact documented launch command during implementation; no Python wrapper is required. Preserve roles and in-session conversation; do not persist prompts by default. Use one active turn, ordinary connection/error handling, safe terminal text and prompt cancellation. Remove the hardcoded 128-output-token override and 120-second deadline; omit output-token overrides and total/read timeouts that stop ongoing generation. Use the configured model/runtime defaults rather than substituting a larger arbitrary maximum. Runtime context capacity is unchanged. Long-output management is future work. Report unknown backend cancellation honestly; do not build a universal server-idle protocol. Do not overlap unresolved local file mutations.
 
-Optional thinking display is a separate M2 slice after answer streaming (#159), tracked in #182. Verify reasoning support against the real Qwen/DMR/Rig route before choosing the exact request fields and event handling. Label emitted reasoning as Thinking and final content as Answer; provide a hide option. Hiding display and disabling reasoning are different operations. Do not fabricate reasoning for unsupported configurations or treat emitted text as a faithful internal trace. Reuse safe streaming for both channels, including split control sequences. Preserve honest partial/limited outcomes. Set defaults during implementation and document the controls and observed effects on response time and output limits in README. No persistent reasoning logs or new tool authority are introduced.
+Optional thinking display is a separate M2 slice after answer streaming (#159), tracked in #182. Verify reasoning support against the configured model/DMR/Rig route before choosing the exact request fields and event handling. Label emitted reasoning as Thinking and final content as Answer; provide a hide option. Hiding display and disabling reasoning are different operations. Do not fabricate reasoning for unsupported configurations or treat emitted text as a faithful internal trace. Reuse safe streaming for both channels, including split control sequences. Preserve honest partial/limited outcomes. Set defaults during implementation and document the controls and observed effects on response time and output limits in README. No persistent reasoning logs or new tool authority are introduced.
 
 After the user tries chat, add explicit workspace-tool mode with list/read/create/edit/delete. The real model proposes structured calls and Rust handlers execute them. File operations resolve beneath `/workspace`, reject traversal/symlink escapes and non-regular targets, and have file/output/step bounds. No shell, arbitrary HTTP, generated-code execution, workspace-root deletion or recursive directory deletion. Verify files independently of the model's narration. On cancellation, preserve a truthful record of completed operations.
 
@@ -49,7 +49,7 @@ The workspace is container-owned temporary storage, discarded on teardown. A fut
 
 ### D4. Observe a few models, do not certify them
 
-Start with the published Qwen artifact in [prerequisites](prerequisites.md). Record runtime/model identities and observations manually. Verify an expected download identity before calling it the pinned artifact. Let operators select other installed local models without a whitelist, quality score, exact tokenizer or memory gate. Unsupported format, load failure and tool-call failure are observed technical limits; they do not require a compliance subsystem. Chat may remain useful when tools fail.
+The user selected MiniCPM5-2B as the default on 2026-11-17 following the [model observations](model-observations.md). Use the pinned published MiniCPM artifact recorded there; the earlier Qwen inventory and completed checks remain historical evidence. This changes the default configuration, not Qwen behavior or model admission policy. Record runtime/model identities and observations manually. Verify an expected download identity before calling it the pinned artifact. Let operators select other installed local models without a whitelist, quality score, exact tokenizer or memory gate. Unsupported format, load failure and tool-call failure are observed technical limits; they do not require a compliance subsystem. Chat may remain useful when tools fail.
 
 Benchmarks, cohorts, context retrieval, exact serving-memory attribution, runtime rankings, common conversion and closed-model comparison are later work. Preserve the existing research without making it a prerequisite. New downloads are deliberate operator actions rather than model-generated instructions.
 
