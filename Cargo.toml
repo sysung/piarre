@@ -9,4 +9,4 @@ futures-util = "0.3"
 rig-core = { version = "=0.46.0", features = ["reqwest"] }
 rustyline = { version = "=19.0.0", default-features = false }
 serde_json = "1"
-tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
