@@ -46,6 +46,8 @@ To release model memory after use:
 docker model unload piarre/qwen3.5:4b-q4_k_m
 ```
 
+The harness does not set an output-token cap or generation deadline. It uses the configured model/runtime defaults; runtime context and output limits still apply. A runtime-reported cutoff is shown as incomplete. Manual in-chat stopping is planned in #161.
+
 ## Project work
 
 [Tasks and verification](openspec/changes/local-model-chat-poc/tasks.md) · [GitHub Project](https://github.com/users/sysung/projects/8)
