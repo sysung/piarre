@@ -18,3 +18,7 @@ Rejected for this first pass: mandatory Issue Forms, duplicated parent/blocker l
 The migration covers PKM issues #185–198. It reorganizes their existing contracts into the requested six sections, with tracking and authorization notes retained. It does not approve children, change milestones, alter dependency edges, or authorize product implementation. #185 retains its existing conditional approval. Issue edits are live independently of the template PR.
 
 Verification: reviewed both proposals and the synthesis, checked GitHub's documented template/dependency capabilities, checked the diff for whitespace errors, and read back all 14 issue bodies and their tracking metadata after migration. Template activation in the hosted chooser remains a post-merge check because templates are loaded from the default branch.
+
+## Verification refinement
+
+Following an Interrogate review and maintainer feedback, the template adds one Verification section with an Agent Verification Plan and a Human Verification Plan. Acceptance checkboxes have no AC-number prefixes. Agent plans name precise checks and record observed evidence separately from planned work. Human plans use short numbered actions, concrete inputs, and expected observations. Future features explicitly mark commands, fixtures, and report links as pending until the implementation handoff supplies runnable details. No existing approval gate is waived.
