@@ -44,7 +44,7 @@ Artifact identities from the investigation:
 
 ### Verify documentation without changing behavior
 
-During apply, manually check each excerpt and identifier against this snapshot, check relative links, validate OpenSpec, and inspect the scoped diff. Include optional human replay commands in the observation note: `docker compose run --rm harness` for Qwen and `PIARRE_MODEL=piarre/minicpm5:2b-q4_k_m docker compose run --rm harness` for an already installed MiniCPM. Ctrl-D at the prompt ends the session. Reproduction is optional and output may vary; documentation completion does not require reproducing every sentence. No new model downloads or automated verifiers are required.
+During apply, manually check each excerpt and identifier against this snapshot, check relative links, validate OpenSpec, and inspect the scoped diff. Include optional human replay commands in the observation note: `PIARRE_MODEL=piarre/qwen3.5:4b-q4_k_m docker compose run --rm harness` for Qwen and `PIARRE_MODEL=piarre/minicpm5:2b-q4_k_m docker compose run --rm harness` for an already installed MiniCPM. Ctrl-D at the prompt ends the session. Reproduction is optional and output may vary; documentation completion does not require reproducing every sentence. No new model downloads or automated verifiers are required.
 
 ## Risks / Trade-offs
 
@@ -56,3 +56,11 @@ During apply, manually check each excerpt and identifier against this snapshot, 
 ## Migration Plan
 
 Documentation only. Add the observation note and inventory link on apply. Reverting those documentation edits rolls back the change; no runtime migration is needed.
+
+## Accepted limitations, 2026-11-17
+
+The user approved recording the observed downsides and closing #206 without further diagnosis for now. Qwen refused harmless recall and contradicted supplied context. MiniCPM sometimes recalled correctly and sometimes returned an earlier short answer instead of the requested codeword. Earlier formatting instructions influencing later answers is a hypothesis, not an established cause. Nanbeige failed to load on the attempted backend; that is a compatibility observation.
+
+Keep exact dated trials in the existing observation note. Do not generalize these examples to every local model, claim that history transport is fully verified, or promise reliable recall. MiniCPM5-2B remains the default. Accepting these limitations does not accept the entire PoC or weaken workspace isolation.
+
+Apply adds a short README limitations note and records the acceptance decision in the observation note. Check the statements against the existing trials and validate the documentation. No new model run or application-code change is required for this acceptance decision. Archive this change after its documentation task is complete; leave local-model-chat-poc active.

@@ -9,3 +9,7 @@
 
 - [x] 2.1 Link the observation note from the existing PoC prerequisite inventory and qualify historical no-execution wording. Verify the link resolves and historical research remains distinct from the November 17 observations.
 - [x] 2.2 Run `openspec validate document-model-behavior-caveats --strict` and inspect the scoped diff. Verify only the planned OpenSpec documentation and task status changed; exclude existing README edits, source, Compose, dependency, runtime and test changes. Confirm the wording does not claim issue #206 is fixed.
+
+## 3. Record accepted PoC limitations
+
+- [x] 3.1 Record the user acceptance of the observed limitations in the model-observation note and add a short README notice. Preserve dated successes and failures, distinguish hypotheses from established causes, and state that #206 closes without a technical fix. Verify links and strict OpenSpec validation; no application code or new tests.

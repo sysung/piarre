@@ -69,4 +69,16 @@ Ran the updated installer against the real download: the pinned GGUF checksum pa
 
 The configured model was printed as MiniCPM on each launch. Docker build, shell syntax check and strict OpenSpec validation passed. No new tests or verifier scripts were added. Source inspection of Rig 0.46.0 `CompletionRequest::messages` confirms that history is inserted before the current prompt, rather than replacing it. This is source evidence, not a captured wire-request trace.
 
-The original Qwen refusal was absent in the tested MiniCPM reproduction, but other recall answers were wrong. Switching defaults does not establish reliable recall or repair Qwen. Keep #206 open for request-level and direct-runtime investigation. Do not treat these few examples as a benchmark or claim the bug is resolved.
+The original Qwen refusal was absent in the tested MiniCPM reproduction, but other recall answers were wrong. Switching defaults does not establish reliable recall or repair Qwen. At the time of this retest, #206 remained open for request-level and direct-runtime investigation; the subsequent acceptance decision is recorded below. Do not treat these few examples as a benchmark or claim the bug is resolved.
+
+## Accepted PoC limitations, November 17, 2026
+
+The maintainer accepted these observed limitations and approved closing #206 without a technical fix. MiniCPM5-2B remains the default. The dated failures above remain failures; accepting them lets the PoC proceed and does not establish reliable recall or general coding competence.
+
+- Qwen refused harmless codeword requests and contradicted context it quoted.
+- MiniCPM recalled correctly in some trials but returned `OK` or `NONE` incorrectly in others. Earlier formatting instructions influencing later answers is a possible explanation, not a verified cause.
+- Nanbeige could not load on the attempted backend. Import success does not establish inference compatibility.
+
+These observations apply to the tested configurations. They do not establish a universal limitation of local models. Wire-request inspection and a controlled direct-runtime comparison were not completed; the model, template, and integration contributions remain unresolved. Future investigation may reopen #206 when it becomes relevant to an actual workflow.
+
+This decision adds no model admission gate, persistence, benchmark target, or runtime change. It does not waive workspace isolation or constitute final PoC acceptance. Resume launch/teardown review in PR #205, followed by the human chat trial.
