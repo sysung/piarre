@@ -6,12 +6,12 @@ Published planning only. No product code or implementation tasks were completed.
 
 | Stage | Milestone | Parent tracker |
 | --- | --- | --- |
-| K1 | [Project knowledge foundation](https://github.com/sysung/piarre/milestone/5) | [#185](https://github.com/sysung/piarre/issues/185) |
-| K2 | [Useful memory across sessions](https://github.com/sysung/piarre/milestone/6) | [#186](https://github.com/sysung/piarre/issues/186) |
-| K3 | [Adaptive workflow and specifications](https://github.com/sysung/piarre/milestone/7) | [#187](https://github.com/sysung/piarre/issues/187) |
-| K4 | [Collaboration assistance](https://github.com/sysung/piarre/milestone/8) | [#188](https://github.com/sysung/piarre/issues/188) |
-| K5 | [Configurable capabilities](https://github.com/sysung/piarre/milestone/9) | [#189](https://github.com/sysung/piarre/issues/189) |
-| K6 | [Context efficiency evaluation](https://github.com/sysung/piarre/milestone/10) | [#190](https://github.com/sysung/piarre/issues/190) |
+| K1 | [M4 — Project knowledge foundation](https://github.com/sysung/piarre/milestone/5) | [#185](https://github.com/sysung/piarre/issues/185) |
+| K2 | [M5 — Useful memory across sessions](https://github.com/sysung/piarre/milestone/6) | [#186](https://github.com/sysung/piarre/issues/186) |
+| K3 | [M6 — Adaptive workflow and specifications](https://github.com/sysung/piarre/milestone/7) | [#187](https://github.com/sysung/piarre/issues/187) |
+| K4 | [M7 — Collaboration assistance](https://github.com/sysung/piarre/milestone/8) | [#188](https://github.com/sysung/piarre/issues/188) |
+| K5 | [M8 — Configurable capabilities](https://github.com/sysung/piarre/milestone/9) | [#189](https://github.com/sysung/piarre/issues/189) |
+| K6 | [M9 — Context efficiency evaluation](https://github.com/sysung/piarre/milestone/10) | [#190](https://github.com/sysung/piarre/issues/190) |
 
 ## First-change issues
 
