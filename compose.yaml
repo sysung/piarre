@@ -4,7 +4,7 @@ services:
     image: piarre-harness:local
     environment:
       PIARRE_ENDPOINT: ${PIARRE_ENDPOINT:-http://model-runner.docker.internal/engines/llama.cpp/v1}
-      PIARRE_MODEL: ${PIARRE_MODEL:-piarre/qwen3.5:4b-q4_k_m}
+      PIARRE_MODEL: ${PIARRE_MODEL:-piarre/minicpm5:2b-q4_k_m}
     user: "10001:10001"
     read_only: true
     cap_drop: [ALL]

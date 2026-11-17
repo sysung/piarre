@@ -1,6 +1,6 @@
 # Piarre
 
-Piarre is a local-model proof of concept for chatting with Qwen in a disposable Docker container. It uses a Rust Rig harness. File tools and thinking display are planned.
+Piarre is a local-model proof of concept for chatting with MiniCPM5-2B in a disposable Docker container. It uses a Rust Rig harness. File tools and thinking display are planned.
 
 ## Set up
 
@@ -13,13 +13,13 @@ git clone https://github.com/sysung/piarre.git
 cd piarre
 ```
 
-Install the model once. Allow about 3.03 GB for the model, plus temporary staging space:
+Install the model once. Allow about 1.56 GB for the model, plus temporary staging space:
 
 ```sh
 sh scripts/install-model.sh
 ```
 
-Skip this step if `piarre/qwen3.5:4b-q4_k_m` is already installed. The installer removes temporary downloads after success, failure, or interruption. The imported model stays in Docker Model Runner.
+Skip this step if `piarre/minicpm5:2b-q4_k_m` is already installed. The installer removes temporary downloads after success, failure, or interruption. The imported model stays in Docker Model Runner.
 
 ## Build and try a prompt
 
@@ -54,12 +54,12 @@ Cancelling a response leaves the cancelled turn out of history and keeps earlier
 To release model memory after use:
 
 ```sh
-docker model unload piarre/qwen3.5:4b-q4_k_m
+docker model unload piarre/minicpm5:2b-q4_k_m
 ```
 
 ## Runtime behavior and limits
 
-Rig runs inside Docker, while Docker Model Runner serves Qwen separately. No personal folders are mounted into the harness.
+Rig runs inside Docker, while Docker Model Runner serves MiniCPM5-2B separately. No personal folders are mounted into the harness.
 
 The harness does not set an output-token cap or generation deadline. It uses the configured model and runtime defaults. Runtime context and output limits still apply. A runtime-reported cutoff is shown as incomplete.
 

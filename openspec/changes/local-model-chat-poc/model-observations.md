@@ -30,12 +30,12 @@ Artifact identities from the investigation:
 
 ## Optional manual replay
 
-Use the existing installation from the repository directory. This does not download models or change the default. Responses may vary.
+Use the existing installation from the repository directory. This does not download models. MiniCPM5-2B became the default after these historical trials. Responses may vary.
 
 1. Start a fresh Qwen chat:
 
    ```sh
-   docker compose run --rm harness
+   PIARRE_MODEL=piarre/qwen3.5:4b-q4_k_m docker compose run --rm harness
    ```
 
 2. Send `Remember the codeword violet-100`, then `What was the codeword`. Compare the answer with the excerpts above. Press **Ctrl-D at `You>`** to exit.
@@ -50,3 +50,23 @@ Use the existing installation from the repository directory. This does not downl
 Each launch starts an empty harness conversation. Model unloading is not required. Nanbeige produced no answer on the attempted backend; successful package import alone does not establish inference support.
 
 Record future trials separately with their date and configuration. Do not overwrite these historical results or infer a reliability rate from these few examples.
+
+## Default switch and retest, November 17, 2026
+
+The user selected MiniCPM5-2B as the default after PR #207. Branch `codex/206-minicpm-default` starts from master `6cd6d63`. Compose, README and the installer now select `piarre/minicpm5:2b-q4_k_m`. Rig application code is unchanged; temperature remains 0.0, thinking is requested off, and context remains 4096.
+
+Ran the updated installer against the real download: the pinned GGUF checksum passed, import succeeded, and its temporary directory was removed. The GGUF repository declares Apache-2.0 at the pinned revision. The installer packages the standard Apache 2.0 license text from apache.org. The resulting package ID is `442e50cefb402d1450ae6675580707786dff858e89fb7700926c7783af4d71d7`; package metadata differs from the earlier import, while the verified GGUF checksum is unchanged.
+
+| Retest | Observed result |
+|---|---|
+| Exact `Reploy only OK` reproduction, then codeword question | `OK.` then `The codeword you gave me was "violet-742."`; observed before and after installer import |
+| Fresh session, ask for prior codeword or `NONE` | `NONE` |
+| In that same reset-check session, remember `amber-319` with `Reply only OK`, then ask for codeword | `OK`, then incorrectly `NONE` |
+| Separate fresh session, `Remember the codeword violet-742. Reply only OK.`, then codeword question | `OK`, then incorrectly `OK` |
+| Follow-up arithmetic in that session | `7 plus 8` returned `15` |
+| Documented one-shot arithmetic | `2 + 2` returned `4`; exit status 0 |
+| Exit each interactive session | Ctrl-D returned exit status 0 |
+
+The configured model was printed as MiniCPM on each launch. Docker build, shell syntax check and strict OpenSpec validation passed. No new tests or verifier scripts were added. Source inspection of Rig 0.46.0 `CompletionRequest::messages` confirms that history is inserted before the current prompt, rather than replacing it. This is source evidence, not a captured wire-request trace.
+
+The original Qwen refusal was absent in the tested MiniCPM reproduction, but other recall answers were wrong. Switching defaults does not establish reliable recall or repair Qwen. Keep #206 open for request-level and direct-runtime investigation. Do not treat these few examples as a benchmark or claim the bug is resolved.
