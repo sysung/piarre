@@ -26,22 +26,12 @@ labels: needs-triage
 
 - <!-- Adjacent work intentionally excluded. “None identified” is acceptable. -->
 
+## Agent Verification Plan
+
+- <!-- Briefly name the outcome to check, the action or linked procedure, and the expected observation. Link execution evidence when available. -->
+
 ## OpenSpec Contract
 
 - **Source:** <!-- Link the spec/change and section. Say “Pending” with the unresolved question, or “Not applicable” with a short reason. Do not invent a contract. -->
 - **Verification source:** <!-- Link the applicable OpenSpec verification section, if available. -->
 <!-- Preserve explicit acceptance/authorization gates. Proposed requirements are not automatically adopted. Configure parent/children, dependencies, milestone, and project in GitHub; see docs/agents/issue-tracker.md. -->
-
-## Verification
-
-### Agent Verification Plan
-
-- <!-- Name the acceptance outcome, exact action/command or linked procedure, and expected observation. Reuse existing checks; new tests or standalone verifiers require explicit authorization. -->
-- **Results:** <!-- After execution, link observed evidence and relevant revision/configuration. Identify passed, failed, blocked, and unrun checks. A plan is not evidence. -->
-
-### Human Verification Plan
-
-<!-- Provide a short reproducible walkthrough, not “try it and see.” Include the starting state, exact inputs/commands or UI actions, and expected result for each step. Supply runnable details at handoff; mark unknown details pending rather than inventing them. For research, guide the reviewer to specific evidence and the decision needed. If no human check is required, state why; preserve existing human gates. -->
-1. <!-- Setup: open/start the specified version and prepared sample. Include the exact path/link or command. -->
-2. <!-- Action: enter this exact input or take this exact action. Expected: observable result. -->
-3. <!-- Check: take the final action and state what to observe or decide. Explain where to report a mismatch. -->
