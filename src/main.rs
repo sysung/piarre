@@ -19,7 +19,7 @@ use terminal::safe_text;
 #[tokio::main]
 async fn main() -> ExitCode {
     match run().await {
-        Ok(()) => ExitCode::SUCCESS,
+        Ok(status) => status,
         Err(error) => {
             eprintln!("Request failed: {}", safe_text(&error.to_string()));
             ExitCode::FAILURE
@@ -27,7 +27,7 @@ async fn main() -> ExitCode {
     }
 }
 
-async fn run() -> Result<(), Box<dyn Error>> {
+async fn run() -> Result<ExitCode, Box<dyn Error>> {
     let prompt = env::args().skip(1).collect::<Vec<_>>().join(" ");
     let endpoint = env::var("PIARRE_ENDPOINT")?;
     let model_name = env::var("PIARRE_MODEL")?;
@@ -101,13 +101,13 @@ async fn run() -> Result<(), Box<dyn Error>> {
             }
             Ok::<String, Box<dyn Error>>(text)
         };
-        let mut result: Result<String, Box<dyn Error>> = tokio::select! {
+        let mut result: Result<Option<String>, Box<dyn Error>> = tokio::select! {
             biased;
             signal = tokio::signal::ctrl_c() => {
                 signal?;
-                Err("cancelled locally; the model server may still be generating. This turn was not added to conversation history".into())
+                Ok(None)
             }
-            result = response => result,
+            result = response => result.map(Some),
         };
         if displayed {
             let mut stdout = io::stdout().lock();
@@ -122,7 +122,13 @@ async fn run() -> Result<(), Box<dyn Error>> {
             eprintln!("Response incomplete; displayed text was not added to conversation history.");
         }
         match result {
-            Ok(text) => {
+            Ok(None) => {
+                eprintln!("Response cancelled. This turn was not added to conversation history.");
+                if !interactive {
+                    return Ok(ExitCode::FAILURE);
+                }
+            }
+            Ok(Some(text)) => {
                 history.push(Message::user(input));
                 history.push(Message::assistant(text));
             }
@@ -135,5 +141,5 @@ async fn run() -> Result<(), Box<dyn Error>> {
             break;
         }
     }
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }

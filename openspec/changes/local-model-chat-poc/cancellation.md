@@ -20,3 +20,5 @@ Configuration: Docker Model Runner 1.2.9 on Apple Silicon, `piarre/qwen3.5:4b-q4
 The request future competes with Ctrl-C. Cancellation drops the local stream; only successful completed responses enter conversation history. Existing history remains. There is no retry or automatic timeout. The Ctrl-C branch is polled first so output cannot starve cancellation.
 
 These checks establish local cancellation with real Qwen. They do not prove when the native inference server stopped computing. Cancellation before first output was not separately observed. File tools are not implemented, and human PoC acceptance remains pending.
+
+After user feedback, cancellation now prints one notice: `Response cancelled. This turn was not added to conversation history.` It is a distinct outcome rather than a request error. Rebuilt and cancelled a real Qwen one-shot car story: the single notice appeared and exit status remained 1. Backend stop timing remains unverified; the shorter notice makes no backend-stop claim.
