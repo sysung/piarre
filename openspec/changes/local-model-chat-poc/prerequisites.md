@@ -4,6 +4,8 @@ Status: task 0.5 inventory completed in merged PR #169. Historical research belo
 
 Parameter counts use billions (B), rounded to one decimal place. Sizes use decimal GB, rounded to two decimals. Exact values remain in the JSON metadata. The former 8 GB research target is not a model-admission limit.
 
+Later execution evidence: [November 17 model observations](model-observations.md) records Qwen’s refusal, MiniCPM’s recall and Nanbeige’s loading failure. The inventory below describes the earlier research stage.
+
 ## Machine and tools
 
 Direct inspection found Apple M3 Pro, 38.65 GB of memory, macOS 26.6.2, Docker Engine 29.9.3, Compose 5.7.0 and Model Runner client/server 1.2.9. Model Runner was reachable with host inspection permissions. The restricted agent environment could not access it; that is not evidence that the service is down.
@@ -78,7 +80,7 @@ Start with pinned published configurations. Compare practical results and disclo
 | Loaded components and memory observations | Deferred 1.3 / #152 | Optional future comparisons, never chat admission |
 | Comparison settings and precision disclosures | Deferred 0.8 / #146 | A future comparative report |
 
-Task 0.5 checks that findings are traceable and unresolved prerequisites have owners. It does not perform these later operations or require their successful results. Only a prerequisite needed by the attempted operation affects that operation. No model execution or benchmark has occurred.
+Task 0.5 checks that findings are traceable and unresolved prerequisites have owners. It does not perform these later operations or require their successful results. Only a prerequisite needed by the attempted operation affects that operation. No model execution or benchmark occurred as part of task 0.5; subsequent model trials are recorded in the observation note linked above.
 
 ## Inventory verification
 
