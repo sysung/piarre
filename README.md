@@ -46,7 +46,7 @@ To release model memory after use:
 docker model unload piarre/qwen3.5:4b-q4_k_m
 ```
 
-The harness does not set an output-token cap or generation deadline. It uses the configured model/runtime defaults; runtime context and output limits still apply. A runtime-reported cutoff is shown as incomplete. Manual in-chat stopping is planned in #161.
+The harness does not set an output-token cap or generation deadline. It uses the configured model/runtime defaults; runtime context and output limits still apply. A runtime-reported cutoff is shown as incomplete. Press Ctrl-C during a response to stop receiving it and return to the chat prompt (or exit with failure in one-shot mode). The cancelled turn is not saved in conversation history; earlier completed turns remain. The model server may still be generating after local cancellation.
 
 ## Project work
 

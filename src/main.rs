@@ -51,7 +51,7 @@ async fn run() -> Result<(), Box<dyn Error>> {
     };
     let mut history: Vec<Message> = Vec::new();
     if interactive {
-        eprintln!("Chat history stays in this session. Ctrl-D exits; Ctrl-C clears input.");
+        eprintln!("Chat history stays in this session. Ctrl-D exits; Ctrl-C clears input or cancels a response.");
     }
     loop {
         let input = if let Some(editor) = &mut editor {
@@ -78,7 +78,7 @@ async fn run() -> Result<(), Box<dyn Error>> {
             .temperature(0.0)
             .additional_params(json!({"chat_template_kwargs": {"enable_thinking": false}}));
         let mut displayed = false;
-        let mut result: Result<String, Box<dyn Error>> = async {
+        let response = async {
             let mut stream = model.stream(request)?;
             while let Some(item) = stream.next().await {
                 if let Item::Event(StreamEvent::Text { text, .. }) = item? {
@@ -100,8 +100,15 @@ async fn run() -> Result<(), Box<dyn Error>> {
                 return Err("the model returned no text".into());
             }
             Ok::<String, Box<dyn Error>>(text)
-        }
-        .await;
+        };
+        let mut result: Result<String, Box<dyn Error>> = tokio::select! {
+            biased;
+            signal = tokio::signal::ctrl_c() => {
+                signal?;
+                Err("cancelled locally; the model server may still be generating. This turn was not added to conversation history".into())
+            }
+            result = response => result,
+        };
         if displayed {
             let mut stdout = io::stdout().lock();
             let separator = stdout.write_all(b"\n").and_then(|_| stdout.flush());
