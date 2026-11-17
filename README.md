@@ -38,9 +38,21 @@ docker compose run --rm harness
 
 Edit your message and press Enter. Use Up/Down to recall input, Ctrl-C to clear input at the prompt, and Ctrl-D on an empty prompt to exit. Follow-up messages include earlier successful turns. History stays in memory; restarting begins a fresh conversation. Replies stream as they arrive. Terminal control characters are shown as visible escapes instead of being executed; normal text, tabs, and line breaks are preserved. Thinking display is planned separately.
 
- Rig runs inside Docker; Docker Model Runner serves Qwen separately. No personal folders are mounted into the harness.
+Rig runs inside Docker; Docker Model Runner serves Qwen separately. No personal folders are mounted into the harness.
 
-To release model memory after use:
+## Stop or start fresh
+
+At an empty `You>` prompt, press Ctrl-D to exit. If a response is running, press Ctrl-C first to cancel it, then Ctrl-D at the prompt.
+
+The `--rm` option removes the chat container after it exits. Its conversation history and temporary files in `/workspace` and `/tmp` are discarded. To start fresh, run the same command again:
+
+```sh
+docker compose run --rm harness
+```
+
+You do not need to rebuild unless the application or build configuration changed. Exiting chat does not unload Qwen or delete the installed model.
+
+Optionally release model memory after use:
 
 ```sh
 docker model unload piarre/qwen3.5:4b-q4_k_m
