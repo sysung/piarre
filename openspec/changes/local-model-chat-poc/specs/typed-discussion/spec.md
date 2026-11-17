@@ -17,8 +17,16 @@ Chat SHALL expose errors, cancellation and partial responses honestly without au
 - **WHEN** the user cancels after one tool operation completed
 - **THEN** the application reports that operation and does not claim it was undone
 
-### Requirement: Bound requests and render safe text
-The application SHALL use configurable output and request limits, show context errors without silently discarding history, and filter terminal control sequences from model and tool output. Exact tokenizer preflight SHALL NOT be an admission requirement.
+### Requirement: Use runtime generation defaults and render safe text
+The application SHALL use configured model/runtime generation defaults without output-token overrides or automatic generation deadlines, including transport total/read timeouts. It SHALL show context errors without silently discarding history and filter terminal controls from model/tool output. Exact tokenizer preflight SHALL NOT be required. Long-output management is deferred.
+
+#### Scenario: Runtime stops generation
+- **WHEN** a runtime limit ends generation
+- **THEN** the harness reports the observed outcome without promising unlimited or complete output
+
+#### Scenario: Generate beyond former harness limits
+- **WHEN** the configured runtime continues producing an answer beyond 128 tokens or 120 seconds
+- **THEN** the harness continues streaming without applying either former cutoff
 
 #### Scenario: Request fails or contains terminal controls
 - **WHEN** a runtime rejects context or returns terminal-control bytes

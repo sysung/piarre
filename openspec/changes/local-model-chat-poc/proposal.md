@@ -9,6 +9,7 @@ Establish whether a real local model can support useful chat and simple file tas
 - Preserve the completed recovery and approved legacy reset. No further cleanup is requested.
 - Deliver M0 scope and setup, M1 one working local model, M2 Rig chat followed by a user chat trial and scoped file tools, and M3 human acceptance.
 - Run Rig and its temporary `/workspace` in the same Linux container. Start with real Qwen through the existing local inference runtime; do not build a mocked model service or mediation proxy.
+- Use the configured model/runtime generation defaults without a harness output-token override or automatic generation deadline. Long-output management is future work; manual stopping remains a separate slice.
 - Offer optional streamed model-provided reasoning, displayed separately from the answer, when the configured local runtime exposes it.
 - After the user tries chat, add list/read/create/edit/delete operations confined to that workspace. No shell, generated-code execution, default Mac mounts or retrieval.
 - Let operators try configured local models. Record observed behavior; benchmarks, an 8 GB target, exact memory accounting and tokenizer support do not control model admission.

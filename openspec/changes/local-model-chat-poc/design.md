@@ -39,7 +39,7 @@ No default host mounts, Docker socket, credentials, SSH agent, privileged mode o
 
 ### D3. Build chat first, then bounded tools
 
-Use one compiled Rust binary, Rig and Rustyline with plain streaming. Compose participates in the first Rig slice. Choose the exact documented launch command during implementation; no Python wrapper is required. Preserve roles and in-session conversation; do not persist prompts by default. Use one active turn, practical connection/overall limits, explicit errors, safe terminal text and prompt cancellation. Report unknown backend cancellation honestly; do not build a universal server-idle protocol. Do not overlap unresolved local file mutations.
+Use one compiled Rust binary, Rig and Rustyline with plain streaming. Compose participates in the first Rig slice. Choose the exact documented launch command during implementation; no Python wrapper is required. Preserve roles and in-session conversation; do not persist prompts by default. Use one active turn, ordinary connection/error handling, safe terminal text and prompt cancellation. Remove the hardcoded 128-output-token override and 120-second deadline; omit output-token overrides and total/read timeouts that stop ongoing generation. Use the configured model/runtime defaults rather than substituting a larger arbitrary maximum. Runtime context capacity is unchanged. Long-output management is future work. Report unknown backend cancellation honestly; do not build a universal server-idle protocol. Do not overlap unresolved local file mutations.
 
 Optional thinking display is a separate M2 slice after answer streaming (#159), tracked in #182. Verify reasoning support against the real Qwen/DMR/Rig route before choosing the exact request fields and event handling. Label emitted reasoning as Thinking and final content as Answer; provide a hide option. Hiding display and disabling reasoning are different operations. Do not fabricate reasoning for unsupported configurations or treat emitted text as a faithful internal trace. Reuse safe streaming for both channels, including split control sequences. Preserve honest partial/limited outcomes. Set defaults during implementation and document the controls and observed effects on response time and output limits in README. No persistent reasoning logs or new tool authority are introduced.
 
@@ -61,11 +61,12 @@ Update existing issues and native dependencies without duplicates. Keep mileston
 
 1. Inspect the actual container user, mounts and writable paths. Expect no personal paths, credentials or Docker control access.
 2. Ask the real local model a simple question directly, then through containerized Rig. Record the actual model/runtime and outcome.
-3. Try two chat turns, cancellation, an unavailable endpoint and restart. Expect visible errors, readable text and fresh session state after restart.
-4. For #182, observe real streamed Thinking followed by Answer, hide thinking without losing the answer, and check the unavailable-reasoning behavior. Verify safe rendering across chunk boundaries and honest interrupted/limited output. Record observed latency/output-limit effects without a benchmark gate.
-5. Have the user try chat before enabling file tools.
-6. With real model tool calls, create, inspect, edit, inspect, delete and verify a sample Python file. Check a harmless outside-workspace request is refused and teardown discards the workspace. No Python execution is implied.
-7. Record user observations and acceptance separately from code completion. Recheck only behavior affected by fixes.
+3. For #200, follow the [issue verification plan](https://github.com/sysung/piarre/issues/200): inspect actual request/transport defaults, observe real output beyond 128 tokens and 120 seconds when achievable under existing runtime limits, and record missing evidence explicitly. Verify context errors preserve earlier history.
+4. Try two chat turns, cancellation, an unavailable endpoint and restart. Expect visible errors, readable text and fresh session state after restart.
+5. For #182, observe real streamed Thinking followed by Answer, hide thinking without losing the answer, and check the unavailable-reasoning behavior. Verify safe rendering across chunk boundaries and honest interrupted/limited output. Record observed latency/output-limit effects without a benchmark gate.
+6. Have the user try chat before enabling file tools.
+7. With real model tool calls, create, inspect, edit, inspect, delete and verify a sample Python file. Check a harmless outside-workspace request is refused and teardown discards the workspace. No Python execution is implied.
+8. Record user observations and acceptance separately from code completion. Recheck only behavior affected by fixes.
 
 Real inference is required for end-to-end evidence; no mocked endpoint is planned. Harmless path/permission checks do not need model-generated malicious output. New automated tests or standalone verifiers still require explicit authorization under AGENTS.md; direct command execution and manual observation are sufficient for routine checks.
 

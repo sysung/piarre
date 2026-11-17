@@ -131,17 +131,10 @@ Approved revision: 2026-11-15. Real model first; user chat trial before workspac
   - Human verification: Observe incremental real-model output; inspect filtering of terminal-control sequences, including split chunks.
   - Contract: [design and verification](design.md#verification-plan).
 
-- [ ] 2.4 Bound requests and show context errors. Verify using the human steps below.
-  - Description: Bound requests and show context errors.
-  - Value: Keep requests manageable without excluding models by tokenizer support.
-  - Parent: S5. Blocked by: 2.3.
-  - Human verification: Exercise configured output/time limits and an oversized input; observe a visible failure instead of silent history loss.
-  - Contract: [design and verification](design.md#verification-plan).
-
 - [ ] 2.5 Handle cancellation and partial outcomes. Verify using the human steps below.
   - Description: Handle cancellation and partial outcomes.
   - Value: Let the user stop a request without confusing partial output with completion.
-  - Parent: S5. Blocked by: 2.4.
+  - Parent: S5. Blocked by: 2.13.
   - Human verification: Cancel a live response; observe prompt return, no automatic retry and honest backend uncertainty.
   - Contract: [design and verification](design.md#verification-plan).
 
@@ -194,6 +187,13 @@ Approved revision: 2026-11-15. Real model first; user chat trial before workspac
   - Human verification: Use real supported Qwen to observe thinking before the answer; hide thinking and retain the answer; report unavailable reasoning while keeping ordinary chat usable. Check filtering across chunks and honest interrupted/limited output. Document controls and observed time/output-limit effects in README.
   - Contract: [typed discussion](specs/typed-discussion/spec.md#requirement-show-optional-model-provided-reasoning); [design and verification](design.md#verification-plan).
 
+- [ ] 2.13 Remove harness output caps and request timeout. Verify using the human steps below.
+  - Description: Remove the 128-token override and 120-second deadline; use configured model/runtime defaults without replacement knobs or generation deadlines.
+  - Value: Let users see the answer without arbitrary harness cutoffs.
+  - Parent: S5. Blocked by: 2.3. Issue: [#200](https://github.com/sysung/piarre/issues/200).
+  - Human verification: Follow the issue verification plan: inspect request/transport configuration, observe long real output, verify context/history behavior and normal use. Record token-count or duration checks as unverified when not observed. Do not change runtime context merely to claim a pass.
+  - Contract: [typed discussion](specs/typed-discussion/spec.md#requirement-use-runtime-generation-defaults-and-render-safe-text); [verification](design.md#verification-plan).
+
 ## 3. M3 User Acceptance Testing
 
 - [ ] 3.1 Run the workspace agent acceptance session. Verify using the human steps below.
@@ -218,6 +218,8 @@ Approved revision: 2026-11-15. Real model first; user chat trial before workspac
   - Contract: [design and verification](design.md#verification-plan).
 
 ## Deferred and superseded work
+
+- 2.4 / #160: Retired as not planned; PR #199 closed without merging. Replaced by 2.13 / #200. This is not completed delivery.
 
 - 0.7 / #145: Retired: surrogate isolation check. No active delivery task depends on it.
 - 0.8 / #146: Deferred: comparison protocol. No active delivery task depends on it.
