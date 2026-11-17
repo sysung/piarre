@@ -61,6 +61,6 @@ Requires T0 qualification and T1 persistence.
 ## Workflow follow-up
 
 - T0 is a K1 foundation prerequisite for T2. Compatibility work begins only after M3 UAT completion (#138) and explicit acceptance (#165); fixture execution follows its scoped authorization. This task list does not authorize relocating the current repository. K3 later owns automatic workflow selection and broader existing-project migration.
-- Publish the reviewed milestone/parent/child drafts only when that external step is requested. Use real IDs and native dependencies; do not infer acceptance from closed historical issues.
+- Milestones, parents, and children were published at the user's request; see publication-map.md. Publication completes no implementation checkbox. Native blockers preserve M3 UAT and explicit acceptance.
 - Refresh the capability catalog against the implementation base before applying or synchronizing this change. Reconcile any intervening PoC adoption explicitly.
 - After actual implementation and acceptance, separately synchronize and archive through the owning OpenSpec skills. No sync/archive or Git publication is authorized by this checklist itself.

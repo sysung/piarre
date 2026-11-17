@@ -1,8 +1,8 @@
 # Milestones and triage implementation plan
 
-## Draft status
+## Publication status
 
-This is a publication-ready structure for review, not a record of created GitHub objects. `P1-P6` and `T0-T7` are placeholders. No labels, milestones, parent links, dependencies, issues, or Project 8 fields were changed.
+The user authorized publication of this plan without implementation. Six milestones, six parent trackers, and eight child issues were created. See [publication-map.md](publication-map.md) for actual URLs and dependencies. `P1-P6` and `T0-T7` remain stable planning IDs. T0 and T1 wait for M3 UAT completion and explicit acceptance.
 
 The recommended initial category/state pair for all drafts is `enhancement` and `needs-triage`. Both labels and the other standard state labels exist in the live repository. Keep exactly one category and one state when publishing. No existing issue state is overridden by this document. A blocked dependency is not itself `needs-info`; use that state only for a specific unanswered reporter question.
 

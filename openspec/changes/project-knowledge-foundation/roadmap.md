@@ -2,7 +2,7 @@
 
 ## Status and acceptance boundary
 
-This roadmap records the product direction agreed in the exploration. Milestone names, tracker IDs, and implementation details below are drafts for review. No GitHub milestones or issues have been created by this change. Implementation has not started.
+This roadmap records the product direction agreed in the exploration. The milestone and tracker structure has been published at the user's request; [publication-map.md](publication-map.md) records actual GitHub URLs. Implementation details remain planned and implementation has not started.
 
 On 2026-11-16, GitHub reported `master` as the default branch. Existing milestone titles were M0 Preparation and isolation, M1 Running a local model, M2 Creating the agent harness, and M3 User Acceptance Testing. GitHub milestone number 4 is M3. [#165](https://github.com/sysung/piarre/issues/165) remained open with no acceptance comment. Project 8 still placed that issue and its UAT predecessors in Backlog.
 
