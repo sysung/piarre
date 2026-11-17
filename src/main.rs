@@ -2,7 +2,7 @@ mod terminal;
 
 use futures_util::StreamExt;
 use rig_core::{
-    completion::{CompletionRequest, Message},
+    completion::{CompletionRequest, FinishReason, Message},
     providers::openai::OpenAIConfig,
     streaming::{Item, StreamEvent},
 };
@@ -35,6 +35,8 @@ async fn run() -> Result<(), Box<dyn Error>> {
     if endpoint.trim().is_empty() || model_name.trim().is_empty() {
         return Err("PIARRE_ENDPOINT and PIARRE_MODEL must not be empty".into());
     }
+    let max_tokens = positive_setting("PIARRE_MAX_OUTPUT_TOKENS", 128)?;
+    let timeout_seconds = positive_setting("PIARRE_REQUEST_TIMEOUT_SECONDS", 120)?;
     let model = OpenAIConfig::new("local-no-secret")
         .with_base_url(&endpoint)
         .client()
@@ -44,6 +46,7 @@ async fn run() -> Result<(), Box<dyn Error>> {
         safe_text(&model_name),
         safe_text(&endpoint)
     );
+    eprintln!("Limits: {max_tokens} output tokens, {timeout_seconds} seconds per request");
     let interactive = env::args().len() == 1;
     let mut editor = if interactive {
         Some(DefaultEditor::new()?)
@@ -77,7 +80,7 @@ async fn run() -> Result<(), Box<dyn Error>> {
         let request = CompletionRequest::new(input.clone())
             .messages(history.clone())
             .temperature(0.0)
-            .max_tokens(128)
+            .max_tokens(u64::from(max_tokens))
             .additional_params(json!({"chat_template_kwargs": {"enable_thinking": false}}));
         let mut displayed = false;
         let mut result: Result<String, Box<dyn Error>> = async {
@@ -95,15 +98,18 @@ async fn run() -> Result<(), Box<dyn Error>> {
                     }
                 }
                 let response = stream.finish().await?;
+                if matches!(response.finish_reason(), Some(FinishReason::Length)) {
+                    return Err(format!("output limit reached ({max_tokens} tokens); increase PIARRE_MAX_OUTPUT_TOKENS for a longer answer").into());
+                }
                 let text = response.text();
                 if text.trim().is_empty() {
                     return Err("the model returned no text".into());
                 }
                 Ok::<String, Box<dyn Error>>(text)
             };
-            tokio::time::timeout(Duration::from_secs(120), read)
+            tokio::time::timeout(Duration::from_secs(u64::from(timeout_seconds)), read)
                 .await
-                .map_err(|_| "local request timed out after 120 seconds; backend work may still be running")?
+                .map_err(|_| format!("local request timed out after {timeout_seconds} seconds; backend work may still be running"))?
         }
         .await;
         if displayed {
@@ -125,6 +131,7 @@ async fn run() -> Result<(), Box<dyn Error>> {
             }
             Err(error) if interactive => {
                 eprintln!("Request failed: {}", safe_text(&error.to_string()));
+                eprintln!("Conversation history unchanged; this failed turn was not saved.");
             }
             Err(error) => return Err(error),
         }
@@ -133,4 +140,16 @@ async fn run() -> Result<(), Box<dyn Error>> {
         }
     }
     Ok(())
+}
+
+fn positive_setting(name: &str, default: u32) -> Result<u32, Box<dyn Error>> {
+    match env::var(name) {
+        Ok(value) => value
+            .parse::<u32>()
+            .ok()
+            .filter(|value| *value > 0)
+            .ok_or_else(|| format!("{name} must be a positive whole number up to {}", u32::MAX).into()),
+        Err(env::VarError::NotPresent) => Ok(default),
+        Err(error) => Err(format!("invalid {name}: {error}").into()),
+    }
 }

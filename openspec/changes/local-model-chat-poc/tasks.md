@@ -131,7 +131,7 @@ Approved revision: 2026-11-15. Real model first; user chat trial before workspac
   - Human verification: Observe incremental real-model output; inspect filtering of terminal-control sequences, including split chunks.
   - Contract: [design and verification](design.md#verification-plan).
 
-- [ ] 2.4 Bound requests and show context errors. Verify using the human steps below.
+- [x] 2.4 Bound requests and show context errors. Verify using the human steps below.
   - Description: Bound requests and show context errors.
   - Value: Keep requests manageable without excluding models by tokenizer support.
   - Parent: S5. Blocked by: 2.3.

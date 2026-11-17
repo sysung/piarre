@@ -46,6 +46,18 @@ To release model memory after use:
 docker model unload piarre/qwen3.5:4b-q4_k_m
 ```
 
+## Request limits
+
+Defaults are 128 output tokens and 120 seconds per request. Override them when launching:
+
+```sh
+PIARRE_MAX_OUTPUT_TOKENS=512 PIARRE_REQUEST_TIMEOUT_SECONDS=60 docker compose run --rm harness
+```
+
+Both settings require positive whole numbers. The timeout covers the whole request, including streaming. If the runtime reports that the output cap was reached, the app marks the answer incomplete. Failed or incomplete turns are not added to conversation history; earlier turns remain intact. A timeout stops local waiting, but backend work may still be running.
+
+The model server checks context capacity. If it rejects a long prompt, the app displays its error without silently trimming history. Shorten the new prompt or restart for a fresh conversation.
+
 ## Project work
 
 [Tasks and verification](openspec/changes/local-model-chat-poc/tasks.md) · [GitHub Project](https://github.com/users/sysung/projects/8)

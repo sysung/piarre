@@ -5,6 +5,8 @@ services:
     environment:
       PIARRE_ENDPOINT: ${PIARRE_ENDPOINT:-http://model-runner.docker.internal/engines/llama.cpp/v1}
       PIARRE_MODEL: ${PIARRE_MODEL:-piarre/qwen3.5:4b-q4_k_m}
+      PIARRE_MAX_OUTPUT_TOKENS: ${PIARRE_MAX_OUTPUT_TOKENS-128}
+      PIARRE_REQUEST_TIMEOUT_SECONDS: ${PIARRE_REQUEST_TIMEOUT_SECONDS-120}
     user: "10001:10001"
     read_only: true
     cap_drop: [ALL]
