@@ -1,0 +1,55 @@
+# Remember project decisions across sessions
+
+The first change lets the user correct an unsupported inference once and ask why an authorized SQL file exists after restarting Piarre. The answer cites the original correction or request, the observed file operation, and current evidence where relevant. The change follows human PoC acceptance under #165. Its first real run uses a user-selected, persistent Git checkout with harmless data.
+
+## Connect memory to the chat turn
+
+The current Rust entry point builds a Rig request from the input and in-process history, then consumes the stream. Place memory selection before request construction. Capture explicit corrections at the user-message boundary and link artifact rationale at the successful file-operation boundary once the PoC tool contract is available. The default Compose profile keeps its disposable `/workspace`. Add opt-in project access with deliberate read and write scopes. Validate worktree metadata access and container permissions before committing to a launch design. Keep model access to Git and `.piarre` behind typed application operations.
+
+At first use, the user enables project memory and sees what can be saved. Save a clear correction within its stated scope after checking available facts. Acknowledge the saved record and offer a source or identifier. When the user asks to create SQL for a stated purpose, keep the minimal request excerpt and link a successful tool receipt with the repository-relative path, observed content hash, and checkout revision. If the user gave no reason, the receipt can explain what happened and the purpose remains unknown. An interrupted answer leaves earlier completed effects intact. Reapplying the same source event converges on one record. A failed save reports the completed artifact operation and the unsaved rationale.
+
+Only user messages and trusted application receipts can supply these source types. Extract the smallest relevant verbatim excerpt, retain its source identity, and exclude material marked sensitive or detected as secret. Model interpretation can suggest a scoped candidate but carries provisional status. If inspection resolves a factual question, proceed. If intent remains unclear and the answer changes a consequential action, ask the shortest material question. A low-impact assumption within current authorization can remain provisional. A receipt, retrieved file, or remembered statement grants no new tool permission.
+
+## Keep one readable source of truth
+
+Use one Markdown file per record, with versioned front matter, stable ID, scoped subject, typed provenance, and typed links such as `supersedes`, `explains`, or `evidenced_by`. Keep original wording in a labeled excerpt and derived wording separate. Represent a user-stated decision or correction separately from a file observation and a provisional interpretation. Decisions can expire or be superseded. Observations describe a revision or file fingerprint. A remembered correction limits unsupported claims today, while current inspection determines what code actually does. Unknown dependency coverage remains unknown after a successful search.
+
+Write auto-captures under ignored `.piarre/local/`, namespaced by worktree and branch, with ancestry checked against their recorded checkout base. Detached HEAD uses its observed commit. A history rewrite that breaks ancestry leaves drafts available for inspection and deliberate reattachment. Place shareable records in `.piarre/knowledge/`. A user can move an item there with its existing ID, then use normal Git staging, commit, and push. Git operations run as usual. The current checkout supplies shared records and working proposals. Cite the observed revision and dirty state, and label a default-branch baseline only if a known local ref supports that claim. This checkout calls the default branch `master`. An old ref is evidence of a known version.
+
+Keep SQLite under the ignored local area as a derived index. Before retrieval, compare the current checkout identity and a bounded scan of record paths and fingerprints to the index. Update additions and removals transactionally. Check unmerged index entries, merge markers, invalid records, and divergent duplicate IDs before selecting evidence. Omit affected claims and surface the conflict when it matters. When the index is missing, stale, or damaged, rebuild it from Markdown. If the refresh fails, report memory unavailable for that turn and continue ordinary chat. Cache bytes cannot resurface withdrawn or deleted records. Atomic same-directory replacement and expected-content checks protect record edits. A move that leaves identical copies after interruption deduplicates by ID and fingerprint. Divergence requires user resolution.
+
+## Select evidence and let the user manage it
+
+Filter by project, applicability, lifecycle, and permission before ranking. Resolve exact IDs and paths first, then use SQLite FTS5 for subject and text. Pass a limited number of short excerpts with distinct source identifiers. Inspect the current file fingerprint when an answer depends on a saved observation. If bytes changed, label the old observation historical and inspect the current file if authorized. If retrieval finds no reliable support, state the missing evidence. Show incompatible active claims within the relevant scope and avoid selecting one by timestamp. Keep captured text structurally separate from runtime instructions.
+
+Let the user inspect what was saved, correct it with a `supersedes` link, withdraw it from use, or ask to delete the retained content. Honor a scoped withdrawal on refresh. For an imported shared record, a local exclusion can suppress use while the user decides whether to remove the working-tree copy for everyone. Deleting a record removes its body and excerpt from current app-managed files, including local duplicates. Rebuild the index and discard the old database and its sidecars. Show that committed copies may remain in Git history and other checkouts. Disabling project memory stops both capture and injection. A local restriction overrides capability preferences pulled from Git.
+
+## Draft milestones and parents
+
+| Proposed milestone | Parent issue | Completion evidence |
+| --- | --- | --- |
+| M4 Project memory | Remember a correction and artifact purpose across sessions | Real local model recalls both in the chosen checkout, cites evidence, and honors withdrawal and isolation. |
+| M5 Adaptive workflow | Match Direct, Light, and Spec to the decision | Simple turns stay in chat. Scoped changes get a short plan when useful. Consequential ambiguity leads to a question or a linked OpenSpec change. Verify pinned tooling and one authoritative artifact location here. |
+| M6 Git collaboration | Review conflicting project decisions together | User invokes merge assistance. It reads the ancestor and both sides, recommends a resolution with consequences, and applies the selected edits. The user controls Git publication. |
+| M7 Extensibility | Configure project and local capabilities | Shared preferences cannot grant local skill, hook, MCP, or network authority. Keep the master automatic hook switch and per-capability controls. Opt-in conflict hooks may start the interview on relevant pull conflicts. |
+| M8 Context experiments | Evaluate structured handoff on the local model | Compare full context, selected context, and selection with structured handoff on actual user tasks. Track recall, answer quality, corrections, context and turn cost before adopting lossy compression. |
+
+Use these as proposed display names and sequencing, independent of GitHub milestone database IDs. Keep M5 through M8 at parent level. No retrieval service, vectors, autonomous Git actions, or generalized workflow router is needed for M4. Native OpenSpec stays where it is for planning. Verify `.piarre` compatibility with the installed and pinned CLI, generated skills/templates, validation, sync and archive early. That investigation informs M5 without blocking M4. An adapter or fork adds upgrade maintenance and warrants evidence that pinned native configuration cannot work.
+
+## Draft M4 implementation children
+
+| Child | Depends on | Observable result |
+| --- | --- | --- |
+| A. Enable project memory in a persistent checkout | #165 and actual PoC acceptance | An opted-in fixture survives teardown. Default chat stays disposable. Linked worktree and detached checkout identity can be determined safely. |
+| B. Store and reconcile project records | A | Readable records survive restart. External edits, branch switches, conflicts and deletions are visible at next access. Removing SQLite changes no records. |
+| C. Recall a correction in a fresh chat | B | A clear scoped correction is saved once, cited after restart, and withdrawable or deletable through chat. Run unrelated and unsupported questions as controls. |
+| D. Explain why the SQL file exists | C and accepted file-operation contract | The answer cites the original request and completed file receipt after restart, distinguishes historical purpose from changed code, and reports missing purpose when absent. |
+| E. Review actual use and deliberate sharing | D | One user run covers both flows, publishes a chosen record through ordinary Git, and checks disabled memory and branch/worktree isolation. Human acceptance closes the parent. |
+
+Stage each as a reviewable unit of the same proposed OpenSpec change. Use `enhancement` and `needs-triage` for draft scope review. Link each child to its parent, acceptance section, and real blocker with native dependency edges. An unresolved launch fact can move A to `needs-info`. Promote a child to `ready-for-agent` only when its scope is adopted and prerequisites are closed. Link worked issues and PRs in both directions.
+
+## Check real behavior and record unresolved facts
+
+Use the real Rig and local model after acceptance. Ask a question that previously led to an invented dependency claim, correct it, restart, rephrase the question, then inspect cited evidence. Repeat after withdrawal. Create SQL with an explicit purpose, restart, ask why, change its bytes externally, and repeat. Try a path in another checkout, an absent record, a merge conflict, a deleted index, and a cancelled or failed write. Inspect actual files and receipts. Record whether retrieval selected the right evidence separately from whether the answer used it accurately. Observe supplied bytes and interruption count without making an unmeasured latency claim. These scenarios require no authored verifier.
+
+The current binary has no file receipt or knowledge request hook. Confirm the actual PoC tool integration, bounded request support, SQLite FTS5 availability in the deployment image, and Git metadata access for selected linked worktrees at implementation. Automatic whole-chat retention would make consent, relevance and deletion harder. A SQLite-only store would lose Git review and textual recovery. A tracked default for auto-capture would expose drafts to routine staging. Git-aware Markdown and bounded selection give each of those responsibilities an explicit owner.
