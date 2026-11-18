@@ -147,11 +147,12 @@ Approved revision: 2026-11-15. Real model first; user chat trial before workspac
   - Evidence: [Launch and teardown checks](launch-teardown.md).
   - Contract: [design and verification](design.md#verification-plan).
 
-- [ ] 2.7 Try real chat before enabling file tools. Verify using the human steps below.
+- [x] 2.7 Try real chat before enabling file tools. Verify using the human steps below.
   - Description: Try real chat before enabling file tools.
   - Value: Let the user assess chat before model-driven changes.
   - Parent: S5. Blocked by: 2.6.
   - Human verification: The maintainer tries real chat and explicitly records readiness to try workspace tools. Tools remain disabled until that choice.
+  - Decision (2026-11-18): After personally trying chat/cancellation, selecting MiniCPM5-2B and accepting the recorded recall limitations in #206, the maintainer instructed us to continue when presented with this checkpoint and the next list/read slice. Proceed to disposable workspace tools. This is not final PoC acceptance or permission to access personal files.
   - Contract: [design and verification](design.md#verification-plan).
 
 - [ ] 2.8 Add workspace listing and reading tools. Verify using the human steps below.
