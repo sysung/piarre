@@ -21,10 +21,13 @@ impl Workspace {
         let relative = Path::new(path)
             .strip_prefix("/workspace")
             .map_err(|_| "workspace directory must be /workspace or a directory beneath it")?;
-        Self::at(Path::new("/workspace"))?.select(relative)
-    }
-
-    fn select(&self, path: &Path) -> Result<Self, String> {
+        let root = open(
+            "/workspace",
+            OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC,
+            Mode::empty(),
+        )
+        .map_err(|e| format!("cannot open workspace: {e}"))?;
+        let path = relative;
         if path
             .components()
             .any(|c| !matches!(c, Component::Normal(_) | Component::CurDir))
@@ -37,25 +40,13 @@ impl Workspace {
             path
         };
         let fd = openat2(
-            &self.root,
+            &root,
             path,
             OFlags::RDONLY | OFlags::DIRECTORY | OFlags::CLOEXEC,
             Mode::empty(),
             ResolveFlags::BENEATH | ResolveFlags::NO_SYMLINKS | ResolveFlags::NO_XDEV,
         )
         .map_err(|e| format!("cannot select workspace directory: {e}"))?;
-        Ok(Self {
-            root: File::from(fd),
-        })
-    }
-
-    fn at(path: &Path) -> Result<Self, String> {
-        let fd = open(
-            path,
-            OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC,
-            Mode::empty(),
-        )
-        .map_err(|e| format!("cannot open workspace: {e}"))?;
         Ok(Self {
             root: File::from(fd),
         })

@@ -107,9 +107,9 @@ async fn run() -> Result<ExitCode, Box<dyn Error>> {
             conversation.push(Message::user(input.clone()));
             let mut calls_used = 0;
             loop {
-                let last = conversation.last().expect("current turn").clone();
-                let mut request = CompletionRequest::new(last)
-                    .messages(conversation[..conversation.len() - 1].iter().cloned())
+                let (last, previous) = conversation.split_last().expect("current turn");
+                let mut request = CompletionRequest::new(last.clone())
+                    .messages(previous.iter().cloned())
                     .temperature(0.0)
                     .additional_params(json!({"chat_template_kwargs": {"enable_thinking": false}}));
                 if workspace.is_some() {
@@ -161,16 +161,13 @@ async fn run() -> Result<ExitCode, Box<dyn Error>> {
                             &serde_json::Value::Object(call.function.arguments.clone()),
                         )
                     };
+                    let result = result.to_string();
                     eprintln!(
                         "\nTool {}: {}",
                         safe_text(call.function.name.as_str()),
-                        safe_text(&result.to_string())
+                        safe_text(&result)
                     );
-                    conversation.push(Message::tool_result(
-                        call.id,
-                        call.function.name,
-                        result.to_string(),
-                    ));
+                    conversation.push(Message::tool_result(call.id, call.function.name, result));
                     calls_used += 1;
                 }
             }
