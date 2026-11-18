@@ -139,11 +139,12 @@ Approved revision: 2026-11-15. Real model first; user chat trial before workspac
   - Evidence: [Real Qwen cancellation checks](cancellation.md).
   - Contract: [design and verification](design.md#verification-plan).
 
-- [ ] 2.6 Document launch and disposable teardown. Verify using the human steps below.
+- [x] 2.6 Document launch and disposable teardown. Verify using the human steps below.
   - Description: Document launch and disposable teardown.
   - Value: Make the same environment usable by the maintainer.
   - Parent: S5. Blocked by: 2.5.
   - Human verification: Follow launch/stop/reset instructions; inspect no personal mounts, writable scratch only, no persisted chat and discarded workspace.
+  - Evidence: [Launch and teardown checks](launch-teardown.md).
   - Contract: [design and verification](design.md#verification-plan).
 
 - [ ] 2.7 Try real chat before enabling file tools. Verify using the human steps below.

@@ -49,6 +49,18 @@ Follow-up messages include earlier successful turns. Conversation history stays 
 
 Cancelling a response leaves the cancelled turn out of history and keeps earlier completed turns. The model server may continue generating after local cancellation. In one-shot mode, cancellation exits with failure.
 
+## Stop or start fresh
+
+At an empty `You>` prompt, press Ctrl-D to exit. If a response is running, press Ctrl-C first, then Ctrl-D at the prompt.
+
+The `--rm` option removes the chat container after it exits. Conversation history and temporary files in `/workspace` and `/tmp` are discarded. Start a fresh session with:
+
+```sh
+docker compose run --rm harness
+```
+
+Rebuild only when the application or build configuration changes. Exiting chat does not unload MiniCPM5-2B or delete the installed model.
+
 ## Release model memory
 
 To release model memory after use:
