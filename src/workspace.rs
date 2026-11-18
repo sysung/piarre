@@ -17,8 +17,36 @@ pub struct Workspace {
 }
 
 impl Workspace {
-    pub fn open() -> Result<Self, String> {
-        Self::at(Path::new("/workspace"))
+    pub fn open(path: &str) -> Result<Self, String> {
+        let relative = Path::new(path)
+            .strip_prefix("/workspace")
+            .map_err(|_| "workspace directory must be /workspace or a directory beneath it")?;
+        Self::at(Path::new("/workspace"))?.select(relative)
+    }
+
+    fn select(&self, path: &Path) -> Result<Self, String> {
+        if path
+            .components()
+            .any(|c| !matches!(c, Component::Normal(_) | Component::CurDir))
+        {
+            return Err("workspace directory must not contain '..'".into());
+        }
+        let path = if path.as_os_str().is_empty() {
+            Path::new(".")
+        } else {
+            path
+        };
+        let fd = openat2(
+            &self.root,
+            path,
+            OFlags::RDONLY | OFlags::DIRECTORY | OFlags::CLOEXEC,
+            Mode::empty(),
+            ResolveFlags::BENEATH | ResolveFlags::NO_SYMLINKS | ResolveFlags::NO_XDEV,
+        )
+        .map_err(|e| format!("cannot select workspace directory: {e}"))?;
+        Ok(Self {
+            root: File::from(fd),
+        })
     }
 
     fn at(path: &Path) -> Result<Self, String> {
@@ -35,8 +63,8 @@ impl Workspace {
 
     pub fn definitions() -> Vec<ToolDefinition> {
         [
-            ("list_files", "List up to 64 entries in a directory beneath /workspace. Use path '.' for the workspace root. No recursion."),
-            ("read_file", "Read a UTF-8 regular file beneath /workspace, at most 4096 bytes. Paths are relative to /workspace; symlinks and traversal are forbidden."),
+            ("list_files", "List up to 64 entries in a directory beneath the selected workspace. Use path '.' for the workspace root. No recursion."),
+            ("read_file", "Read a UTF-8 regular file beneath the selected workspace, at most 4096 bytes. Paths are relative to the selected workspace; symlinks and traversal are forbidden."),
         ].into_iter().map(|(name, description)| ToolDefinition::new(
             ToolName::new(name).expect("static tool name"), description,
             json!({"type":"object", "properties":{"path":{"type":"string"}}, "required":["path"], "additionalProperties":false}),
@@ -68,7 +96,7 @@ impl Workspace {
                 .components()
                 .any(|c| !matches!(c, Component::Normal(_) | Component::CurDir))
         {
-            return Err("use a relative path beneath /workspace without '..'".into());
+            return Err("use a relative path beneath the selected workspace without '..'".into());
         }
         let mut flags = OFlags::RDONLY | OFlags::NONBLOCK | OFlags::CLOEXEC;
         if name == "list_files" {
@@ -165,6 +193,40 @@ mod tests {
         assert_eq!(result["ok"], false, "unexpected result: {result}");
         assert!(result["error"].as_str().is_some_and(|s| !s.is_empty()));
         assert!(result.get("result").is_none());
+    }
+
+    #[test]
+    fn selected_directory_confines_reads_and_rejects_symlink_ancestors() {
+        let fixture = Fixture::new();
+        fs::create_dir(fixture.0.join("samples")).unwrap();
+        fs::write(fixture.0.join("outside.txt"), "outside").unwrap();
+        fs::write(fixture.0.join("samples/inside.txt"), "inside").unwrap();
+        symlink("samples", fixture.0.join("link")).unwrap();
+        let root = fixture.workspace();
+        let selected = root.select(Path::new("samples")).unwrap();
+        assert_eq!(
+            selected.execute("list_files", &json!({"path":"."})),
+            json!({"ok":true,"result":["inside.txt"]})
+        );
+        assert_eq!(
+            selected.execute("read_file", &json!({"path":"inside.txt"})),
+            json!({"ok":true,"result":"inside"})
+        );
+        rejected(selected.execute("read_file", &json!({"path":"../outside.txt"})));
+        rejected(selected.execute("read_file", &json!({"path":"outside.txt"})));
+        fs::create_dir(fixture.0.join("samples/nested")).unwrap();
+        for path in [
+            "..",
+            "samples/..",
+            "link",
+            "link/nested",
+            "missing",
+            "outside.txt",
+            "/etc",
+        ] {
+            assert!(root.select(Path::new(path)).is_err(), "{path}");
+        }
+        assert!(root.select(Path::new("")).is_ok());
     }
 
     #[test]

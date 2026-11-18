@@ -54,7 +54,7 @@ Cancelling a response leaves the cancelled turn out of history and keeps earlier
 Enable read-only tools for one session:
 
 ```sh
-docker compose run --rm --name piarre-workspace harness --workspace-tools
+docker compose run --rm --name piarre-workspace harness --workspace /workspace
 ```
 
 In a second terminal, add a sample inside that container:
@@ -65,7 +65,7 @@ docker exec piarre-workspace sh -c 'printf "The sample color is violet.\n" > /wo
 
 Back at `You>`, ask `List the workspace files`, then `Read notes.txt`. Each actual tool result appears as `Tool list_files` or `Tool read_file` before the model's answer. Check the result rather than trusting the answer alone.
 
-Tools are off without `--workspace-tools`. They accept relative paths inside `/workspace`, reject symlinks and traversal, and cannot modify files or run commands. Each turn allows four calls; reads accept UTF-8 files up to 4 KiB, listings up to 64 names, and results up to 8 KiB. Oversized results produce an error instead of partial file contents. No personal folders are mounted. Exiting discards the sample files.
+Tools are off unless you supply `--workspace DIRECTORY`. The directory must already exist inside `/workspace`; `/workspace/samples` confines tools to that subfolder. Tool paths are relative to the selected directory. They reject symlinks and traversal, and cannot modify files or run commands. Each turn allows four calls; reads accept UTF-8 files up to 4 KiB, listings up to 64 names, and results up to 8 KiB. Oversized results produce an error instead of partial file contents. No personal folders are mounted. Exiting discards the sample files.
 
 ## Stop or start fresh
 
