@@ -46,3 +46,13 @@ On 2026-11-18 the user selected container-only directory opt-in. Application cha
 - All 11 Linux tests passed, including the added selected-root test. It verifies sibling-file exclusion, traversal rejection and intermediate symlink rejection. Docker build and diff checks passed.
 
 The old flag is rejected with usage guidance. Directory selection does not mount a Mac folder or create a missing directory. Previous cancellation checks were not repeated because the cancellation path is unchanged.
+
+## Focused acceptance tests
+
+The maintainer approved reducing automated workspace coverage to three behaviors on 2026-11-18. The tests now use the public `Workspace::open` and `execute` interfaces with real disposable files:
+
+1. List and read files and subfolders inside the selected directory.
+2. Reject reads/listings outside it, including traversal, absolute paths and symlink escapes.
+3. Reject invalid directory selections, including an intermediate symlink, before inference is possible.
+
+All six current tests passed: three workspace tests and three unchanged terminal tests. They ran with `cargo test --locked` in the Linux compiler container with a writable temporary `/workspace` supplied by `--tmpfs /workspace`. Earlier counts above describe historical runs, not the current suite. Runtime code and protections are unchanged; detailed size/encoding/special-file test matrices were removed. Existing real-model observations remain applicable and were not rerun for this test-only refactor. This was a refactor of existing coverage, not a claimed new red-green feature cycle.

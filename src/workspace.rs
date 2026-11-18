@@ -151,13 +151,13 @@ impl Workspace {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::Workspace;
+    use serde_json::json;
     use std::{
         fs,
-        os::unix::{ffi::OsStringExt, fs::symlink, net::UnixListener},
+        os::unix::fs::symlink,
         path::PathBuf,
         sync::atomic::{AtomicU64, Ordering},
-        time::{SystemTime, UNIX_EPOCH},
     };
 
     struct Fixture(PathBuf);
@@ -165,21 +165,18 @@ mod tests {
     impl Fixture {
         fn new() -> Self {
             static NEXT: AtomicU64 = AtomicU64::new(0);
-            let path = std::env::temp_dir().join(format!(
-                "piarre-workspace-{}-{}-{}",
+            let path = PathBuf::from(format!(
+                "/workspace/piarre-test-{}-{}",
                 std::process::id(),
-                SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .unwrap()
-                    .as_nanos(),
-                NEXT.fetch_add(1, Ordering::Relaxed),
+                NEXT.fetch_add(1, Ordering::Relaxed)
             ));
-            fs::create_dir(&path).unwrap();
+            fs::create_dir(&path).expect("run workspace tests in Linux with a writable /workspace");
+            fs::create_dir(path.join("selected")).unwrap();
             Self(path)
         }
 
-        fn workspace(&self) -> Workspace {
-            Workspace::at(&self.0).unwrap()
+        fn selected(&self) -> String {
+            self.0.join("selected").to_str().unwrap().to_owned()
         }
     }
 
@@ -189,199 +186,78 @@ mod tests {
         }
     }
 
-    fn rejected(result: Value) {
-        assert_eq!(result["ok"], false, "unexpected result: {result}");
-        assert!(result["error"].as_str().is_some_and(|s| !s.is_empty()));
-        assert!(result.get("result").is_none());
-    }
-
     #[test]
-    fn selected_directory_confines_reads_and_rejects_symlink_ancestors() {
+    fn user_can_list_and_read_files_in_the_selected_directory() {
         let fixture = Fixture::new();
-        fs::create_dir(fixture.0.join("samples")).unwrap();
-        fs::write(fixture.0.join("outside.txt"), "outside").unwrap();
-        fs::write(fixture.0.join("samples/inside.txt"), "inside").unwrap();
-        symlink("samples", fixture.0.join("link")).unwrap();
-        let root = fixture.workspace();
-        let selected = root.select(Path::new("samples")).unwrap();
-        assert_eq!(
-            selected.execute("list_files", &json!({"path":"."})),
-            json!({"ok":true,"result":["inside.txt"]})
-        );
-        assert_eq!(
-            selected.execute("read_file", &json!({"path":"inside.txt"})),
-            json!({"ok":true,"result":"inside"})
-        );
-        rejected(selected.execute("read_file", &json!({"path":"../outside.txt"})));
-        rejected(selected.execute("read_file", &json!({"path":"outside.txt"})));
-        fs::create_dir(fixture.0.join("samples/nested")).unwrap();
-        for path in [
-            "..",
-            "samples/..",
-            "link",
-            "link/nested",
-            "missing",
-            "outside.txt",
-            "/etc",
-        ] {
-            assert!(root.select(Path::new(path)).is_err(), "{path}");
-        }
-        assert!(root.select(Path::new("")).is_ok());
-    }
-
-    #[test]
-    fn lists_sorted_direct_children_and_reads_utf8_files() {
-        let fixture = Fixture::new();
-        fs::create_dir(fixture.0.join("nested")).unwrap();
-        fs::write(fixture.0.join("z.txt"), "hello π\n").unwrap();
-        fs::write(fixture.0.join("nested/a.txt"), "inside").unwrap();
-        let workspace = fixture.workspace();
+        fs::create_dir(fixture.0.join("selected/nested")).unwrap();
+        fs::write(fixture.0.join("selected/notes.txt"), "hello π\n").unwrap();
+        fs::write(
+            fixture.0.join("selected/nested/child.txt"),
+            "nested content",
+        )
+        .unwrap();
+        let workspace = Workspace::open(&fixture.selected()).unwrap();
         assert_eq!(
             workspace.execute("list_files", &json!({"path":"."})),
-            json!({"ok":true,"result":["nested","z.txt"]})
+            json!({"ok":true,"result":["nested","notes.txt"]})
         );
         assert_eq!(
             workspace.execute("list_files", &json!({"path":"nested"})),
-            json!({"ok":true,"result":["a.txt"]})
+            json!({"ok":true,"result":["child.txt"]})
         );
         assert_eq!(
-            workspace.execute("read_file", &json!({"path":"z.txt"})),
+            workspace.execute("read_file", &json!({"path":"notes.txt"})),
             json!({"ok":true,"result":"hello π\n"})
         );
         assert_eq!(
-            workspace.execute("read_file", &json!({"path":"nested/a.txt"})),
-            json!({"ok":true,"result":"inside"})
+            workspace.execute("read_file", &json!({"path":"nested/child.txt"})),
+            json!({"ok":true,"result":"nested content"})
         );
     }
 
     #[test]
-    fn rejects_traversal_absolute_paths_and_symlinks() {
+    fn user_cannot_read_or_list_outside_the_selected_directory() {
         let fixture = Fixture::new();
-        let outside = Fixture::new();
-        fs::write(outside.0.join("secret"), "outside content").unwrap();
-        fs::write(fixture.0.join("local"), "inside content").unwrap();
-        symlink(outside.0.join("secret"), fixture.0.join("file-link")).unwrap();
-        symlink(&outside.0, fixture.0.join("parent-link")).unwrap();
-        symlink("local", fixture.0.join("local-link")).unwrap();
-        let workspace = fixture.workspace();
+        fs::write(fixture.0.join("outside.txt"), "private outside content").unwrap();
+        symlink(
+            fixture.0.join("outside.txt"),
+            fixture.0.join("selected/file-link"),
+        )
+        .unwrap();
+        symlink(&fixture.0, fixture.0.join("selected/parent-link")).unwrap();
+        let workspace = Workspace::open(&fixture.selected()).unwrap();
         for path in [
-            "../secret",
-            "nested/../../secret",
-            "parent-link/secret",
-            "file-link",
-            "local-link",
+            "../outside.txt".to_owned(),
+            fixture.0.join("outside.txt").to_str().unwrap().to_owned(),
+            "file-link".into(),
+            "parent-link/outside.txt".into(),
         ] {
-            rejected(workspace.execute("read_file", &json!({"path":path})));
+            let result = workspace.execute("read_file", &json!({"path":path}));
+            assert_eq!(result["ok"], false, "{path}: {result}");
+            assert!(result.get("result").is_none());
         }
-        rejected(workspace.execute("read_file", &json!({"path":outside.0.join("secret")})));
-        rejected(workspace.execute("list_files", &json!({"path":"parent-link"})));
-        rejected(workspace.execute("list_files", &json!({"path":".."})));
-        rejected(workspace.execute("list_files", &json!({"path":outside.0})));
-    }
-
-    #[test]
-    fn rejects_nonregular_files_without_waiting_for_a_fifo_writer() {
-        let fixture = Fixture::new();
-        rustix::fs::mkfifoat(
-            rustix::fs::CWD,
-            fixture.0.join("pipe"),
-            Mode::RUSR | Mode::WUSR,
-        )
-        .unwrap();
-        let _socket = UnixListener::bind(fixture.0.join("socket")).unwrap();
-        let workspace = fixture.workspace();
-        for path in [".", "pipe", "socket", "missing"] {
-            rejected(workspace.execute("read_file", &json!({"path":path})));
+        for path in ["..", "parent-link"] {
+            assert_eq!(
+                workspace.execute("list_files", &json!({"path":path}))["ok"],
+                false
+            );
         }
-        fs::write(fixture.0.join("file"), "text").unwrap();
-        rejected(workspace.execute("list_files", &json!({"path":"file"})));
     }
 
     #[test]
-    fn enforces_utf8_and_file_size_boundary() {
+    fn invalid_directory_selection_is_rejected() {
         let fixture = Fixture::new();
-        let workspace = fixture.workspace();
-        fs::write(fixture.0.join("text"), "a".repeat(4096)).unwrap();
-        assert_eq!(
-            workspace.execute("read_file", &json!({"path":"text"})),
-            json!({"ok":true,"result":"a".repeat(4096)})
-        );
-        fs::write(fixture.0.join("text"), "a".repeat(4097)).unwrap();
-        rejected(workspace.execute("read_file", &json!({"path":"text"})));
-        fs::write(fixture.0.join("text"), [0xff]).unwrap();
-        rejected(workspace.execute("read_file", &json!({"path":"text"})));
-        fs::write(fixture.0.join("text"), "").unwrap();
-        assert_eq!(
-            workspace.execute("read_file", &json!({"path":"text"})),
-            json!({"ok":true,"result":""})
-        );
-    }
-
-    #[test]
-    fn enforces_directory_entry_limit_without_truncating() {
-        let fixture = Fixture::new();
-        let workspace = fixture.workspace();
-        assert_eq!(
-            workspace.execute("list_files", &json!({"path":"."})),
-            json!({"ok":true,"result":[]})
-        );
-        let names: Vec<_> = (0..64).map(|i| format!("file-{i:02}")).collect();
-        for name in &names {
-            fs::write(fixture.0.join(name), "").unwrap();
-        }
-        assert_eq!(
-            workspace.execute("list_files", &json!({"path":"."})),
-            json!({"ok":true,"result":names})
-        );
-        fs::write(fixture.0.join("extra"), "").unwrap();
-        rejected(workspace.execute("list_files", &json!({"path":"."})));
-    }
-
-    #[test]
-    fn bounds_serialized_results_and_rejects_non_utf8_names() {
-        let fixture = Fixture::new();
-        let workspace = fixture.workspace();
-        fs::write(fixture.0.join("escaped"), vec![0; 4096]).unwrap();
-        rejected(workspace.execute("read_file", &json!({"path":"escaped"})));
-        for i in 0..40 {
-            fs::write(fixture.0.join(format!("{i:02}{}", "x".repeat(220))), "").unwrap();
-        }
-        rejected(workspace.execute("list_files", &json!({"path":"."})));
-
-        let invalid_name = Fixture::new();
-        fs::write(
-            invalid_name
-                .0
-                .join(std::ffi::OsString::from_vec(vec![0xff])),
-            "",
-        )
-        .unwrap();
-        rejected(
-            invalid_name
-                .workspace()
-                .execute("list_files", &json!({"path":"."})),
-        );
-    }
-
-    #[test]
-    fn rejects_unknown_tools_and_malformed_arguments() {
-        let fixture = Fixture::new();
-        let workspace = fixture.workspace();
-        rejected(workspace.execute("write_file", &json!({"path":"."})));
-        for arguments in [
-            Value::Null,
-            json!([]),
-            json!({}),
-            json!({"path":1}),
-            json!({"path":".","extra":true}),
-            json!({"other":"."}),
-            json!({"path":""}),
-            json!({"path":"a".repeat(1025)}),
-            json!({"path":"a\u{0000}b"}),
+        fs::write(fixture.0.join("file.txt"), "not a directory").unwrap();
+        symlink(&fixture.0, fixture.0.join("link")).unwrap();
+        for path in [
+            "/etc".to_owned(),
+            "".into(),
+            fixture.0.join("missing").to_str().unwrap().into(),
+            fixture.0.join("file.txt").to_str().unwrap().into(),
+            fixture.0.join("selected/..").to_str().unwrap().into(),
+            fixture.0.join("link/selected").to_str().unwrap().into(),
         ] {
-            for name in ["list_files", "read_file"] {
-                rejected(workspace.execute(name, &arguments));
-            }
+            assert!(Workspace::open(&path).is_err(), "accepted {path}");
         }
     }
 }
