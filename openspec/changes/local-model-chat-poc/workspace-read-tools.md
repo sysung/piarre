@@ -56,3 +56,7 @@ The maintainer approved reducing automated workspace coverage to three behaviors
 3. Reject invalid directory selections, including an intermediate symlink, before inference is possible.
 
 All six current tests passed: three workspace tests and three unchanged terminal tests. They ran with `cargo test --locked` in the Linux compiler container with a writable temporary `/workspace` supplied by `--tmpfs /workspace`. Earlier counts above describe historical runs, not the current suite. Runtime code and protections are unchanged; detailed size/encoding/special-file test matrices were removed. Existing real-model observations remain applicable and were not rerun for this test-only refactor. This was a refactor of existing coverage, not a claimed new red-green feature cycle.
+
+## Simplification check
+
+Application revision `e84ac26` combines workspace construction, uses `split_last` for conversation history, and serializes each tool result once. All six existing Linux tests passed. The rebuilt harness used the same MiniCPM route to list `notes.txt` in `/workspace/samples`, read `Reference: birch-527.`, and answer with `birch-527`. No runtime protections or requirements changed. Docker build and diff checks passed.
