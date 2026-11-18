@@ -45,6 +45,8 @@ Optional thinking display is a separate M2 slice after answer streaming (#159), 
 
 After the user tries chat, add explicit workspace-tool mode with list/read/create/edit/delete. The real model proposes structured calls and Rust handlers execute them. File operations resolve beneath `/workspace`, reject traversal/symlink escapes and non-regular targets, and have file/output/step bounds. No shell, arbitrary HTTP, generated-code execution, workspace-root deletion or recursive directory deletion. Verify files independently of the model's narration. On cancellation, preserve a truthful record of completed operations.
 
+For list/read, `--workspace DIRECTORY` enables tools for an existing container directory at or beneath `/workspace`. Resolve the selected directory through the same confined filesystem boundary; tool paths are relative to that directory. Reject invalid or missing directories before inference.
+
 The workspace is container-owned temporary storage, discarded on teardown. A future personal workspace mount or export is a separate opt-in feature. No second client container is necessary for the initial PoC.
 
 ### D4. Observe a few models, do not certify them
