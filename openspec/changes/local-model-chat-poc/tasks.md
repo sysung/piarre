@@ -155,11 +155,12 @@ Approved revision: 2026-11-15. Real model first; user chat trial before workspac
   - Decision (2026-11-18): After personally trying chat/cancellation, selecting MiniCPM5-2B and accepting the recorded recall limitations in #206, the maintainer instructed us to continue when presented with this checkpoint and the next list/read slice. Proceed to disposable workspace tools. This is not final PoC acceptance or permission to access personal files.
   - Contract: [design and verification](design.md#verification-plan).
 
-- [ ] 2.8 Add workspace listing and reading tools. Verify using the human steps below.
+- [x] 2.8 Add workspace listing and reading tools. Verify using the human steps below.
   - Description: Add workspace listing and reading tools.
   - Value: Let the agent inspect disposable sample files.
   - Parent: S5. Blocked by: 2.7.
   - Human verification: Real model calls list/read; operator checks results. Reject traversal, symlink escapes and non-regular files; bound output and tool steps.
+  - Evidence: [workspace read tools](workspace-read-tools.md). Real MiniCPM calls and seven approved boundary tests passed on 2026-11-18.
   - Contract: [design and verification](design.md#verification-plan).
 
 - [ ] 2.9 Create sample files through the real model. Verify using the human steps below.

@@ -1,6 +1,6 @@
 # Piarre
 
-Piarre is a local-model proof of concept for chatting with MiniCPM5-2B in a disposable Docker container. It uses a Rust Rig harness. File tools and thinking display are planned.
+Piarre is a local-model proof of concept for chatting with MiniCPM5-2B in a disposable Docker container. It uses a Rust Rig harness. Optional tools can list and read disposable workspace files. Thinking display is planned.
 
 ## Set up
 
@@ -48,6 +48,24 @@ Type your message and press Enter. Replies stream as they arrive.
 Follow-up messages include earlier successful turns. Conversation history stays in memory. Restarting begins a fresh conversation.
 
 Cancelling a response leaves the cancelled turn out of history and keeps earlier completed turns. The model server may continue generating after local cancellation. In one-shot mode, cancellation exits with failure.
+
+## Inspect sample files
+
+Enable read-only tools for one session:
+
+```sh
+docker compose run --rm --name piarre-workspace harness --workspace-tools
+```
+
+In a second terminal, add a sample inside that container:
+
+```sh
+docker exec piarre-workspace sh -c 'printf "The sample color is violet.\n" > /workspace/notes.txt'
+```
+
+Back at `You>`, ask `List the workspace files`, then `Read notes.txt`. Each actual tool result appears as `Tool list_files` or `Tool read_file` before the model's answer. Check the result rather than trusting the answer alone.
+
+Tools are off without `--workspace-tools`. They accept relative paths inside `/workspace`, reject symlinks and traversal, and cannot modify files or run commands. Each turn allows four calls; reads accept UTF-8 files up to 4 KiB, listings up to 64 names, and results up to 8 KiB. Oversized results produce an error instead of partial file contents. No personal folders are mounted. Exiting discards the sample files.
 
 ## Stop or start fresh
 
