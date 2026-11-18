@@ -65,6 +65,12 @@ The harness does not set an output-token cap or generation deadline. It uses the
 
 Terminal control characters appear as visible escapes instead of being executed. Normal text, tabs, and line breaks are preserved.
 
+## Model limitations
+
+In the recorded trials, models sometimes refused harmless requests, contradicted supplied context, or answered recall questions incorrectly. MiniCPM5-2B is the default, but successful examples do not guarantee reliable recall. Check answers against the information you supplied.
+
+See [model observations](openspec/changes/local-model-chat-poc/model-observations.md) for the tested configurations, failures, and accepted PoC limitations.
+
 ## Project work
 
 [Tasks and verification](openspec/changes/local-model-chat-poc/tasks.md) · [GitHub Project](https://github.com/users/sysung/projects/8)
