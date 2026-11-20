@@ -1,6 +1,7 @@
 mod terminal;
 
 use futures_util::StreamExt;
+use piarre::workspace::Workspace;
 use rig_agent::{Agent, AgentBuilder, agent::MultiTurnStreamItem};
 use rig_core::{
     completion::{FinishReason, Message},
@@ -12,7 +13,9 @@ use serde_json::json;
 use std::{
     env,
     error::Error,
+    ffi::OsString,
     io::{self, Write},
+    path::PathBuf,
     process::ExitCode,
 };
 use terminal::safe_text;
@@ -28,8 +31,42 @@ async fn main() -> ExitCode {
     }
 }
 
+struct Invocation {
+    directory: Option<PathBuf>,
+    prompt: Option<String>,
+}
+
+impl Invocation {
+    fn parse(args: impl Iterator<Item = OsString>) -> Result<Self, &'static str> {
+        let mut args = args.peekable();
+        let directory = if args.peek().is_some_and(|arg| arg == "--workspace") {
+            args.next();
+            let directory = args
+                .next()
+                .filter(|path| !path.is_empty())
+                .ok_or("--workspace requires an absolute container directory")?;
+            Some(PathBuf::from(directory))
+        } else {
+            None
+        };
+        let prompt_args = args
+            .map(|arg| arg.into_string().map_err(|_| "prompt must be valid UTF-8"))
+            .collect::<Result<Vec<_>, _>>()?;
+        let prompt = (!prompt_args.is_empty()).then(|| prompt_args.join(" "));
+        Ok(Self { directory, prompt })
+    }
+}
+
 async fn run() -> Result<ExitCode, Box<dyn Error>> {
-    let prompt = env::args().skip(1).collect::<Vec<_>>().join(" ");
+    let Invocation { directory, prompt } = Invocation::parse(env::args_os().skip(1))?;
+    let _workspace = directory
+        .as_deref()
+        .map(|path| {
+            Workspace::select(path)
+                .map_err(|error| format!("cannot select workspace {}: {error}", path.display()))
+        })
+        .transpose()?;
+
     let endpoint = env::var("PIARRE_ENDPOINT")?;
     let model_name = env::var("PIARRE_MODEL")?;
     if endpoint.trim().is_empty() || model_name.trim().is_empty() {
@@ -48,7 +85,11 @@ async fn run() -> Result<ExitCode, Box<dyn Error>> {
         safe_text(&model_name),
         safe_text(&endpoint)
     );
-    let interactive = env::args().len() == 1;
+    if let Some(directory) = directory {
+        eprintln!("Workspace: {}", safe_text(&directory.to_string_lossy()));
+    }
+    let interactive = prompt.is_none();
+    let prompt = prompt.unwrap_or_default();
     let mut editor = if interactive {
         Some(DefaultEditor::new()?)
     } else {

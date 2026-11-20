@@ -30,6 +30,14 @@ docker compose run --rm harness
 
 Type at `You>`. Press Ctrl-C during a reply to stop local streaming, or Ctrl-D at an empty prompt to exit. Each session starts with fresh history.
 
+To select the disposable workspace for a session:
+
+```sh
+docker compose run --rm harness --workspace /workspace
+```
+
+You can also select an existing subfolder by its absolute path inside the container. This release validates the directory at startup. [Issue #214](https://github.com/sysung/piarre/issues/214) tracks connecting it to model file tools.
+
 ## Release model memory
 
 To release model memory after use:
