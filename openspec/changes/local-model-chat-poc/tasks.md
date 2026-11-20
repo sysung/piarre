@@ -162,10 +162,11 @@ Approved revision: 2026-11-15. Real model first; user chat trial before workspac
   - Evidence: [Rig Agent evaluation](rig-agent-evaluation.md). Real MiniCPM preserved chat and completed the harmless tool round trip. Rig now owns dispatch and continuation.
   - Contract: [design and verification](design.md#verification-plan).
 
-- [ ] 2.8b Enforce permissions for one disposable workspace.
+- [x] 2.8b Enforce permissions for one disposable workspace.
   - Value: Ensure file access stays inside the container directory the user selected.
   - Parent: [#174](https://github.com/sysung/piarre/issues/174). Blocked by: 2.8a. Issue: [#213](https://github.com/sysung/piarre/issues/213).
   - Human verification: Independently of inference, select a valid subfolder and read an inside file. Verify outside paths and symlink escapes are rejected and invalid selections fail before inference.
+  - Evidence: In the hardened Docker runtime, revision `46f7235` read the seeded files inside the selection and denied absolute, parent and symlink paths to a seeded sibling. The release CLI rejected invalid selections before configuring the model. [Integration check](../../../tests/workspace_boundary.rs).
   - Contract: [design and verification](design.md#verification-plan).
 
 - [ ] 2.8c Connect MiniCPM to workspace listing and reading tools.
