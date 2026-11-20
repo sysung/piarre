@@ -155,17 +155,30 @@ Approved revision: 2026-11-15. Real model first; user chat trial before workspac
   - Decision (2026-11-18): After personally trying chat/cancellation, selecting MiniCPM5-2B and accepting the recorded recall limitations in #206, the maintainer instructed us to continue when presented with this checkpoint and the next list/read slice. Proceed to disposable workspace tools. This is not final PoC acceptance or permission to access personal files.
   - Contract: [design and verification](design.md#verification-plan).
 
-- [ ] 2.8 Add workspace listing and reading tools. Verify using the human steps below.
+- [ ] 2.8a Evaluate and adopt Rig Agent if it preserves chat and simplifies the loop.
+  - Value: Use a shorter turn loop before expanding model tool access.
+  - Parent: [#174](https://github.com/sysung/piarre/issues/174). Blocked by: 2.7. Issue: [#212](https://github.com/sysung/piarre/issues/212).
+  - Human verification: With real MiniCPM, observe streaming and a follow-up, cancel a turn and confirm it stays out of history, then observe a harmless tool round trip. Record whether the migration meets the adoption criteria.
+  - Contract: [design and verification](design.md#verification-plan).
+
+- [ ] 2.8b Enforce permissions for one disposable workspace.
+  - Value: Ensure file access stays inside the container directory the user selected.
+  - Parent: [#174](https://github.com/sysung/piarre/issues/174). Blocked by: 2.8a. Issue: [#213](https://github.com/sysung/piarre/issues/213).
+  - Human verification: Independently of inference, select a valid subfolder and read an inside file. Verify outside paths and symlink escapes are rejected and invalid selections fail before inference.
+  - Contract: [design and verification](design.md#verification-plan).
+
+- [ ] 2.8c Connect MiniCPM to workspace listing and reading tools.
   - Description: Add workspace listing and reading tools.
   - Value: Let the agent inspect disposable sample files.
-  - Parent: S5. Blocked by: 2.7.
+  - Parent: [#174](https://github.com/sysung/piarre/issues/174). Blocked by: 2.8b. Issue: [#214](https://github.com/sysung/piarre/issues/214).
   - Human verification: Real model calls list/read; operator checks results. Reject traversal, symlink escapes and non-regular files; bound output and tool steps.
+  - Prior prototype: [PR #211](https://github.com/sysung/piarre/pull/211). Repeat the applicable checks against the replacement implementation.
   - Contract: [design and verification](design.md#verification-plan).
 
 - [ ] 2.9 Create sample files through the real model. Verify using the human steps below.
   - Description: Create sample files through the real model.
   - Value: Prove that an agent request makes an observable file.
-  - Parent: S5. Blocked by: 2.8.
+  - Parent: S5. Blocked by: 2.8c.
   - Human verification: Request a Python file in workspace-tool mode and inspect its bytes in the container. Reject existing-file overwrite and outside-workspace writes.
   - Contract: [design and verification](design.md#verification-plan).
 
