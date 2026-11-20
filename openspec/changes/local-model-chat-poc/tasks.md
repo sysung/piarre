@@ -155,10 +155,11 @@ Approved revision: 2026-11-15. Real model first; user chat trial before workspac
   - Decision (2026-11-18): After personally trying chat/cancellation, selecting MiniCPM5-2B and accepting the recorded recall limitations in #206, the maintainer instructed us to continue when presented with this checkpoint and the next list/read slice. Proceed to disposable workspace tools. This is not final PoC acceptance or permission to access personal files.
   - Contract: [design and verification](design.md#verification-plan).
 
-- [ ] 2.8a Evaluate and adopt Rig Agent if it preserves chat and simplifies the loop.
+- [x] 2.8a Evaluate and adopt Rig Agent if it preserves chat and simplifies the loop.
   - Value: Use a shorter turn loop before expanding model tool access.
   - Parent: [#174](https://github.com/sysung/piarre/issues/174). Blocked by: 2.7. Issue: [#212](https://github.com/sysung/piarre/issues/212).
   - Human verification: With real MiniCPM, observe streaming and a follow-up, cancel a turn and confirm it stays out of history, then observe a harmless tool round trip. Record whether the migration meets the adoption criteria.
+  - Evidence: [Rig Agent evaluation](rig-agent-evaluation.md). Real MiniCPM preserved chat and completed the harmless tool round trip. Rig now owns dispatch and continuation.
   - Contract: [design and verification](design.md#verification-plan).
 
 - [ ] 2.8b Enforce permissions for one disposable workspace.
