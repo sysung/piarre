@@ -162,18 +162,19 @@ Approved revision: 2026-11-15. Real model first; user chat trial before workspac
   - Evidence: [Rig Agent evaluation](rig-agent-evaluation.md). Real MiniCPM preserved chat and completed the harmless tool round trip. Rig now owns dispatch and continuation.
   - Contract: [design and verification](design.md#verification-plan).
 
-- [x] 2.8b Enforce permissions for one disposable workspace.
-  - Value: Ensure file access stays inside the container directory the user selected.
+- [x] 2.8b Link an existing workspace and enforce file permissions.
+  - Value: Work in a user-selected project whose files and edits persist across sessions.
   - Parent: [#174](https://github.com/sysung/piarre/issues/174). Blocked by: 2.8a. Issue: [#213](https://github.com/sysung/piarre/issues/213).
-  - Human verification: Independently of inference, select a valid subfolder and read an inside file. Verify outside paths and symlink escapes are rejected and invalid selections fail before inference.
-  - Evidence: In the hardened Docker runtime, revision `46f7235` read the seeded files inside the selection and denied absolute, parent and symlink paths to a seeded sibling. The release CLI rejected invalid selections before configuring the model. [Integration check](../../../tests/workspace_boundary.rs).
+  - Human verification: Select an existing host fixture folder. Independently of inference, read and write inside it, exit, and check the host file and a new session. Check outside reads and writes return approval required and leave the sibling untouched. Reject traversal, symlinks and invalid selections.
+  - Evidence: The [two integration cases](../../../tests/workspace_boundary.rs) passed with model configuration unset. The host retained the inside edit after container exit and a new container read it. Outside reads and writes reported approval required and left the sibling unchanged. The launcher rejected missing directories and files. [PR #216](https://github.com/sysung/piarre/pull/216).
+  - Historical evidence: Revision `46f7235` verified confined reads and invalid selection for the former disposable workspace. Reverify the persistent mount, write access and approval results.
   - Contract: [design and verification](design.md#verification-plan).
 
 - [ ] 2.8c Connect MiniCPM to workspace listing and reading tools.
   - Description: Add workspace listing and reading tools.
-  - Value: Let the agent inspect disposable sample files.
+  - Value: Let the agent inspect sample files in the selected project folder.
   - Parent: [#174](https://github.com/sysung/piarre/issues/174). Blocked by: 2.8b. Issue: [#214](https://github.com/sysung/piarre/issues/214).
-  - Human verification: Real model calls list/read; operator checks results. Reject traversal, symlink escapes and non-regular files; bound output and tool steps.
+  - Human verification: Real model calls list/read; operator checks results and sees an approval-required result for an outside request. Reject traversal, symlink escapes and non-regular files; bound output and tool steps.
   - Prior prototype: [PR #211](https://github.com/sysung/piarre/pull/211). Repeat the applicable checks against the replacement implementation.
   - Contract: [design and verification](design.md#verification-plan).
 
@@ -193,7 +194,7 @@ Approved revision: 2026-11-15. Real model first; user chat trial before workspac
 
 - [ ] 2.11 Delete sample files and report completed changes. Verify using the human steps below.
   - Description: Delete sample files and report completed changes.
-  - Value: Try reversible disposable-workspace operations with honest results.
+  - Value: Verify visible deletion results in the selected sample project.
   - Parent: S5. Blocked by: 2.10.
   - Human verification: Request deletion and verify absence; reject root/recursive deletion. Cancel a multi-operation turn and inspect which completed changes remain.
   - Contract: [design and verification](design.md#verification-plan).

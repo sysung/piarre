@@ -1,0 +1,9 @@
+services:
+  harness:
+    user: "${PIARRE_HOST_UID:?set by scripts/piarre}:${PIARRE_HOST_GID:?set by scripts/piarre}"
+    volumes:
+      - type: bind
+        source: "${PIARRE_HOST_WORKSPACE:?set by scripts/piarre}"
+        target: /workspace
+        bind:
+          create_host_path: false

@@ -1,6 +1,6 @@
 # Piarre
 
-Piarre is a local-model proof of concept for chatting with MiniCPM5-2B in a disposable Docker container. It uses a Rust Rig harness. File tools and thinking display are planned.
+Piarre is a local-model proof of concept for chatting with MiniCPM5-2B in an isolated Docker container. It uses a Rust Rig harness. File tools and thinking display are planned.
 
 ## Set up
 
@@ -30,13 +30,15 @@ docker compose run --rm harness
 
 Type at `You>`. Press Ctrl-C during a reply to stop local streaming, or Ctrl-D at an empty prompt to exit. Each session starts with fresh history.
 
-To select the disposable workspace for a session:
+### Select a workspace
+
+Select an existing project folder on your machine:
 
 ```sh
-docker compose run --rm harness --workspace /workspace
+./scripts/piarre --workspace "/path/to/project"
 ```
 
-You can also select an existing subfolder by its absolute path inside the container. This release validates the directory at startup. [Issue #214](https://github.com/sysung/piarre/issues/214) tracks connecting it to model file tools.
+The selected folder is mounted at `/workspace`. Its files and edits stay on your machine after chat exits. The file layer allows reads and writes inside the folder and returns an approval-required result for outside requests. [#214](https://github.com/sysung/piarre/issues/214) connects Rig's list and read tools to this boundary. The approval prompt and grant are later work.
 
 ## Release model memory
 
@@ -73,7 +75,7 @@ With tools registered, Rig can run a tool the model requests, send back the resu
 
 ## Runtime behavior and limits
 
-Rig runs inside Docker, while Docker Model Runner serves MiniCPM5-2B separately. No personal folders are mounted into the harness.
+Rig runs inside Docker, while Docker Model Runner serves MiniCPM5-2B separately. Plain chat starts without a host folder mount.
 
 The harness does not set an output-token cap or generation deadline. It uses the configured model and runtime defaults. Runtime context and output limits still apply. A runtime-reported cutoff is shown as incomplete.
 

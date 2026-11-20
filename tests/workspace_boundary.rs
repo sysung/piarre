@@ -1,59 +1,59 @@
 #![cfg(target_os = "linux")]
 
-use piarre::workspace::Workspace;
+use piarre::workspace::{AccessError, FileAccess, Workspace};
 use std::{
+    error::Error,
     fs::{self, File},
-    io::{self, Read, Write},
+    io::{self, Write},
     os::unix::fs::symlink,
     path::Path,
 };
 
 #[test]
-#[ignore = "run in Piarre's disposable Docker workspace"]
-fn reads_stay_in_the_selected_workspace() -> io::Result<()> {
-    let root = Path::new("/workspace");
-    let selected = root.join("samples");
-    let sibling = root.join("other.txt");
-    fs::create_dir(&selected)?;
-    fs::create_dir(selected.join("nested"))?;
-    fs::write(selected.join("notes.txt"), b"inside notes\n")?;
-    fs::write(selected.join("nested/notes.txt"), b"nested notes\n")?;
-    File::create_new(&sibling)?.write_all(b"outside notes\n")?;
-    symlink("../other.txt", selected.join("other-link"))?;
-    symlink("..", selected.join("parent-link"))?;
+#[ignore = "run in Docker with an empty host fixture mounted at /workspace"]
+fn reads_and_writes_inside_the_workspace() -> Result<(), Box<dyn Error>> {
+    let workspace = Workspace::select(Path::new("/workspace"))?;
+    let notes = Path::new("notes.txt");
+    File::create_new("/workspace/notes.txt")?.write_all(b"before\n")?;
 
-    for target in [
-        &sibling,
-        &selected.join("other-link"),
-        &selected.join("parent-link/other.txt"),
-    ] {
-        assert_eq!(fs::read(target)?, b"outside notes\n");
-    }
+    assert_eq!(io::read_to_string(workspace.open_read(notes)?)?, "before\n");
+    workspace
+        .open_write(Path::new("/workspace/notes.txt"))?
+        .write_all(b"edited\n")?;
+    assert_eq!(io::read_to_string(workspace.open_read(notes)?)?, "edited\n");
+    Ok(())
+}
 
-    let workspace = Workspace::select(&selected)?;
-    for (path, expected) in [
-        ("notes.txt", "inside notes\n"),
-        ("nested/notes.txt", "nested notes\n"),
-    ] {
-        let mut contents = String::new();
-        workspace
-            .open_read(Path::new(path))?
-            .read_to_string(&mut contents)?;
-        assert_eq!(contents, expected);
-        eprintln!("read {path}: {contents:?}");
-    }
+#[test]
+#[ignore = "run in Docker with an empty host fixture mounted at /workspace"]
+fn outside_reads_and_writes_require_approval() -> Result<(), Box<dyn Error>> {
+    let selected = Path::new("/workspace/samples");
+    let sibling = Path::new("/workspace/outside.txt");
+    fs::create_dir(selected)?;
+    File::create_new(sibling)?.write_all(b"outside\n")?;
+    symlink("../outside.txt", selected.join("link"))?;
+    fs::hard_link(sibling, selected.join("alias"))?;
+    let workspace = Workspace::select(selected)?;
 
-    for path in [
-        "/workspace/other.txt",
-        "../other.txt",
-        "other-link",
-        "parent-link/other.txt",
-        "nested",
-    ] {
-        let Err(error) = workspace.open_read(Path::new(path)) else {
-            panic!("workspace unexpectedly opened {path}");
-        };
-        eprintln!("denied {path}: {error}");
+    assert!(matches!(
+        workspace.open_read(sibling),
+        Err(AccessError::ApprovalRequired { path, access: FileAccess::Read }) if path == sibling
+    ));
+    assert!(matches!(
+        workspace.open_write(sibling),
+        Err(AccessError::ApprovalRequired { path, access: FileAccess::Write }) if path == sibling
+    ));
+    for path in [Path::new("../outside.txt"), Path::new("link")] {
+        assert!(matches!(workspace.open_read(path), Err(AccessError::Io(_))));
+        assert!(matches!(
+            workspace.open_write(path),
+            Err(AccessError::Io(_))
+        ));
     }
+    assert!(matches!(
+        workspace.open_write(Path::new("alias")),
+        Err(AccessError::Io(error)) if error.kind() == io::ErrorKind::PermissionDenied
+    ));
+    assert_eq!(fs::read(sibling)?, b"outside\n");
     Ok(())
 }

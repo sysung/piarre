@@ -1,5 +1,5 @@
 ## Purpose
-Let a user chat with a local model and then try scoped file operations in a disposable session workspace.
+Let a user chat with a local model and then try scoped file operations in a folder they select.
 
 ## ADDED Requirements
 
@@ -33,18 +33,29 @@ The application SHALL use configured model/runtime generation defaults without o
 - **THEN** the error is visible and displayed text cannot perform terminal actions
 
 ### Requirement: Enable file tools after the chat trial
-File tools SHALL remain disabled until the user has tried chat and explicitly chooses workspace-tool mode. That mode SHALL offer list/read/create/edit/delete for regular files inside the disposable workspace, with bounded file sizes, output and tool-loop steps.
+File tools SHALL remain disabled until the user has tried chat and explicitly chooses a workspace. The planned file tools SHALL support bounded list/read/create/edit/delete inside the selected workspace.
 
 #### Scenario: Request a sample file
 - **WHEN** the user enables workspace mode after the chat trial and asks the real model to create a Python file
 - **THEN** a registered tool writes the file and returns its actual result for independent inspection
 
 ### Requirement: Confine file operations
-Tools SHALL reject paths outside the workspace, traversal and symlink escapes, non-regular targets, deletion of the workspace root and recursive directory deletion. They SHALL NOT provide shell, arbitrary HTTP or generated-code execution. Model prose SHALL NOT grant additional authority.
+Workspace selection SHALL consent to reads and writes on regular files within the selected directory without per-file approval, subject to OS permissions. The file layer SHALL reject traversal, symlinks, non-regular file targets, writes through multiply linked files, deletion of the workspace root and recursive directory deletion.
+
+#### Scenario: Read or write within the selection
+- **WHEN** a file operation targets a permitted regular file inside the selected folder
+- **THEN** the file layer permits the operation without another approval prompt
+
+#### Scenario: Request an unsafe path
+- **WHEN** a file request contains traversal or attempts to follow a symlink
+- **THEN** the file layer rejects the path
+
+### Requirement: Require approval outside the workspace
+An explicit outside file read or write SHALL return an approval-required result without opening or changing the target. An outside operation may proceed only after explicit user approval through a separately implemented grant flow. Model text SHALL NOT grant authority. Shell, arbitrary HTTP and generated-code execution remain outside the file permission layer.
 
 #### Scenario: Request an outside path
-- **WHEN** a tool request targets a path outside the workspace or follows a symlink outside it
-- **THEN** the operation fails without changing the target
+- **WHEN** a file request names an absolute path outside the selected workspace
+- **THEN** the file layer reports approval required without opening or modifying the target
 
 ### Requirement: Show optional model-provided reasoning
 Chat SHALL offer a live Thinking section separate from the Answer when the configured local model/runtime exposes reasoning. The user SHALL be able to hide the Thinking display. Hiding text SHALL be distinguished from disabling model reasoning. The application SHALL NOT fabricate reasoning or describe emitted reasoning as a guaranteed account of internal computation. Both streams SHALL use the same safe terminal rendering and honest interrupted/limited-output reporting.

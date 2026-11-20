@@ -1,0 +1,36 @@
+#!/bin/sh
+set -eu
+
+case "$0" in
+    */*) script_dir=${0%/*} ;;
+    *) script_dir=. ;;
+esac
+repo=$(CDPATH='' cd -P "$script_dir/.." && pwd -P)
+
+if [ "${1-}" = "--workspace" ]; then
+    if [ "$#" -lt 2 ] || [ -z "$2" ]; then
+        printf '%s\n' 'Usage: scripts/piarre --workspace DIRECTORY [PROMPT]' >&2
+        exit 1
+    fi
+    case "$2" in
+        /*) directory=$2 ;;
+        *) directory=$PWD/$2 ;;
+    esac
+    if ! resolved=$(CDPATH='' cd -P "$directory" 2>/dev/null && printf '%s.' "$PWD"); then
+        printf 'Workspace must be an existing directory: %s\n' "$2" >&2
+        exit 1
+    fi
+    PIARRE_HOST_WORKSPACE=${resolved%.}
+    PIARRE_HOST_UID=$(id -u)
+    PIARRE_HOST_GID=$(id -g)
+    if [ "$PIARRE_HOST_UID" -eq 0 ]; then
+        printf '%s\n' 'Run workspace mode as a non-root user.' >&2
+        exit 1
+    fi
+    export PIARRE_HOST_WORKSPACE PIARRE_HOST_UID PIARRE_HOST_GID
+    shift 2
+    exec docker compose -f "$repo/compose.yaml" -f "$repo/compose.workspace.yaml" \
+        run --rm harness --workspace /workspace "$@"
+fi
+
+exec docker compose -f "$repo/compose.yaml" run --rm harness "$@"
