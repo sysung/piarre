@@ -45,6 +45,12 @@ Optional thinking display is a separate M2 slice after answer streaming (#159), 
 
 After the user tries chat, add explicit workspace-tool mode with list/read/create/edit/delete. The real model proposes structured calls and Rust handlers execute them. File operations resolve beneath `/workspace`, reject traversal/symlink escapes and non-regular targets, and have file/output/step bounds. No shell, arbitrary HTTP, generated-code execution, workspace-root deletion or recursive directory deletion. Verify files independently of the model's narration. On cancellation, preserve a truthful record of completed operations.
 
+The M2 split replaces [#174](https://github.com/sysung/piarre/issues/174) with three linked issues. [#212](https://github.com/sysung/piarre/issues/212) evaluates Rig Agent 0.46.0 on the existing MiniCPM route. Adopt its turn loop only if it simplifies the code and preserves streaming, chat context and cancellation. Verify one real tool round trip without file access. If adoption fails those checks, retain the current loop and reassess the design before advancing.
+
+[#213](https://github.com/sysung/piarre/issues/213) defines the file access boundary separately from model tool dispatch. `--workspace DIRECTORY` selects an existing directory at or beneath the disposable container's `/workspace`. The selection provides explicit consent for workspace mode. Reads inside the selected directory need no further approval. The file access layer denies outside paths and symlink escapes, and invalid directory selections fail before inference. Future writes use the same boundary.
+
+[#214](https://github.com/sysung/piarre/issues/214) registers list/read tools only for sessions with a selected workspace. It routes each request through the file access layer and displays actual results. Check the four-call tool budget separately from Rig's model-call budget. [PR #211](https://github.com/sysung/piarre/pull/211) records the earlier prototype and review. Its results do not verify the replacement implementation.
+
 The workspace is container-owned temporary storage, discarded on teardown. A future personal workspace mount or export is a separate opt-in feature. No second client container is necessary for the initial PoC.
 
 ### D4. Observe a few models, do not certify them
@@ -65,6 +71,9 @@ Update existing issues and native dependencies without duplicates. Keep mileston
 4. Try two chat turns, cancellation, an unavailable endpoint and restart. Expect visible errors, readable text and fresh session state after restart.
 5. For #182, observe real streamed Thinking followed by Answer, hide thinking without losing the answer, and check the unavailable-reasoning behavior. Verify safe rendering across chunk boundaries and honest interrupted/limited output. Record observed latency/output-limit effects without a benchmark gate.
 6. Have the user try chat before enabling file tools.
+   - For #212, check real MiniCPM streaming, use of prior context, Ctrl-C with no interrupted turn in history, and one harmless tool call.
+   - For #213, select a disposable subfolder and independently verify that inside paths work and outside paths are denied.
+   - For #214, use real MiniCPM to list a seeded subfolder and read a known file. Check the answer against the tool result, verify the call budget and confirm that plain chat exposes no file tools.
 7. With real model tool calls, create, inspect, edit, inspect, delete and verify a sample Python file. Check a harmless outside-workspace request is refused and teardown discards the workspace. No Python execution is implied.
 8. Record user observations and acceptance separately from code completion. Recheck only behavior affected by fixes.
 

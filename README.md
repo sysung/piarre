@@ -21,45 +21,14 @@ sh scripts/install-model.sh
 
 Skip this step if `piarre/minicpm5:2b-q4_k_m` is already installed. The installer removes temporary downloads after success, failure, or interruption. The imported model stays in Docker Model Runner.
 
-## Build and try a prompt
-
-```sh
-docker compose build harness
-docker compose run --rm harness "What is 2 + 2? Reply with only the number."
-```
-
-The documented verified response is `4`. When you pass a prompt argument, the command answers once and exits.
-
 ## Chat interactively
 
 ```sh
+docker compose build harness
 docker compose run --rm harness
 ```
 
-Type your message and press Enter. Replies stream as they arrive.
-
-| Key | Action |
-| --- | --- |
-| Up or Down | Recall earlier input. |
-| Ctrl-C at the prompt | Clear the current input. |
-| Ctrl-C during a response | Cancel the local response and return to the prompt. |
-| Ctrl-D at an empty prompt | Exit chat. |
-
-Follow-up messages include earlier successful turns. Conversation history stays in memory. Restarting begins a fresh conversation.
-
-Cancelling a response leaves the cancelled turn out of history and keeps earlier completed turns. The model server may continue generating after local cancellation. In one-shot mode, cancellation exits with failure.
-
-## Stop or start fresh
-
-At an empty `You>` prompt, press Ctrl-D to exit. If a response is running, press Ctrl-C first, then Ctrl-D at the prompt.
-
-The `--rm` option removes the chat container after it exits. Conversation history and temporary files in `/workspace` and `/tmp` are discarded. Start a fresh session with:
-
-```sh
-docker compose run --rm harness
-```
-
-Rebuild only when the application or build configuration changes. Exiting chat does not unload MiniCPM5-2B or delete the installed model.
+Type at `You>`. Press Ctrl-C during a reply to stop local streaming, or Ctrl-D at an empty prompt to exit. Each session starts with fresh history.
 
 ## Release model memory
 
@@ -69,11 +38,38 @@ To release model memory after use:
 docker model unload piarre/minicpm5:2b-q4_k_m
 ```
 
+## How a chat turn works
+
+```mermaid
+sequenceDiagram
+    box Piarre container
+        participant Chat as Terminal chat
+        participant Rig as Rig Agent library
+    end
+    participant Model as MiniCPM on Model Runner
+    Chat->>Rig: Send prompt and earlier messages
+    Rig->>Rig: Prepare model request
+    Note over Rig: Chat only in this PoC
+    Rig->>Model: Request a reply
+    loop As text arrives
+        Model-->>Rig: Stream text chunks
+        Rig-->>Chat: Forward text events
+        Chat->>Chat: Display text
+    end
+    Model-->>Rig: Finish model reply
+    Rig-->>Chat: Final response and new messages
+    Chat->>Chat: Keep valid turn in history
+```
+
+With tools registered, Rig can run a tool the model requests, send back the result, and ask the model to continue. Exploration, edits, and verification would be steps in a coding workflow built on that loop. See the [Rig Agent evaluation](openspec/changes/local-model-chat-poc/rig-agent-evaluation.md) for the tool-call test.
+
 ## Runtime behavior and limits
 
 Rig runs inside Docker, while Docker Model Runner serves MiniCPM5-2B separately. No personal folders are mounted into the harness.
 
 The harness does not set an output-token cap or generation deadline. It uses the configured model and runtime defaults. Runtime context and output limits still apply. A runtime-reported cutoff is shown as incomplete.
+
+Ctrl-C leaves the interrupted turn out of history. The model server may continue generating after local cancellation.
 
 Terminal control characters appear as visible escapes instead of being executed. Normal text, tabs, and line breaks are preserved.
 
