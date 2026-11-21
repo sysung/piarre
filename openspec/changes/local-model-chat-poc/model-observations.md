@@ -35,14 +35,14 @@ Use the existing installation from the repository directory. This does not downl
 1. Start a fresh Qwen chat:
 
    ```sh
-   PIARRE_MODEL=piarre/qwen3.5:4b-q4_k_m docker compose run --rm harness
+   PIARRE_MODEL=piarre/qwen3.5:4b-q4_k_m docker compose run --rm existing-model
    ```
 
 2. Send `Remember the codeword violet-100`, then `What was the codeword`. Compare the answer with the excerpts above. Press **Ctrl-D at `You>`** to exit.
 3. If MiniCPM is already installed, start its fresh chat:
 
    ```sh
-   PIARRE_MODEL=piarre/minicpm5:2b-q4_k_m docker compose run --rm harness
+   PIARRE_MODEL=piarre/minicpm5:2b-q4_k_m docker compose run --rm existing-model
    ```
 
 4. Send the same two prompts. Exit with Ctrl-D. For the second MiniCPM example, launch again and send the exact `violet-742` prompts in the table.

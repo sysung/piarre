@@ -4,14 +4,18 @@ Run a real local model with an isolated Linux container and an opt-in persistent
 ## ADDED Requirements
 
 ### Requirement: Use an explicitly configured local model
-The application SHALL call the operator-configured local endpoint and model. The default Compose configuration and installer SHALL select MiniCPM5-2B; operators MAY override the model. It SHALL NOT silently download weights or fall back to a cloud provider.
+The harness SHALL use the operator-configured local endpoint and model without downloading weights or falling back to a cloud provider. The default Compose services SHALL visibly provision MiniCPM5-2B through Docker Model Runner when missing and apply the default context setting only to that model. The `existing-model` and `workspace-existing-model` services SHALL skip provisioning and preserve the selected model's runtime settings.
+
+#### Scenario: Start without the default model cached
+- **WHEN** the operator starts the default Compose service with Docker Model Runner enabled and MiniCPM5-2B is missing
+- **THEN** Compose downloads the configured model before starting the harness
 
 #### Scenario: Model unavailable
 - **WHEN** the configured model cannot load or the endpoint cannot be reached
 - **THEN** the attempt reports the actual failure without substituting another provider
 
 ### Requirement: Keep agent work in a disposable container
-The agent SHALL run in an isolated Linux container without credential mounts, SSH agent, Docker socket or privileged mode. Plain chat SHALL mount no host folders. The workspace Compose override SHALL mount only the selected existing host folder at `/workspace` for read-write access under OS permissions. The flag `--workspace DIRECTORY` SHALL select the file access root in that mount. Bounded temporary storage SHALL be the only other writable location.
+The agent SHALL run in an isolated Linux container without credential mounts, SSH agent, Docker socket or privileged mode. Plain chat SHALL mount no host folders. The Compose workspace services SHALL mount only the selected existing host folder at `/workspace` for read-write access under OS permissions. The flag `--workspace DIRECTORY` SHALL select the file access root in that mount. Bounded temporary storage SHALL be the only other writable location.
 
 #### Scenario: Start the default environment
 - **WHEN** the user launches plain chat

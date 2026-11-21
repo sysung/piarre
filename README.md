@@ -13,42 +13,38 @@ git clone https://github.com/sysung/piarre.git
 cd piarre
 ```
 
-Install the model once. Allow about 1.56 GB for the model, plus temporary staging space:
-
-```sh
-sh scripts/install-model.sh
-```
-
-Skip this step if `piarre/minicpm5:2b-q4_k_m` is already installed. The installer removes temporary downloads after success, failure, or interruption. The imported model stays in Docker Model Runner.
-
 ## Chat interactively
 
 ```sh
-docker compose build harness
-docker compose run --rm harness
+docker compose run --build --rm harness
 ```
+
+On first launch, Compose downloads the MiniCPM5-2B Q4_K_M model from Hugging Face (about 1.56 GB) into Docker Model Runner. Later launches use the cached weights.
 
 Type at `You>`. Press Ctrl-C during a reply to stop local streaming, or Ctrl-D at an empty prompt to exit. Each session starts with fresh history.
 
-### Select a workspace
+### Open a project folder
 
-From the Piarre checkout, set the absolute path to an existing project folder:
+Build the harness from the Piarre checkout:
 
 ```sh
-test "$(id -u)" -ne 0 && \
-PIARRE_HOST_WORKSPACE="/path/to/project" \
-  docker compose -f compose.yaml -f compose.workspace.yaml run --rm \
-  --user "$(id -u):$(id -g)" harness --workspace /workspace
+docker compose build harness
 ```
 
-Compose mounts the host folder at `/workspace`. The `--workspace` argument selects that path inside the container. Your files and edits stay on your machine after chat exits. [#214](https://github.com/sysung/piarre/issues/214) connects Rig's list and read tools to the file permission layer.
+Open your project by replacing `/path/to/project` with its absolute path:
+
+```sh
+PIARRE_HOST_WORKSPACE="/path/to/project" docker compose run --rm workspace
+```
+
+Your files and edits stay on your machine after chat exits. On Docker setups that require matching host file ownership, pass `--user UID:GID` before `workspace` using your non-root user and group IDs. [#214](https://github.com/sysung/piarre/issues/214) connects Rig's list and read tools to the selected folder.
 
 ## Release model memory
 
 To release model memory after use:
 
 ```sh
-docker model unload piarre/minicpm5:2b-q4_k_m
+docker model unload hf.co/openbmb/MiniCPM5-2B-GGUF:Q4_K_M
 ```
 
 ## How a chat turn works
@@ -80,11 +76,13 @@ With tools registered, Rig can run a tool the model requests, send back the resu
 
 Rig runs inside Docker, while Docker Model Runner serves MiniCPM5-2B separately. Plain chat starts without a host folder mount.
 
+To use an installed model with its current settings, set `PIARRE_MODEL` and run `docker compose run --rm existing-model`. For a project folder, also set `PIARRE_HOST_WORKSPACE` and run `docker compose run --rm workspace-existing-model`. Set `PIARRE_ENDPOINT` if you use another local server.
+
 The harness does not set an output-token cap or generation deadline. It uses the configured model and runtime defaults. Runtime context and output limits still apply. A runtime-reported cutoff is shown as incomplete.
 
 Ctrl-C leaves the interrupted turn out of history. The model server may continue generating after local cancellation.
 
-Terminal control characters appear as visible escapes instead of being executed. Normal text, tabs, and line breaks are preserved.
+Rig streams replies directly to the terminal, where control characters in a reply can affect the display. Ordinary chat hides structured reasoning. Piarre escapes control characters in configuration and error messages.
 
 ## Model limitations
 
@@ -94,4 +92,4 @@ See [model observations](openspec/changes/local-model-chat-poc/model-observation
 
 ## Project work
 
-[Tasks and verification](openspec/changes/local-model-chat-poc/tasks.md) · [GitHub Project](https://github.com/users/sysung/projects/8)
+[Tasks and verification](openspec/changes/local-model-chat-poc/tasks.md) · [GitHub Project](https://github.com/users/sysung/projects/8) · [Issue workflow](.agents/docs/issue-tracker.md)

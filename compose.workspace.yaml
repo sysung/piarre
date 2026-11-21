@@ -1,8 +1,0 @@
-services:
-  harness:
-    volumes:
-      - type: bind
-        source: "${PIARRE_HOST_WORKSPACE:?set an absolute path to an existing project folder}"
-        target: /workspace
-        bind:
-          create_host_path: false

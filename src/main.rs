@@ -1,12 +1,17 @@
-mod terminal;
+mod helper;
+mod workspace;
 
-use futures_util::StreamExt;
-use piarre::workspace::Workspace;
-use rig_agent::{Agent, AgentBuilder, agent::MultiTurnStreamItem};
+use futures_util::{StreamExt, future};
+use helper::escape_terminal_controls;
+use rig_agent::{
+    Agent, AgentBuilder,
+    agent::{MultiTurnStreamItem, stream_to_stdout},
+    streaming::{Item, StreamEvent},
+};
 use rig_core::{
     completion::{FinishReason, Message},
+    message::AssistantContent,
     providers::openai::OpenAIConfig,
-    streaming::{Item, StreamEvent},
 };
 use rustyline::{DefaultEditor, error::ReadlineError};
 use serde_json::json;
@@ -18,14 +23,17 @@ use std::{
     path::PathBuf,
     process::ExitCode,
 };
-use terminal::safe_text;
+use workspace::Workspace;
 
 #[tokio::main]
 async fn main() -> ExitCode {
     match run().await {
         Ok(status) => status,
         Err(error) => {
-            eprintln!("Request failed: {}", safe_text(&error.to_string()));
+            eprintln!(
+                "Request failed: {}",
+                escape_terminal_controls(&error.to_string())
+            );
             ExitCode::FAILURE
         }
     }
@@ -82,11 +90,14 @@ async fn run() -> Result<ExitCode, Box<dyn Error>> {
         .build();
     eprintln!(
         "Model: {}\nEndpoint: {}",
-        safe_text(&model_name),
-        safe_text(&endpoint)
+        escape_terminal_controls(&model_name),
+        escape_terminal_controls(&endpoint)
     );
     if let Some(directory) = directory {
-        eprintln!("Workspace: {}", safe_text(&directory.to_string_lossy()));
+        eprintln!(
+            "Workspace: {}",
+            escape_terminal_controls(&directory.to_string_lossy())
+        );
     }
     let interactive = prompt.is_none();
     let prompt = prompt.unwrap_or_default();
@@ -130,7 +141,10 @@ async fn run() -> Result<ExitCode, Box<dyn Error>> {
             }
             Ok(TurnOutcome::Completed(messages)) => history.extend(messages),
             Err(error) if interactive => {
-                eprintln!("Request failed: {}", safe_text(&error.to_string()));
+                eprintln!(
+                    "Request failed: {}",
+                    escape_terminal_controls(&error.to_string())
+                );
             }
             Err(error) => return Err(error),
         }
@@ -151,63 +165,49 @@ async fn run_turn(
     history: &[Message],
     input: &str,
 ) -> Result<TurnOutcome, Box<dyn Error>> {
-    let mut displayed = false;
     let response = async {
         let mut stream = agent
             .prompt(input)
             .history(history.iter().cloned())
-            .stream();
-        while let Some(item) = stream.next().await {
-            match item? {
-                MultiTurnStreamItem::StreamAssistantItem(Item::Event(StreamEvent::Text {
-                    text,
-                    ..
-                })) => {
-                    let safe = safe_text(&text);
-                    if !safe.is_empty() {
-                        let mut stdout = io::stdout().lock();
-                        stdout.write_all(safe.as_bytes())?;
-                        displayed = true;
-                        stdout.flush()?;
-                    }
-                }
-                MultiTurnStreamItem::FinalResponse(response) => {
-                    if response
-                        .completion_calls
-                        .iter()
-                        .any(|call| matches!(call.finish_reason, Some(FinishReason::Length)))
-                    {
-                        return Err("the runtime stopped at its output/context limit; the answer may be incomplete".into());
-                    }
-                    if response.output().trim().is_empty() {
-                        return Err("the model returned no text".into());
-                    }
-                    return Ok::<Vec<Message>, Box<dyn Error>>(response.messages);
-                }
-                _ => {}
-            }
+            .stream()
+            .filter(|item| {
+                future::ready(!matches!(
+                    item,
+                    Ok(MultiTurnStreamItem::StreamAssistantItem(Item::Event(
+                        StreamEvent::End {
+                            content: AssistantContent::Reasoning(_),
+                            ..
+                        }
+                    )))
+                ))
+            })
+            .boxed();
+        let response = stream_to_stdout(&mut stream).await?;
+        if response
+            .completion_calls
+            .iter()
+            .any(|call| matches!(call.finish_reason, Some(FinishReason::Length)))
+        {
+            return Err("the runtime stopped at its output/context limit; the answer may be incomplete".into());
         }
-        Err("the model stream ended without a final response".into())
+        if response.output().trim().is_empty() {
+            return Err("the model returned no text".into());
+        }
+        Ok(TurnOutcome::Completed(response.messages))
     };
-    let mut result: Result<Option<Vec<Message>>, Box<dyn Error>> = tokio::select! {
+    let result: Result<TurnOutcome, Box<dyn Error>> = tokio::select! {
         biased;
-        signal = tokio::signal::ctrl_c() => signal.map(|()| None).map_err(Into::into),
-        result = response => result.map(Some),
+        signal = tokio::signal::ctrl_c() => signal.map(|()| TurnOutcome::Cancelled).map_err(Into::into),
+        result = response => result,
     };
-    if displayed {
+    let separator = {
         let mut stdout = io::stdout().lock();
-        let separator = stdout.write_all(b"\n").and_then(|_| stdout.flush());
-        if let Err(error) = separator {
-            if result.is_ok() {
-                result = Err(error.into());
-            }
-        }
+        stdout.write_all(b"\n").and_then(|_| stdout.flush())
+    };
+    if result.is_err() {
+        eprintln!("Response incomplete. This turn was not added to conversation history.");
     }
-    if result.is_err() && displayed {
-        eprintln!("Response incomplete; displayed text was not added to conversation history.");
-    }
-    result.map(|messages| match messages {
-        Some(messages) => TurnOutcome::Completed(messages),
-        None => TurnOutcome::Cancelled,
-    })
+    let outcome = result?;
+    separator?;
+    Ok(outcome)
 }
