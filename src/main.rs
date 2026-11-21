@@ -28,7 +28,7 @@ use workspace::Workspace;
 #[tokio::main]
 async fn main() -> ExitCode {
     match run().await {
-        Ok(status) => status,
+        Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
             eprintln!(
                 "Request failed: {}",
@@ -39,34 +39,26 @@ async fn main() -> ExitCode {
     }
 }
 
-struct Invocation {
-    directory: Option<PathBuf>,
-    prompt: Option<String>,
-}
-
-impl Invocation {
-    fn parse(args: impl Iterator<Item = OsString>) -> Result<Self, &'static str> {
-        let mut args = args.peekable();
-        let directory = if args.peek().is_some_and(|arg| arg == "--workspace") {
-            args.next();
-            let directory = args
-                .next()
-                .filter(|path| !path.is_empty())
-                .ok_or("--workspace requires an absolute container directory")?;
-            Some(PathBuf::from(directory))
-        } else {
-            None
-        };
-        let prompt_args = args
-            .map(|arg| arg.into_string().map_err(|_| "prompt must be valid UTF-8"))
-            .collect::<Result<Vec<_>, _>>()?;
-        let prompt = (!prompt_args.is_empty()).then(|| prompt_args.join(" "));
-        Ok(Self { directory, prompt })
+fn parse_workspace(mut args: impl Iterator<Item = OsString>) -> Result<Option<PathBuf>, &'static str> {
+    const USAGE: &str = "usage: piarre [--workspace DIRECTORY]. Enter prompts in chat";
+    let Some(flag) = args.next() else {
+        return Ok(None);
+    };
+    if flag != "--workspace" {
+        return Err(USAGE);
     }
+    let directory = args
+        .next()
+        .filter(|path| !path.is_empty())
+        .ok_or("--workspace requires an absolute container directory")?;
+    if args.next().is_some() {
+        return Err(USAGE);
+    }
+    Ok(Some(PathBuf::from(directory)))
 }
 
-async fn run() -> Result<ExitCode, Box<dyn Error>> {
-    let Invocation { directory, prompt } = Invocation::parse(env::args_os().skip(1))?;
+async fn run() -> Result<(), Box<dyn Error>> {
+    let directory = parse_workspace(env::args_os().skip(1))?;
     let _workspace = directory
         .as_deref()
         .map(|path| {
@@ -99,60 +91,36 @@ async fn run() -> Result<ExitCode, Box<dyn Error>> {
             escape_terminal_controls(&directory.to_string_lossy())
         );
     }
-    let interactive = prompt.is_none();
-    let prompt = prompt.unwrap_or_default();
-    let mut editor = if interactive {
-        Some(DefaultEditor::new()?)
-    } else {
-        None
-    };
+    let mut editor = DefaultEditor::new()?;
     let mut history: Vec<Message> = Vec::new();
-    if interactive {
-        eprintln!(
-            "Chat history stays in this session. Ctrl-D exits; Ctrl-C clears input or cancels a response."
-        );
-    }
+    eprintln!(
+        "Chat history stays in this session. Ctrl-D exits; Ctrl-C clears input or cancels a response."
+    );
     loop {
-        let input = if let Some(editor) = &mut editor {
-            match editor.readline("You> ") {
-                Ok(line) => line,
-                Err(ReadlineError::Interrupted) => continue,
-                Err(ReadlineError::Eof) => break,
-                Err(error) => return Err(error.into()),
-            }
-        } else {
-            prompt.clone()
+        let input = match editor.readline("You> ") {
+            Ok(line) => line,
+            Err(ReadlineError::Interrupted) => continue,
+            Err(ReadlineError::Eof) => break,
+            Err(error) => return Err(error.into()),
         };
         if input.trim().is_empty() {
-            if interactive {
-                continue;
-            }
-            return Err("provide a non-empty prompt".into());
+            continue;
         }
-        if let Some(editor) = &mut editor {
-            editor.add_history_entry(input.as_str())?;
-        }
+        editor.add_history_entry(input.as_str())?;
         match run_turn(&agent, &history, &input).await {
             Ok(TurnOutcome::Cancelled) => {
                 eprintln!("Response cancelled. This turn was not added to conversation history.");
-                if !interactive {
-                    return Ok(ExitCode::FAILURE);
-                }
             }
             Ok(TurnOutcome::Completed(messages)) => history.extend(messages),
-            Err(error) if interactive => {
+            Err(error) => {
                 eprintln!(
                     "Request failed: {}",
                     escape_terminal_controls(&error.to_string())
                 );
             }
-            Err(error) => return Err(error),
-        }
-        if !interactive {
-            break;
         }
     }
-    Ok(ExitCode::SUCCESS)
+    Ok(())
 }
 
 enum TurnOutcome {

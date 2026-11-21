@@ -6,6 +6,10 @@ Let a user chat with a local model and then try scoped file operations in a fold
 ### Requirement: Preserve session conversation
 Chat SHALL keep user and assistant messages in session memory, support editable input and streamed replies, and avoid persisted conversation history by default.
 
+#### Scenario: Supply a positional prompt
+- **WHEN** the user passes prompt text as a launch argument
+- **THEN** the CLI exits with a usage message directing the user to chat input before requesting inference
+
 #### Scenario: Continue a conversation
 - **WHEN** the user sends a related second message
 - **THEN** the model receives the session context; restarting begins a new session
