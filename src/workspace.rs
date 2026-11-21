@@ -4,7 +4,10 @@ use std::{
 };
 
 #[cfg(target_os = "linux")]
-use rustix::fs::{Mode, OFlags, ResolveFlags, open, openat2};
+use rustix::{
+    fd::OwnedFd,
+    fs::{Mode, OFlags, ResolveFlags, open, openat2},
+};
 #[cfg(target_os = "linux")]
 use std::{
     fs::File,
@@ -16,7 +19,7 @@ use std::{
 /// A directory selected for workspace access inside the Linux container.
 pub struct Workspace {
     #[cfg(target_os = "linux")]
-    root: File,
+    root: OwnedFd,
     #[cfg(target_os = "linux")]
     directory: PathBuf,
     #[cfg(not(target_os = "linux"))]
@@ -50,8 +53,10 @@ pub enum AccessError {
 impl Workspace {
     /// Selects an existing directory using an absolute path beneath /workspace.
     pub fn select(directory: &Path) -> io::Result<Self> {
+        const MOUNT: &str = "/workspace";
+
         reject_traversal(directory)?;
-        let relative = directory.strip_prefix("/workspace").map_err(|_| {
+        let relative = directory.strip_prefix(MOUNT).map_err(|_| {
             io::Error::new(
                 io::ErrorKind::InvalidInput,
                 "use /workspace or an absolute path beneath it",
@@ -62,16 +67,13 @@ impl Workspace {
         } else {
             relative
         };
-        let container_root = File::from(open(
-            "/workspace",
-            OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC,
+        let directory_flags = OFlags::RDONLY | OFlags::DIRECTORY;
+        let mount = open(
+            MOUNT,
+            directory_flags | OFlags::NOFOLLOW | OFlags::CLOEXEC,
             Mode::empty(),
-        )?);
-        let root = open_beneath(
-            &container_root,
-            relative,
-            OFlags::RDONLY | OFlags::DIRECTORY,
         )?;
+        let root = open_beneath(&mount, relative, directory_flags)?;
         Ok(Self {
             root,
             directory: directory.to_owned(),
@@ -103,7 +105,7 @@ impl Workspace {
             FileAccess::Read => OFlags::RDONLY,
             FileAccess::Write => OFlags::WRONLY,
         };
-        let file = open_beneath(&self.root, relative, mode | OFlags::NONBLOCK)?;
+        let file = File::from(open_beneath(&self.root, relative, mode | OFlags::NONBLOCK)?);
         let metadata = file.metadata()?;
         if !metadata.is_file() {
             return Err(io::Error::new(
@@ -146,16 +148,16 @@ fn reject_traversal(path: &Path) -> io::Result<()> {
 }
 
 #[cfg(target_os = "linux")]
-fn open_beneath(root: &File, relative: &Path, flags: OFlags) -> io::Result<File> {
+fn open_beneath(root: &OwnedFd, relative: &Path, flags: OFlags) -> io::Result<OwnedFd> {
     // The kernel resolves and opens the path together, relative to the held directory.
-    let file = openat2(
+    openat2(
         root,
         relative,
         OFlags::CLOEXEC | flags,
         Mode::empty(),
         ResolveFlags::BENEATH | ResolveFlags::NO_SYMLINKS | ResolveFlags::NO_XDEV,
-    )?;
-    Ok(File::from(file))
+    )
+    .map_err(Into::into)
 }
 
 #[cfg(all(test, target_os = "linux"))]
