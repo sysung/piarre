@@ -1,17 +1,48 @@
+x-harness: &harness
+  build: .
+  image: piarre-harness:local
+  environment:
+    PIARRE_ENDPOINT: ${PIARRE_ENDPOINT:-http://model-runner.docker.internal/engines/llama.cpp/v1}
+    PIARRE_MODEL: ${PIARRE_MODEL:-hf.co/openbmb/MiniCPM5-2B-GGUF:Q4_K_M}
+  user: "10001:10001"
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  pids_limit: 64
+  mem_limit: 512m
+  cpus: 1
+  tmpfs:
+    - /tmp:size=16777216,mode=1777
+
 services:
   harness:
-    build: .
-    image: piarre-harness:local
-    environment:
-      PIARRE_ENDPOINT: ${PIARRE_ENDPOINT:-http://model-runner.docker.internal/engines/llama.cpp/v1}
-      PIARRE_MODEL: ${PIARRE_MODEL:-piarre/minicpm5:2b-q4_k_m}
-    user: "10001:10001"
-    read_only: true
-    cap_drop: [ALL]
-    security_opt: [no-new-privileges:true]
-    pids_limit: 64
-    mem_limit: 512m
-    cpus: 1
-    tmpfs:
-      - /tmp:size=16777216,mode=1777
-      - /workspace:size=67108864,uid=10001,gid=10001,mode=0700
+    <<: *harness
+    models: [chat]
+
+  workspace: &workspace
+    <<: *harness
+    profiles: [workspace]
+    models: [chat]
+    working_dir: /workspace
+    command: ["--workspace", "/workspace"]
+    volumes:
+      - type: bind
+        # Compose interpolates inactive services too. Use an impossible path when unset.
+        source: "${PIARRE_HOST_WORKSPACE:-/dev/null/PIARRE_HOST_WORKSPACE-required}"
+        target: /workspace
+        bind:
+          create_host_path: false
+
+  existing-model:
+    <<: *harness
+    profiles: [existing-model]
+
+  workspace-existing-model:
+    <<: *workspace
+    profiles: [workspace-existing-model]
+    models: []
+
+models:
+  chat:
+    model: hf.co/openbmb/MiniCPM5-2B-GGUF:Q4_K_M
+    context_size: 4096
