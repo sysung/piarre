@@ -1,5 +1,7 @@
 # Streamed safe output — issue #159
 
+This note records the original #159 implementation. Current plain chat uses Rig's stdout helper as described in the [terminal chat requirement](specs/typed-discussion/spec.md#requirement-render-terminal-chat-and-diagnostics).
+
 Started from master `20fcd40` after the thinking-display planning merge. Rig 0.46.0 now supplies streamed text events. Each visible chunk is flushed immediately; the stream must finish successfully before its response enters conversation history. Errors after displayed text identify the response as incomplete. Reasoning events are not displayed in this slice (#182).
 
 Terminal controls are rendered as visible Rust-style escapes, not executed or silently deleted. Unicode text, newline and tab are preserved. Filtering each character independently makes the output independent of chunk boundaries. Model text, error messages and displayed configuration values use the filter. Raw completed model text remains in in-memory conversation context; it is filtered whenever displayed.

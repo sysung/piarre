@@ -30,22 +30,16 @@ Artifact identities from the investigation:
 
 ## Optional manual replay
 
-Use the existing installation from the repository directory. This does not download models. MiniCPM5-2B became the default after these historical trials. Responses may vary.
+Use the current MiniCPM5-2B chat from the repository directory. The Qwen results above are from earlier trials. Responses may vary.
 
-1. Start a fresh Qwen chat:
+1. Start a fresh chat:
 
    ```sh
-   PIARRE_MODEL=piarre/qwen3.5:4b-q4_k_m docker compose run --rm harness
+   docker compose run --build --rm harness
    ```
 
 2. Send `Remember the codeword violet-100`, then `What was the codeword`. Compare the answer with the excerpts above. Press **Ctrl-D at `You>`** to exit.
-3. If MiniCPM is already installed, start its fresh chat:
-
-   ```sh
-   PIARRE_MODEL=piarre/minicpm5:2b-q4_k_m docker compose run --rm harness
-   ```
-
-4. Send the same two prompts. Exit with Ctrl-D. For the second MiniCPM example, launch again and send the exact `violet-742` prompts in the table.
+3. For the second MiniCPM example, launch again and send the exact `violet-742` prompts in the table.
 
 Each launch starts an empty harness conversation. Model unloading is not required. Nanbeige produced no answer on the attempted backend; successful package import alone does not establish inference support.
 

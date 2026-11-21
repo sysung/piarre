@@ -10,5 +10,4 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 FROM debian:bookworm-slim AS runtime
 COPY --from=build /usr/local/bin/piarre /usr/local/bin/piarre
 USER 10001:10001
-WORKDIR /workspace
 ENTRYPOINT ["/usr/local/bin/piarre"]

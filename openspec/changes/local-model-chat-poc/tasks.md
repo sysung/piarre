@@ -130,6 +130,7 @@ Approved revision: 2026-11-15. Real model first; user chat trial before workspac
   - Parent: S5. Blocked by: 2.2.
   - Human verification: Observe incremental real-model output; inspect filtering of terminal-control sequences, including split chunks.
   - Contract: [design and verification](design.md#verification-plan).
+  - This records the original streaming verification. See [current terminal rendering behavior](specs/typed-discussion/spec.md#requirement-render-terminal-chat-and-diagnostics) for the Rig stdout path.
 
 - [x] 2.5 Handle cancellation and partial outcomes. Verify using the human steps below.
   - Description: Handle cancellation and partial outcomes.
@@ -162,17 +163,19 @@ Approved revision: 2026-11-15. Real model first; user chat trial before workspac
   - Evidence: [Rig Agent evaluation](rig-agent-evaluation.md). Real MiniCPM preserved chat and completed the harmless tool round trip. Rig now owns dispatch and continuation.
   - Contract: [design and verification](design.md#verification-plan).
 
-- [ ] 2.8b Enforce permissions for one disposable workspace.
-  - Value: Ensure file access stays inside the container directory the user selected.
+- [x] 2.8b Link an existing workspace and enforce file permissions.
+  - Value: Work in a user-selected project whose files and edits persist across sessions.
   - Parent: [#174](https://github.com/sysung/piarre/issues/174). Blocked by: 2.8a. Issue: [#213](https://github.com/sysung/piarre/issues/213).
-  - Human verification: Independently of inference, select a valid subfolder and read an inside file. Verify outside paths and symlink escapes are rejected and invalid selections fail before inference.
+  - Human verification: Select an existing host fixture folder. Independently of inference, read and write inside it, exit, and check the host file and a new session. Check outside reads and writes return approval required and leave the sibling untouched. Reject traversal, symlinks and invalid selections.
+  - Evidence: The [two workspace cases](../../../src/workspace.rs) passed with model configuration unset. The host retained the inside edit after container exit and a new container read it. Outside reads and writes reported approval required and left the sibling unchanged. The direct Compose launch rejected missing directories and files. [PR #216](https://github.com/sysung/piarre/pull/216).
+  - Historical evidence: Revision `46f7235` verified confined reads and invalid selection for the former disposable workspace. Reverify the persistent mount, write access and approval results.
   - Contract: [design and verification](design.md#verification-plan).
 
 - [ ] 2.8c Connect MiniCPM to workspace listing and reading tools.
   - Description: Add workspace listing and reading tools.
-  - Value: Let the agent inspect disposable sample files.
+  - Value: Let the agent inspect sample files in the selected project folder.
   - Parent: [#174](https://github.com/sysung/piarre/issues/174). Blocked by: 2.8b. Issue: [#214](https://github.com/sysung/piarre/issues/214).
-  - Human verification: Real model calls list/read; operator checks results. Reject traversal, symlink escapes and non-regular files; bound output and tool steps.
+  - Human verification: Real model calls list/read; operator checks results and sees an approval-required result for an outside request. Reject traversal, symlink escapes and non-regular files; bound output and tool steps.
   - Prior prototype: [PR #211](https://github.com/sysung/piarre/pull/211). Repeat the applicable checks against the replacement implementation.
   - Contract: [design and verification](design.md#verification-plan).
 
@@ -192,7 +195,7 @@ Approved revision: 2026-11-15. Real model first; user chat trial before workspac
 
 - [ ] 2.11 Delete sample files and report completed changes. Verify using the human steps below.
   - Description: Delete sample files and report completed changes.
-  - Value: Try reversible disposable-workspace operations with honest results.
+  - Value: Verify visible deletion results in the selected sample project.
   - Parent: S5. Blocked by: 2.10.
   - Human verification: Request deletion and verify absence; reject root/recursive deletion. Cancel a multi-operation turn and inspect which completed changes remain.
   - Contract: [design and verification](design.md#verification-plan).
@@ -209,7 +212,7 @@ Approved revision: 2026-11-15. Real model first; user chat trial before workspac
   - Value: Let users see the answer without arbitrary harness cutoffs.
   - Parent: S5. Blocked by: 2.3. Issue: [#200](https://github.com/sysung/piarre/issues/200).
   - Human verification: Follow the issue verification plan: inspect request/transport configuration, observe long real output, verify context/history behavior and normal use. Record token-count or duration checks as unverified when not observed. Do not change runtime context merely to claim a pass.
-  - Contract: [typed discussion](specs/typed-discussion/spec.md#requirement-use-runtime-generation-defaults-and-render-safe-text); [verification](design.md#verification-plan).
+  - Contract: [typed discussion](specs/typed-discussion/spec.md#requirement-use-runtime-generation-defaults); [verification](design.md#verification-plan).
 
 ## 3. M3 User Acceptance Testing
 

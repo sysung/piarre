@@ -34,4 +34,4 @@ labels: needs-triage
 
 - **Source:** <!-- Link the spec/change and section. Say “Pending” with the unresolved question, or “Not applicable” with a short reason. Do not invent a contract. -->
 - **Verification source:** <!-- Link the applicable OpenSpec verification section, if available. -->
-<!-- Preserve explicit acceptance/authorization gates. Proposed requirements are not automatically adopted. Configure parent/children, dependencies, milestone, and project in GitHub; see docs/agents/issue-tracker.md. -->
+<!-- Preserve explicit acceptance/authorization gates. Proposed requirements are not automatically adopted. Configure parent/children, dependencies, milestone, and project in GitHub; see .agents/docs/issue-tracker.md. -->

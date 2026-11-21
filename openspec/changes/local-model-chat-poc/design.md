@@ -6,7 +6,7 @@ The recovery and legacy cleanup are complete. The user approved the smaller real
 
 ## Goals / Non-Goals
 
-**Goals:** real local-model requests, a small Rust/Rig chat application, a user chat trial, and observable file operations inside one disposable Linux container.
+**Goals:** real local-model requests, a small Rust/Rig chat application, a user chat trial, and observable file operations in an existing project folder mounted into the isolated Linux container.
 
 **Non-Goals:** benchmarks, strict memory admission, retrieval, model compliance, shell or Python execution, persistent memory, default personal workspace access, public multi-user hosting, authentication infrastructure and a custom model-management service.
 
@@ -28,34 +28,34 @@ Board views and later benchmark work remain tracked independently. No benchmark,
 ```mermaid
 flowchart LR
   U[User terminal] --> H[Rustyline and Rig in Linux container]
-  H --> R[Configured local inference server]
-  R --> Q[MiniCPM5-2B or another selected local model]
-  H --> W[Temporary /workspace in the same container]
+  H --> R[Docker Model Runner]
+  R --> Q[MiniCPM5-2B]
+  H -->|Opt-in workspace| W[Selected host folder mounted at /workspace]
 ```
 
-Rig is a Rust application, not the inference runtime. Start with existing DMR and its llama.cpp backend. Use a fixed operator-configured local endpoint directly; no mediation proxy initially. The application/image and native inference runtime are trusted local software. This is not a claim that arbitrary compromised container code cannot reach other host APIs or that native inference cannot access Mac files.
+Rig sends inference requests directly to Docker Model Runner's llama.cpp endpoint. The application/image and native inference runtime are trusted local software. This is not a claim that arbitrary compromised container code cannot reach other host APIs or that native inference cannot access Mac files.
 
-No default host mounts, Docker socket, credentials, SSH agent, privileged mode or host networking. Use non-root execution, dropped capabilities, no privilege escalation, read-only application files and bounded writable workspace/temp storage. Inspect the actual mounts and user. Model weights stay in the runtime-managed cache outside the agent. Do not add a LAN listener. Container restrictions do not establish perfect machine isolation.
+Plain chat mounts no host folders. Workspace mode mounts only the existing folder selected by the user and retains its data on the host. Keep the Docker socket, credentials, SSH agent, privileged mode and host networking out of both modes. Use non-root execution, dropped capabilities, no privilege escalation, read-only application files and bounded temporary storage. Inspect the actual mounts and user. Model weights stay in the runtime-managed cache outside the agent. Do not add a LAN listener. Container restrictions do not establish perfect machine isolation.
 
 ### D3. Build chat first, then bounded tools
 
-Use one compiled Rust binary, Rig and Rustyline with plain streaming. Compose participates in the first Rig slice. Choose the exact documented launch command during implementation; no Python wrapper is required. Preserve roles and in-session conversation; do not persist prompts by default. Use one active turn, ordinary connection/error handling, safe terminal text and prompt cancellation. Remove the hardcoded 128-output-token override and 120-second deadline; omit output-token overrides and total/read timeouts that stop ongoing generation. Use the configured model/runtime defaults rather than substituting a larger arbitrary maximum. Runtime context capacity is unchanged. Long-output management is future work. Report unknown backend cancellation honestly; do not build a universal server-idle protocol. Do not overlap unresolved local file mutations.
+Use one compiled Rust binary, Rig and Rustyline with plain streaming. Compose participates in the first Rig slice. Choose the exact documented launch command during implementation; no Python wrapper is required. Preserve roles and in-session conversation; do not persist prompts by default. Stream plain replies with Rig's stdout helper and escape control characters in displayed configuration and errors. Keep one active turn with user cancellation. Remove the hardcoded 128-output-token override and 120-second deadline; omit output-token overrides and total/read timeouts that stop ongoing generation. Use the configured model/runtime defaults rather than substituting a larger arbitrary maximum. Runtime context capacity is unchanged. Long-output management is future work. Report unknown backend cancellation honestly; do not build a universal server-idle protocol. Do not overlap unresolved local file mutations.
 
-Optional thinking display is a separate M2 slice after answer streaming (#159), tracked in #182. Verify reasoning support against the configured model/DMR/Rig route before choosing the exact request fields and event handling. Label emitted reasoning as Thinking and final content as Answer; provide a hide option. Hiding display and disabling reasoning are different operations. Do not fabricate reasoning for unsupported configurations or treat emitted text as a faithful internal trace. Reuse safe streaming for both channels, including split control sequences. Preserve honest partial/limited outcomes. Set defaults during implementation and document the controls and observed effects on response time and output limits in README. No persistent reasoning logs or new tool authority are introduced.
+Optional thinking display is a separate M2 slice after answer streaming (#159), tracked in #182. Verify reasoning support against the configured model/DMR/Rig route before choosing the exact request fields and event handling. Label emitted reasoning as Thinking and final content as Answer; provide a hide option. Hiding display and disabling reasoning are different operations. Do not fabricate reasoning for unsupported configurations or treat emitted text as a faithful internal trace. Escape terminal controls in both channels, including split control sequences. Preserve honest partial/limited outcomes. Set defaults during implementation and document the controls and observed effects on response time and output limits in README. No persistent reasoning logs or new tool authority are introduced.
 
 After the user tries chat, add explicit workspace-tool mode with list/read/create/edit/delete. The real model proposes structured calls and Rust handlers execute them. File operations resolve beneath `/workspace`, reject traversal/symlink escapes and non-regular targets, and have file/output/step bounds. No shell, arbitrary HTTP, generated-code execution, workspace-root deletion or recursive directory deletion. Verify files independently of the model's narration. On cancellation, preserve a truthful record of completed operations.
 
 The M2 split replaces [#174](https://github.com/sysung/piarre/issues/174) with three linked issues. [#212](https://github.com/sysung/piarre/issues/212) evaluates Rig Agent 0.46.0 on the existing MiniCPM route. Adopt its turn loop only if it simplifies the code and preserves streaming, chat context and cancellation. Verify one real tool round trip without file access. If adoption fails those checks, retain the current loop and reassess the design before advancing.
 
-[#213](https://github.com/sysung/piarre/issues/213) defines the file access boundary separately from model tool dispatch. `--workspace DIRECTORY` selects an existing directory at or beneath the disposable container's `/workspace`. The selection provides explicit consent for workspace mode. Reads inside the selected directory need no further approval. The file access layer denies outside paths and symlink escapes, and invalid directory selections fail before inference. Future writes use the same boundary.
+[#213](https://github.com/sysung/piarre/issues/213) defines the file access boundary separately from model tool dispatch. The Compose `workspace` service mounts an existing host directory at `/workspace`. The application selects a directory in that mount with `--workspace DIRECTORY`. The selection grants reads and writes on regular files within that folder without further approval, subject to OS permissions. An explicit outside path yields an approval-required result before any access. An invalid selection fails before inference and traversal and symlinks are denied.
 
-[#214](https://github.com/sysung/piarre/issues/214) registers list/read tools only for sessions with a selected workspace. It routes each request through the file access layer and displays actual results. Check the four-call tool budget separately from Rig's model-call budget. [PR #211](https://github.com/sysung/piarre/pull/211) records the earlier prototype and review. Its results do not verify the replacement implementation.
+[#214](https://github.com/sysung/piarre/issues/214) registers list/read tools only for sessions with a selected workspace. It routes each request through the file access layer and displays actual results, including approval-required outcomes. Check the four-call tool budget separately from Rig's model-call budget. The later tool design must define how the user approves outside operations, how a grant reaches the intended target, and how to constrain side effects from any external program. The permission decision alone grants no outside access. [PR #211](https://github.com/sysung/piarre/pull/211) records the earlier prototype and review.
 
-The workspace is container-owned temporary storage, discarded on teardown. A future personal workspace mount or export is a separate opt-in feature. No second client container is necessary for the initial PoC.
+Exiting the container preserves the selected host folder and clears session state. Use a dedicated sample project for verification. The earlier disposable-workspace checks remain evidence for that earlier profile.
 
 ### D4. Observe a few models, do not certify them
 
-The user selected MiniCPM5-2B as the default on 2026-11-17 following the [model observations](model-observations.md). Use the pinned published MiniCPM artifact recorded there; the earlier Qwen inventory and completed checks remain historical evidence. This changes the default configuration, not Qwen behavior or model admission policy. Record runtime/model identities and observations manually. Verify an expected download identity before calling it the pinned artifact. Let operators select other installed local models without a whitelist, quality score, exact tokenizer or memory gate. Unsupported format, load failure and tool-call failure are observed technical limits; they do not require a compliance subsystem. Chat may remain useful when tools fail.
+MiniCPM5-2B is the sole model for the PoC. Both `harness` and `workspace` use the same Hugging Face Q4_K_M variant through Docker Model Runner with a 4,096-token context. Compose reuses installed weights. The earlier [model observations](model-observations.md) record the exact packages and behavior from those trials.
 
 Benchmarks, cohorts, context retrieval, exact serving-memory attribution, runtime rankings, common conversion and closed-model comparison are later work. Preserve the existing research without making it a prerequisite. New downloads are deliberate operator actions rather than model-generated instructions.
 
@@ -65,26 +65,25 @@ Update existing issues and native dependencies without duplicates. Keep mileston
 
 ## Verification plan
 
-1. Inspect the actual container user, mounts and writable paths. Expect no personal paths, credentials or Docker control access.
-2. Ask the real local model a simple question directly, then through containerized Rig. Record the actual model/runtime and outcome.
+1. Inspect the actual container user, mounts and writable paths. Expect no host folder in plain chat and a single selected host folder in workspace mode. Credentials and Docker control access stay outside the container.
+2. Ask the real local model a simple question directly, then through both Compose services. Confirm both report MiniCPM5-2B and return an answer.
 3. For #200, follow the [issue verification plan](https://github.com/sysung/piarre/issues/200): inspect actual request/transport defaults, observe real output beyond 128 tokens and 120 seconds when achievable under existing runtime limits, and record missing evidence explicitly. Verify context errors preserve earlier history.
 4. Try two chat turns, cancellation, an unavailable endpoint and restart. Expect visible errors, readable text and fresh session state after restart.
 5. For #182, observe real streamed Thinking followed by Answer, hide thinking without losing the answer, and check the unavailable-reasoning behavior. Verify safe rendering across chunk boundaries and honest interrupted/limited output. Record observed latency/output-limit effects without a benchmark gate.
 6. Have the user try chat before enabling file tools.
    - For #212, check real MiniCPM streaming, use of prior context, Ctrl-C with no interrupted turn in history, and one harmless tool call.
-   - For #213, select a disposable subfolder and independently verify that inside paths work and outside paths are denied.
+   - For #213, use a temporary host fixture and no inference. Read and write inside the selection, then exit and verify the host file retains the change across a new session. Check that outside reads and writes require approval and leave the target untouched. Reject invalid selections before launch or inference.
    - For #214, use real MiniCPM to list a seeded subfolder and read a known file. Check the answer against the tool result, verify the call budget and confirm that plain chat exposes no file tools.
-7. With real model tool calls, create, inspect, edit, inspect, delete and verify a sample Python file. Check a harmless outside-workspace request is refused and teardown discards the workspace. No Python execution is implied.
+7. With real model tool calls, create, inspect, edit, inspect, delete and verify a sample Python file in a selected fixture folder. Check an outside request leaves the target untouched and container teardown preserves the host folder.
 8. Record user observations and acceptance separately from code completion. Recheck only behavior affected by fixes.
 
 Real inference is required for end-to-end evidence; no mocked endpoint is planned. Harmless path/permission checks do not need model-generated malicious output. New automated tests or standalone verifiers still require explicit authorization under AGENTS.md; direct command execution and manual observation are sufficient for routine checks.
 
 ## Risks / Trade-offs
 
-- Native runtime is trusted local software; no-host-mount tools do not prove native-process filesystem isolation.
-- Open model selection does not promise format or tool-protocol compatibility. Try the selected configuration and report what happened.
-- File operations can delete disposable sample files. Start with a chat trial, explicit tool mode, visible operations and resettable storage.
-- If arbitrary execution or personal workspace access is requested later, revisit the boundary before adding it.
+- Native inference is trusted local software. The harness container's file boundary applies to the harness process.
+- Workspace writes can change the user's project. Use explicit selection, visible operations and dedicated test fixtures.
+- Revisit the isolation boundary before adding execution or granting access outside the mount.
 
 ## Migration and approval
 
