@@ -1,4 +1,6 @@
-/// Escape control characters in configuration and error messages.
+/// Render terminal controls in configuration and error messages as visible escapes.
+///
+/// Keep newlines and tabs so messages retain their layout.
 pub fn escape_terminal_controls(text: &str) -> String {
     let mut safe = String::new();
     for ch in text.chars() {

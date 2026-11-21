@@ -59,7 +59,7 @@ fn parse_workspace(mut args: impl Iterator<Item = OsString>) -> Result<Option<Pa
 
 async fn run() -> Result<(), Box<dyn Error>> {
     let directory = parse_workspace(env::args_os().skip(1))?;
-    let _workspace = directory
+    let _session_workspace = directory
         .as_deref()
         .map(|path| {
             Workspace::select(path)
@@ -92,7 +92,7 @@ async fn run() -> Result<(), Box<dyn Error>> {
         );
     }
     let mut editor = DefaultEditor::new()?;
-    let mut history: Vec<Message> = Vec::new();
+    let mut conversation_history: Vec<Message> = Vec::new();
     eprintln!(
         "Chat history stays in this session. Ctrl-D exits; Ctrl-C clears input or cancels a response."
     );
@@ -107,11 +107,11 @@ async fn run() -> Result<(), Box<dyn Error>> {
             continue;
         }
         editor.add_history_entry(input.as_str())?;
-        match run_turn(&agent, &history, &input).await {
+        match run_turn(&agent, &conversation_history, &input).await {
             Ok(TurnOutcome::Cancelled) => {
                 eprintln!("Response cancelled. This turn was not added to conversation history.");
             }
-            Ok(TurnOutcome::Completed(messages)) => history.extend(messages),
+            Ok(TurnOutcome::Completed(messages)) => conversation_history.extend(messages),
             Err(error) => {
                 eprintln!(
                     "Request failed: {}",
@@ -130,14 +130,15 @@ enum TurnOutcome {
 
 async fn run_turn(
     agent: &Agent,
-    history: &[Message],
+    conversation_history: &[Message],
     input: &str,
 ) -> Result<TurnOutcome, Box<dyn Error>> {
     let response = async {
         let mut stream = agent
             .prompt(input)
-            .history(history.iter().cloned())
+            .history(conversation_history.iter().cloned())
             .stream()
+            // Rig's stdout renderer prints completed reasoning events by default.
             .filter(|item| {
                 future::ready(!matches!(
                     item,
@@ -163,19 +164,20 @@ async fn run_turn(
         }
         Ok(TurnOutcome::Completed(response.messages))
     };
-    let result: Result<TurnOutcome, Box<dyn Error>> = tokio::select! {
+    // Tokio's biased mode checks Ctrl-C first when both branches are ready.
+    let turn_result: Result<TurnOutcome, Box<dyn Error>> = tokio::select! {
         biased;
         signal = tokio::signal::ctrl_c() => signal.map(|()| TurnOutcome::Cancelled).map_err(Into::into),
         result = response => result,
     };
-    let separator = {
+    let newline_result = {
         let mut stdout = io::stdout().lock();
         stdout.write_all(b"\n").and_then(|_| stdout.flush())
     };
-    if result.is_err() {
+    if turn_result.is_err() {
         eprintln!("Response incomplete. This turn was not added to conversation history.");
     }
-    let outcome = result?;
-    separator?;
+    let outcome = turn_result?;
+    newline_result?;
     Ok(outcome)
 }

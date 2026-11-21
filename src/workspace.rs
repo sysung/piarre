@@ -52,6 +52,11 @@ pub enum AccessError {
 #[cfg(target_os = "linux")]
 impl Workspace {
     /// Selects an existing directory using an absolute path beneath /workspace.
+    ///
+    /// # Errors
+    ///
+    /// Fails if the path is outside the mount, contains traversal, or cannot be opened
+    /// as a directory under the workspace resolution rules.
     pub fn select(directory: &Path) -> io::Result<Self> {
         const MOUNT: &str = "/workspace";
 
@@ -62,6 +67,7 @@ impl Workspace {
                 "use /workspace or an absolute path beneath it",
             )
         })?;
+        // Linux rejects an empty pathname. Use "." to select the mount itself.
         let relative = if relative.as_os_str().is_empty() {
             Path::new(".")
         } else {
@@ -105,6 +111,7 @@ impl Workspace {
             FileAccess::Read => OFlags::RDONLY,
             FileAccess::Write => OFlags::WRONLY,
         };
+        // Avoid waiting on a pipe before we can check the file type.
         let file = File::from(open_beneath(&self.root, relative, mode | OFlags::NONBLOCK)?);
         let metadata = file.metadata()?;
         if !metadata.is_file() {
