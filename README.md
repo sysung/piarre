@@ -76,8 +76,6 @@ With tools registered, Rig can run a tool the model requests, send back the resu
 
 Rig runs inside Docker, while Docker Model Runner serves MiniCPM5-2B separately. Plain chat starts without a host folder mount.
 
-To use an installed model with its current settings, set `PIARRE_MODEL` and run `docker compose run --rm existing-model`. For a project folder, also set `PIARRE_HOST_WORKSPACE` and run `docker compose run --rm workspace-existing-model`. Set `PIARRE_ENDPOINT` if you use another local server.
-
 The harness does not set an output-token cap or generation deadline. It uses the configured model and runtime defaults. Runtime context and output limits still apply. A runtime-reported cutoff is shown as incomplete.
 
 Ctrl-C leaves the interrupted turn out of history. The model server may continue generating after local cancellation.

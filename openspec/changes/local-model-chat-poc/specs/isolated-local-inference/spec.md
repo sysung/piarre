@@ -4,10 +4,10 @@ Run a real local model with an isolated Linux container and an opt-in persistent
 ## ADDED Requirements
 
 ### Requirement: Use an explicitly configured local model
-The harness SHALL use the operator-configured local endpoint and model without downloading weights or falling back to a cloud provider. The default Compose services SHALL visibly provision MiniCPM5-2B through Docker Model Runner when missing and apply the default context setting only to that model. The `existing-model` and `workspace-existing-model` services SHALL skip provisioning and preserve the selected model's runtime settings.
+The Compose `harness` and `workspace` services SHALL use MiniCPM5-2B Q4_K_M through Docker Model Runner with a 4,096-token context. Compose SHALL reuse installed weights and visibly provision them when missing. The harness SHALL send requests to the local endpoint without downloading weights or falling back to a cloud provider.
 
 #### Scenario: Start without the default model cached
-- **WHEN** the operator starts the default Compose service with Docker Model Runner enabled and MiniCPM5-2B is missing
+- **WHEN** the operator starts either Compose service with Docker Model Runner enabled and MiniCPM5-2B is missing
 - **THEN** Compose downloads the configured model before starting the harness
 
 #### Scenario: Model unavailable
@@ -31,10 +31,3 @@ The PoC SHALL use real model inference for end-to-end observations. Workspace an
 #### Scenario: Inspect the workspace
 - **WHEN** the operator runs a bounded file trial against a selected fixture folder and exits the container
 - **THEN** the resulting file changes are observable in the original host folder and in a new session using it
-
-### Requirement: Permit model attempts without research admission
-The operator SHALL be able to select a configured local model without benchmark, memory-score or cohort eligibility checks. Actual load and request failures SHALL remain visible.
-
-#### Scenario: Model responds outside the former memory target
-- **WHEN** a configured model can respond but has unknown or greater than 8 GB serving memory
-- **THEN** the application does not reject it on that basis

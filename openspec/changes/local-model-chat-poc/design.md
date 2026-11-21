@@ -28,12 +28,12 @@ Board views and later benchmark work remain tracked independently. No benchmark,
 ```mermaid
 flowchart LR
   U[User terminal] --> H[Rustyline and Rig in Linux container]
-  H --> R[Configured local inference server]
-  R --> Q[MiniCPM5-2B or another selected local model]
+  H --> R[Docker Model Runner]
+  R --> Q[MiniCPM5-2B]
   H -->|Opt-in workspace| W[Selected host folder mounted at /workspace]
 ```
 
-Rig is a Rust application, not the inference runtime. Start with existing DMR and its llama.cpp backend. Use a fixed operator-configured local endpoint directly; no mediation proxy initially. The application/image and native inference runtime are trusted local software. This is not a claim that arbitrary compromised container code cannot reach other host APIs or that native inference cannot access Mac files.
+Rig sends inference requests directly to Docker Model Runner's llama.cpp endpoint. The application/image and native inference runtime are trusted local software. This is not a claim that arbitrary compromised container code cannot reach other host APIs or that native inference cannot access Mac files.
 
 Plain chat mounts no host folders. Workspace mode mounts only the existing folder selected by the user and retains its data on the host. Keep the Docker socket, credentials, SSH agent, privileged mode and host networking out of both modes. Use non-root execution, dropped capabilities, no privilege escalation, read-only application files and bounded temporary storage. Inspect the actual mounts and user. Model weights stay in the runtime-managed cache outside the agent. Do not add a LAN listener. Container restrictions do not establish perfect machine isolation.
 
@@ -55,7 +55,7 @@ Exiting the container preserves the selected host folder and clears session stat
 
 ### D4. Observe a few models, do not certify them
 
-The user selected MiniCPM5-2B as the default on 2026-11-17 following the [model observations](model-observations.md). Compose now provisions the Hugging Face Q4_K_M variant through Docker Model Runner and configures a 4,096-token context. The earlier trials record the pinned GGUF and package they used. Record runtime and model identities with future observations. Let operators select other local models without a whitelist, quality score, exact tokenizer or memory gate. The `existing-model` and `workspace-existing-model` services skip provisioning. Unsupported format, load failure and tool-call failure are observed technical limits. Chat may remain useful when tools fail.
+MiniCPM5-2B is the sole model for the PoC. Both `harness` and `workspace` use the same Hugging Face Q4_K_M variant through Docker Model Runner with a 4,096-token context. Compose reuses installed weights. The earlier [model observations](model-observations.md) record the exact packages and behavior from those trials.
 
 Benchmarks, cohorts, context retrieval, exact serving-memory attribution, runtime rankings, common conversion and closed-model comparison are later work. Preserve the existing research without making it a prerequisite. New downloads are deliberate operator actions rather than model-generated instructions.
 
@@ -66,7 +66,7 @@ Update existing issues and native dependencies without duplicates. Keep mileston
 ## Verification plan
 
 1. Inspect the actual container user, mounts and writable paths. Expect no host folder in plain chat and a single selected host folder in workspace mode. Credentials and Docker control access stay outside the container.
-2. Ask the real local model a simple question directly, then through containerized Rig. Record the actual model/runtime and outcome.
+2. Ask the real local model a simple question directly, then through both Compose services. Confirm both report MiniCPM5-2B and return an answer.
 3. For #200, follow the [issue verification plan](https://github.com/sysung/piarre/issues/200): inspect actual request/transport defaults, observe real output beyond 128 tokens and 120 seconds when achievable under existing runtime limits, and record missing evidence explicitly. Verify context errors preserve earlier history.
 4. Try two chat turns, cancellation, an unavailable endpoint and restart. Expect visible errors, readable text and fresh session state after restart.
 5. For #182, observe real streamed Thinking followed by Answer, hide thinking without losing the answer, and check the unavailable-reasoning behavior. Verify safe rendering across chunk boundaries and honest interrupted/limited output. Record observed latency/output-limit effects without a benchmark gate.
@@ -82,7 +82,6 @@ Real inference is required for end-to-end evidence; no mocked endpoint is planne
 ## Risks / Trade-offs
 
 - Native inference is trusted local software. The harness container's file boundary applies to the harness process.
-- Open model selection does not promise format or tool-protocol compatibility. Try the selected configuration and report what happened.
 - Workspace writes can change the user's project. Use explicit selection, visible operations and dedicated test fixtures.
 - Revisit the isolation boundary before adding execution or granting access outside the mount.
 
