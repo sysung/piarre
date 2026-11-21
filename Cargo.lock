@@ -960,6 +960,7 @@ dependencies = [
  "rustix",
  "rustyline",
  "serde_json",
+ "thiserror",
  "tokio",
 ]
 

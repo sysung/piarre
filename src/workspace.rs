@@ -1,5 +1,5 @@
 use std::{
-    fmt, io,
+    io,
     path::{Path, PathBuf},
 };
 
@@ -29,40 +29,21 @@ pub enum FileAccess {
     Write,
 }
 
-#[derive(Debug)]
+impl FileAccess {
+    fn verb(self) -> &'static str {
+        match self {
+            Self::Read => "read",
+            Self::Write => "write",
+        }
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
 pub enum AccessError {
+    #[error("approval required to {} {}", .access.verb(), .path.display())]
     ApprovalRequired { path: PathBuf, access: FileAccess },
-    Io(io::Error),
-}
-
-impl fmt::Display for AccessError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::ApprovalRequired { path, access } => {
-                let operation = match access {
-                    FileAccess::Read => "read",
-                    FileAccess::Write => "write",
-                };
-                write!(f, "approval required to {operation} {}", path.display())
-            }
-            Self::Io(error) => fmt::Display::fmt(error, f),
-        }
-    }
-}
-
-impl std::error::Error for AccessError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::ApprovalRequired { .. } => None,
-            Self::Io(error) => Some(error),
-        }
-    }
-}
-
-impl From<io::Error> for AccessError {
-    fn from(error: io::Error) -> Self {
-        Self::Io(error)
-    }
+    #[error(transparent)]
+    Io(#[from] io::Error),
 }
 
 #[cfg(target_os = "linux")]

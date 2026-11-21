@@ -11,14 +11,14 @@ The application SHALL call the operator-configured local endpoint and model. The
 - **THEN** the attempt reports the actual failure without substituting another provider
 
 ### Requirement: Keep agent work in a disposable container
-The agent SHALL run in an isolated Linux container without credential or SSH agent mounts, a Docker socket or privileged mode. Plain chat SHALL mount no host folders. With `--workspace DIRECTORY`, the launcher SHALL mount the existing host directory selected by the user at `/workspace` with read-write access subject to OS permissions. The selected directory and bounded temporary storage SHALL be the only writable locations in workspace mode.
+The agent SHALL run in an isolated Linux container without credential mounts, SSH agent, Docker socket or privileged mode. Plain chat SHALL mount no host folders. The workspace Compose override SHALL mount only the selected existing host folder at `/workspace` for read-write access under OS permissions. The flag `--workspace DIRECTORY` SHALL select the file access root in that mount. Bounded temporary storage SHALL be the only other writable location.
 
 #### Scenario: Start the default environment
 - **WHEN** the user launches plain chat
 - **THEN** no host workspace is mounted
 
 #### Scenario: Select an existing host directory
-- **WHEN** the user launches with `--workspace DIRECTORY`
+- **WHEN** the user starts Compose with an existing host folder and selects `--workspace DIRECTORY`
 - **THEN** the selected folder is mounted for the session and its files remain on the host after the container exits
 
 ### Requirement: Check the actual environment

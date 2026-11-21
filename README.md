@@ -32,13 +32,16 @@ Type at `You>`. Press Ctrl-C during a reply to stop local streaming, or Ctrl-D a
 
 ### Select a workspace
 
-Select an existing project folder on your machine:
+From the Piarre checkout, set the absolute path to an existing project folder:
 
 ```sh
-./scripts/piarre --workspace "/path/to/project"
+test "$(id -u)" -ne 0 && \
+PIARRE_HOST_WORKSPACE="/path/to/project" \
+  docker compose -f compose.yaml -f compose.workspace.yaml run --rm \
+  --user "$(id -u):$(id -g)" harness --workspace /workspace
 ```
 
-The selected folder is mounted at `/workspace`. Its files and edits stay on your machine after chat exits. The file layer allows reads and writes inside the folder and returns an approval-required result for outside requests. [#214](https://github.com/sysung/piarre/issues/214) connects Rig's list and read tools to this boundary. The approval prompt and grant are later work.
+Compose mounts the host folder at `/workspace`. The `--workspace` argument selects that path inside the container. Your files and edits stay on your machine after chat exits. [#214](https://github.com/sysung/piarre/issues/214) connects Rig's list and read tools to the file permission layer.
 
 ## Release model memory
 

@@ -166,7 +166,7 @@ Approved revision: 2026-11-15. Real model first; user chat trial before workspac
   - Value: Work in a user-selected project whose files and edits persist across sessions.
   - Parent: [#174](https://github.com/sysung/piarre/issues/174). Blocked by: 2.8a. Issue: [#213](https://github.com/sysung/piarre/issues/213).
   - Human verification: Select an existing host fixture folder. Independently of inference, read and write inside it, exit, and check the host file and a new session. Check outside reads and writes return approval required and leave the sibling untouched. Reject traversal, symlinks and invalid selections.
-  - Evidence: The [two integration cases](../../../tests/workspace_boundary.rs) passed with model configuration unset. The host retained the inside edit after container exit and a new container read it. Outside reads and writes reported approval required and left the sibling unchanged. The launcher rejected missing directories and files. [PR #216](https://github.com/sysung/piarre/pull/216).
+  - Evidence: The [two integration cases](../../../tests/workspace_boundary.rs) passed with model configuration unset. The host retained the inside edit after container exit and a new container read it. Outside reads and writes reported approval required and left the sibling unchanged. The direct Compose launch rejected missing directories and files. [PR #216](https://github.com/sysung/piarre/pull/216).
   - Historical evidence: Revision `46f7235` verified confined reads and invalid selection for the former disposable workspace. Reverify the persistent mount, write access and approval results.
   - Contract: [design and verification](design.md#verification-plan).
 
